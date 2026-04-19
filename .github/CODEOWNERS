@@ -1,0 +1,41 @@
+# Accelerator code ownership
+# Reviewed + enforced on every PR
+
+# Default owners — SMB Agentic AI champs team
+*                                   @microsoft/smb-agentic-ai-champs
+
+# Baseline runtime — accelerator engineering team
+/baseline/                          @microsoft/accelerator-eng
+/baseline-drift/                    @microsoft/accelerator-eng
+/baseline-feedback/                 @microsoft/accelerator-eng
+/baseline-hitl/                     @microsoft/accelerator-eng
+/baseline-actions/                  @microsoft/accelerator-eng
+/baseline-cache/                    @microsoft/accelerator-eng
+/baseline-cli/                      @microsoft/accelerator-eng
+
+# Delivery assets + azd templates — co-owned (eng + partner delivery)
+/delivery-assets/                   @microsoft/accelerator-eng @microsoft/smb-partner-delivery
+/azd-templates/                     @microsoft/accelerator-eng @microsoft/smb-partner-delivery
+
+# Compatibility + release manifests — accelerator eng only
+/compatibility/                     @microsoft/accelerator-eng
+
+# Schema — requires schema steward approval
+/delivery-assets/schema/            @microsoft/accelerator-eng @microsoft/schema-stewards
+/specs/schema/                      @microsoft/accelerator-eng @microsoft/schema-stewards
+
+# RAI docs — RAI council approval required
+/docs/rai/                          @microsoft/rai-council @microsoft/accelerator-eng
+/patterns/rai/                      @microsoft/rai-council @microsoft/accelerator-eng
+
+# Governance — governance board only
+/docs/governance/                   @microsoft/accelerator-governance-board
+
+# Partner playbook + enablement — partner delivery + eng
+/docs/partner-playbook.md           @microsoft/smb-partner-delivery @microsoft/accelerator-eng
+/docs/enablement/                   @microsoft/smb-partner-delivery
+/docs/templates/                    @microsoft/smb-partner-delivery
+
+# Copilot kit — eng owns normative rules, partner delivery reviews
+/.github/copilot-instructions.md    @microsoft/accelerator-eng @microsoft/smb-partner-delivery
+/.github/chatmodes/                 @microsoft/accelerator-eng @microsoft/smb-partner-delivery

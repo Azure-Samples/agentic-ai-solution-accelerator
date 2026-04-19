@@ -1,0 +1,253 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://azure.github.io/agentic-ai-solution-accelerator/schema/spec.schema.json",
+  "title": "Azure Agentic AI Solution Spec",
+  "description": "Single source of truth describing an agentic solution built on this accelerator. Materializers, validators, reconcile, and attestation all read from this document.",
+  "type": "object",
+  "version": "0.1.0",
+  "required": [
+    "spec_version",
+    "solution",
+    "bundle",
+    "profile",
+    "data_classification",
+    "baseline_pin",
+    "model",
+    "agents",
+    "tools",
+    "grounding",
+    "topology",
+    "kpis",
+    "cost_ceiling",
+    "evals",
+    "rai"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "spec_version": {
+      "type": "string",
+      "pattern": "^0\\.[0-9]+\\.[0-9]+$",
+      "description": "Schema version this Spec conforms to. Must be supported by pinned baseline release."
+    },
+    "solution": {
+      "type": "object",
+      "required": ["id", "name", "customer", "partner"],
+      "additionalProperties": false,
+      "properties": {
+        "id":        { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{2,62}$" },
+        "name":      { "type": "string", "minLength": 3 },
+        "customer":  { "type": "string" },
+        "partner":   { "type": "string" },
+        "industry":  { "type": "string" },
+        "business_function": { "type": "string" },
+        "description": { "type": "string" }
+      }
+    },
+    "bundle": {
+      "type": "string",
+      "enum": ["sandbox-only", "retrieval-prod", "retrieval-prod-pl", "actioning-prod", "actioning-prod-pl"],
+      "description": "Blessed bundle. Non-blessed combinations are not supported. See docs/supported-customization-boundary.md §2."
+    },
+    "profile": {
+      "type": "string",
+      "enum": ["dev-sandbox", "guided-demo", "prod-standard", "prod-privatelink"],
+      "description": "Deployment profile. Must be compatible with `bundle` per the bundle matrix."
+    },
+    "data_classification": {
+      "type": "string",
+      "enum": ["public", "internal", "confidential", "highly-confidential"],
+      "description": "Customer-signed-off data classification. Drives profile + tool-catalog restrictions + RAI scope."
+    },
+    "baseline_pin": {
+      "type": "object",
+      "required": ["release"],
+      "additionalProperties": false,
+      "properties": {
+        "release": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+        "lockfile_ref": { "type": "string", "description": "Path to baseline.lock.yaml (default: `./baseline.lock.yaml`)." }
+      }
+    },
+    "model": {
+      "type": "object",
+      "required": ["id", "alias"],
+      "additionalProperties": false,
+      "properties": {
+        "id":    { "type": "string", "description": "Foundry model ID (e.g., `gpt-5.2`)." },
+        "alias": { "type": "string", "description": "Foundry model alias pin (e.g., `gpt-5.2-2026-03`)." },
+        "region": { "type": "string" },
+        "max_tokens": { "type": "integer", "minimum": 1 },
+        "temperature": { "type": "number", "minimum": 0, "maximum": 2 }
+      }
+    },
+    "agents": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 2,
+      "description": "Agent definitions. v1 cap: 2 agents (a2a). Raising requires governance board approval.",
+      "items": {
+        "type": "object",
+        "required": ["id", "role", "instructions_ref"],
+        "additionalProperties": false,
+        "properties": {
+          "id":   { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,32}$" },
+          "role": { "type": "string", "enum": ["orchestrator", "specialist", "retriever", "triage", "reviewer"] },
+          "instructions_ref": {
+            "type": "object",
+            "required": ["source", "snapshot_path"],
+            "additionalProperties": false,
+            "properties": {
+              "source":        { "type": "string", "enum": ["foundry-portal", "repo"] },
+              "foundry_agent_id": { "type": "string" },
+              "repo_path":     { "type": "string" },
+              "snapshot_path": { "type": "string", "description": "Required: path under rai/snapshots/ where instructions are snapshotted at attest time." }
+            }
+          },
+          "tool_refs": { "type": "array", "items": { "type": "string" } },
+          "hitl_points": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^[a-z0-9_]+\\.(before_action|after_action|on_uncertainty)$" }
+          }
+        }
+      }
+    },
+    "tools": {
+      "type": "array",
+      "description": "Tool catalog bound to this solution. Each tool declares side_effect explicitly.",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "side_effect"],
+        "additionalProperties": false,
+        "properties": {
+          "id":   { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{1,48}$" },
+          "kind": { "type": "string", "enum": ["foundry-builtin", "mcp", "function", "rest-api", "openapi"] },
+          "side_effect": { "type": "boolean", "description": "If true, bundle MUST be actioning-*. Triggers HITL + baseline-actions + baseline-hitl T2 requirements." },
+          "source": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "mcp_server": { "type": "string" },
+              "endpoint":   { "type": "string", "format": "uri" },
+              "openapi_ref":{ "type": "string" },
+              "function_ref":{ "type": "string" },
+              "connection_name": { "type": "string" }
+            }
+          },
+          "data_classification_max": { "type": "string", "enum": ["public", "internal", "confidential", "highly-confidential"] },
+          "allowed_in_profiles":     { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "grounding": {
+      "type": "object",
+      "required": ["sources"],
+      "additionalProperties": false,
+      "properties": {
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "type", "acl_model", "classification"],
+            "additionalProperties": false,
+            "properties": {
+              "id":        { "type": "string" },
+              "type":      { "type": "string", "enum": ["sharepoint", "ai-search-index", "blob", "rest-api", "graph-api"] },
+              "url_pattern":{ "type": "string" },
+              "index_name":{ "type": "string" },
+              "acl_model": { "type": "string", "enum": ["inherit-customer-entra", "customer-rbac", "public", "partner-managed"] },
+              "classification": { "type": "string", "enum": ["public", "internal", "confidential", "highly-confidential"] },
+              "last_snapshot_ref": { "type": "string", "description": "Structured manifest snapshot path (hash of source identity, NOT content)." }
+            }
+          }
+        }
+      }
+    },
+    "topology": {
+      "type": "object",
+      "required": ["agents", "edges", "a2a_cap"],
+      "additionalProperties": false,
+      "properties": {
+        "agents":  { "type": "array", "items": { "type": "string" } },
+        "edges":   { "type": "array", "items": { "type": "array", "items": { "type": "string" }, "minItems": 2, "maxItems": 2 } },
+        "human_in_loop_points": { "type": "array", "items": { "type": "string" } },
+        "a2a_cap": { "type": "integer", "minimum": 1, "maximum": 2, "description": "v1 hard cap = 2." }
+      }
+    },
+    "kpis": {
+      "type": "array",
+      "description": "Business KPIs materializer uses to generate dashboards + alerts.",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "target"],
+        "additionalProperties": false,
+        "properties": {
+          "id":     { "type": "string" },
+          "name":   { "type": "string" },
+          "target": { "type": "string", "description": "e.g., 'p50 latency < 2s', 'containment rate > 60%'." },
+          "alert":  { "type": "string", "enum": ["none", "warn", "critical"] }
+        }
+      }
+    },
+    "cost_ceiling": {
+      "type": "object",
+      "required": ["monthly_usd"],
+      "additionalProperties": false,
+      "properties": {
+        "monthly_usd":   { "type": "number", "minimum": 0 },
+        "per_request_usd":{ "type": "number", "minimum": 0 },
+        "kill_switch_threshold_pct": { "type": "number", "minimum": 0, "maximum": 100, "default": 95 }
+      }
+    },
+    "evals": {
+      "type": "object",
+      "required": ["quality", "redteam"],
+      "additionalProperties": false,
+      "properties": {
+        "quality": {
+          "type": "object",
+          "required": ["dataset_ref", "metrics", "regression_threshold"],
+          "additionalProperties": false,
+          "properties": {
+            "dataset_ref":         { "type": "string" },
+            "metrics":             { "type": "array", "items": { "type": "string" } },
+            "regression_threshold": { "type": "number", "description": "Max allowed regression vs last attested baseline (e.g., 0.05 = 5%)." }
+          }
+        },
+        "redteam": {
+          "type": "object",
+          "required": ["suite", "pass_threshold"],
+          "additionalProperties": false,
+          "properties": {
+            "suite":          { "type": "string", "description": "Reference to red-team suite (baseline provides default)." },
+            "pass_threshold": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        }
+      }
+    },
+    "rai": {
+      "type": "object",
+      "required": ["impact_assessment_ref"],
+      "additionalProperties": false,
+      "properties": {
+        "impact_assessment_ref": {
+          "type": "object",
+          "required": ["id", "expires_at"],
+          "additionalProperties": false,
+          "properties": {
+            "id":        { "type": "string", "description": "Immutable UUID of the RAI IA document." },
+            "path":      { "type": "string" },
+            "expires_at":{ "type": "string", "format": "date" },
+            "codeowners_approval_pr": { "type": "string", "format": "uri" }
+          }
+        }
+      }
+    },
+    "references": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "qualification_manifest": { "type": "string", "description": "Path to .qualification.yaml (Path B/C). Omit for sandbox-only." },
+        "override_files":         { "type": "array", "items": { "type": "string" }, "description": "Partner override companions to materialized files." }
+      }
+    }
+  }
+}
