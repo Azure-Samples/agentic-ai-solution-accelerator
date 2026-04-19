@@ -5,8 +5,7 @@
 ## Engagement summary
 - **Customer:** <name>
 - **Partner:** <name>
-- **Path:** [A | B | C]
-- **Bundle (target):** <one of 5>
+- **Bundle:** <one of 5>
 - **Profile:** <dev-sandbox | guided-demo | prod-standard | prod-privatelink>
 - **Primary scenario:** <supplier-risk / itops-triage / knowledge-concierge / custom>
 - **Start date / target go-live:** <dates>
@@ -15,46 +14,44 @@
 - <bullet list of capabilities agreed>
 
 ## Scope OUT (explicit)
-- Anything requiring new blessed bundles (governance board ask; not in SoW).
-- BYO-IaC unless re-qualification package explicitly approved.
+- Anything requiring a new bundle (not in v1). Bundle variants must be Spec parameters.
+- \> 2-agent orchestration.
 - Non-supported models / regions / SKUs.
-- Free-form A2A > 2 agents.
+- Customer infrastructure outside the agentic solution boundary (customer's existing networks, identity, data platform).
 
-## Qualification artifacts required (Path B/C)
-- [ ] `.qualification.yaml` populated + signed
-- [ ] Data classification decision
-- [ ] Network topology decision
-- [ ] Identity model decision
-- [ ] RAI IA scoping minutes
-- [ ] Security review path agreed
-- [ ] Operating model chosen
+## Key decisions required before build
+- [ ] Data classification (customer-signed)
+- [ ] Network topology (public vs private link)
+- [ ] Identity model (customer Entra tenant; MI vs B2B)
+- [ ] RAI scoping minutes held + logged in `rai/scoping-minutes.md`
+- [ ] Security review path agreed with customer (internal customer review? MSFT field-assisted?)
+- [ ] Day-2 ownership model agreed (partner window → customer ownership)
 
 ## Deliverables
-- Scaffolded repo + CI
-- Validated Spec + materialized params/evals/dashboards/alerts
+- Scaffolded customer repo + CI (validator on every PR)
+- Validated `spec.agent.yaml` + materialized params / evals / dashboards / alerts
 - Agent modules + tool wrappers + grounding glue
 - Eval suite (quality + red-team)
-- Attested deploy + runbook walkthrough
+- Production deploy + runbook walkthrough
 - Day-2 customer ops handoff
 
 ## Responsibilities
-| Activity | Partner | Customer | MSFT |
+| Activity | Partner | Customer | Microsoft |
 |---|---|---|---|
 | Spec authoring | X |  |  |
-| RAI IA sign-off |  | X |  |
-| Code implementation | X |  |  |
-| Infra deploy | X |  |  |
+| RAI scoping sign-off |  | X |  |
+| Code implementation (business layer) | X |  |  |
+| Infrastructure deploy | X |  |  |
 | Security review |  | X |  |
-| Attestation issue | X |  |  |
-| Pager on day 1 | X (handoff 30–60d) | X (post-handoff) |  |
-| Baseline upgrades | X |  | X (releases, ring promotion) |
+| Pager day-1 | X (handoff window) | X (post-handoff) |  |
+| Baseline upgrades in customer repo | X |  | X (publishes releases) |
 
 ## Risks + assumptions
-- Assumes customer GitHub org for qualification (§ customer-github-onboarding).
 - Assumes Foundry + Bicep regional availability in target region.
-- Assumes attestation cadence honored (30d).
+- Assumes customer can provide an identity/tenant for MI-backed access to their data sources.
+- Assumes partner + customer align on the accelerator's hard invariants (see `docs/customization-guide.md`).
 
 ## Exit criteria
-- 7 days post-deploy stability.
-- Day-2 handoff complete.
-- No open sev-1; no open high-severity waiver.
+- 7–14 days post-deploy stability.
+- Day-2 handoff complete; runbook walkthrough held.
+- No open sev-1.

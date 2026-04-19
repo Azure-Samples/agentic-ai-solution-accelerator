@@ -1,16 +1,11 @@
 """baseline CLI — Phase A stub.
 
 Commands (Phase B):
-  baseline doctor [--preflight <target>]
-  baseline reconcile [--pre-upgrade]
-  baseline upgrade [--plan <target> | --apply <plan> | --rollback]
-  baseline migrate [--plan <target> | --apply | --status]
+  baseline validate-spec <spec.agent.yaml>
+  baseline doctor
   baseline materialize [params | evals | dashboards | alerts | all]
-  baseline attest [--capture | --issue]
-  baseline deploy --verify <attestation-id>
-  baseline waive [--propose | --list | --renew]
-  baseline sbom [--emit | --verify]
-  baseline new-customer-repo <name> --bundle <bundle>
+  baseline new-customer-repo <name> --bundle <bundle> [--scenario <name>]
+  baseline upgrade [--plan <target> | --apply <plan>]
 """
 
 import typer

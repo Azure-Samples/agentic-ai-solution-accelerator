@@ -1,99 +1,131 @@
 # Azure Agentic AI Solution Accelerator
 
-> **Status:** v1 draft (private) — **controlled-lighthouse** release.
-> **License:** MIT + CLA.
-> **Support:** see [SUPPORT.md](SUPPORT.md). No SLA outside blessed bundles + valid attestation.
+> **What this is:** a content pack + Copilot IDE kit + validator that helps Microsoft delivery partners ship agentic AI solutions on Azure for their customers, following WAF best practices, RAI guidance, and the latest Azure AI Foundry patterns.
+>
+> **Audience:** Microsoft delivery partners (engineers, architects, delivery leads) who have a customer + a use case + want to vibe-code the solution with GitHub Copilot in VS Code.
+>
+> **Status:** Phase A draft — **internal preview**. Not all tooling is implemented yet. See [docs/getting-started.md](docs/getting-started.md) for what's usable today.
 
-## What this is
+---
 
-A partner-deployable kit for building production-grade **agentic AI solutions** on Azure AI Foundry, aligned to the Microsoft Well-Architected Framework (WAF) including the AI workload and Responsible AI (RAI) pillars.
+## What you get
 
-Partners vibecode the **business layer** per customer using **GitHub Copilot in VS Code**, guided by this accelerator's:
+| # | Asset | Purpose |
+|---|---|---|
+| 1 | **Patterns + guidance** ([`content/patterns/`](content/patterns)) | Architecture patterns, WAF-by-pillar decisions, RAI posture — the intellectual payload. |
+| 2 | **Copilot IDE kit** ([`.github/copilot-instructions.md`](.github/copilot-instructions.md), [`.github/chatmodes/`](.github/chatmodes)) | Drops into your customer repo's `.github/`. Shapes every Copilot code suggestion so it lands in-pattern. |
+| 3 | **Spec schema + validator** ([`delivery-assets/schema/spec.schema.json`](delivery-assets/schema/spec.schema.json), [`tools/validate-spec.py`](tools/validate-spec.py)) | Declarative solution description. Validator runs in your CI and fails the build on drift. |
+| 4 | **Reference scenarios** ([`examples/scenarios/`](examples/scenarios)) | Three worked scenarios (supplier risk, IT Ops triage, knowledge concierge) to study + copy from. |
+| 5 | **azd templates** ([`examples/azd-templates/`](examples/azd-templates)) | Five Azure-deployable starting points, one per bundle. |
+| 6 | **Baseline pip packages** ([`baseline/`](baseline), [`baseline-*/`](.)) | T1 core + T2 profile-required primitives (auth, telemetry, cost ceiling, kill switch, HITL, actions). Pin in your customer repo. |
+| 7 | **Partner playbook + templates** ([`docs/`](docs)) | Phase-by-phase guidance, SoW template, decision-record template, RAI scoping minutes template. |
 
-- **Tiered platform baseline** (T1 core + T2 profile-required sub-packages) — hardened, versioned, supported
-- **5 blessed bundles** (sandbox-only, retrieval-prod, retrieval-prod-pl, actioning-prod, actioning-prod-pl) with matching **azd templates**
-- **Spec-driven materializers** (params, evals, dashboards, alerts) — config from a single `spec.yaml`
-- **Copilot IDE kit** — custom instructions, chat modes, prompts, MCP tool configs
-- **Attestation + supportability gates** — make support + RAI posture verifiable per deploy
+---
 
-## What this is NOT
+## How partners use this — three-layer consistency model
 
-- Not a shipped runtime you extend.
-- Not a deterministic codegen.
-- Not a SaaS.
-- Not "the Azure agentic standard" — an **opinionated v1 path**. Broader ecosystem is v1.5+.
+Partners don't clone this repo wholesale. They **scaffold a new customer repo from this accelerator**, which drops the three consistency layers into their customer engagement:
 
-## Who should use it
+```
+ ┌────────────────────────────────────────────────────────────────────┐
+ │  Layer 1 — Scaffolding (repo creation)                             │
+ │  `baseline new-customer-repo --bundle <bundle> --scenario <name>`  │
+ │  drops IDE kit, CI, validator, pinned baseline, a reference        │
+ │  scenario as starting code, Spec skeleton. Partner starts from a   │
+ │  correct repo, not a blank one.                                    │
+ └────────────────────────────────────────────────────────────────────┘
+                                ↓
+ ┌────────────────────────────────────────────────────────────────────┐
+ │  Layer 2 — Copilot IDE kit (authoring time)                        │
+ │  copilot-instructions.md + chatmode + prompts sit in .github/.     │
+ │  Every Copilot prompt is shaped by our patterns. Copilot writes    │
+ │  code that uses baseline primitives, declares tools in Spec, wires │
+ │  HITL for side-effects, emits required telemetry.                  │
+ └────────────────────────────────────────────────────────────────────┘
+                                ↓
+ ┌────────────────────────────────────────────────────────────────────┐
+ │  Layer 3 — Validator (CI time)                                     │
+ │  On every PR, validator checks Spec conformance, bundle↔profile,   │
+ │  HITL wiring, grounding classification, WAF patterns. Fails build  │
+ │  on drift.                                                         │
+ └────────────────────────────────────────────────────────────────────┘
+```
 
-Microsoft-aligned partners delivering agentic AI solutions to customers on Azure who want:
+Good-faith partners following the guidance land in-pattern by default. Validator catches drift before merge.
 
-- A repeatable path to a supportable production deploy
-- A clear WAF + RAI story for customer reviews
-- Compatibility with Foundry + Copilot-based delivery
+> **Important:** this accelerator is **community-supported, best-effort**. It is NOT a Microsoft-supported managed product. Partners own their customer deployments end-to-end. See [SUPPORT.md](SUPPORT.md).
 
-## 3 paths (choose one)
+---
 
-| Path | Goal | Typical duration | Output |
+## First steps
+
+- **New here?** Read [docs/getting-started.md](docs/getting-started.md) — the partner journey in plain English.
+- **Evaluating fit?** Run [`docs/enablement/self-assessment.md`](docs/enablement/self-assessment.md) against your org.
+- **Onboarding your partner org?** Work through [`docs/enablement/partner-onboarding-checklist.md`](docs/enablement/partner-onboarding-checklist.md).
+- **Ready to scope a customer engagement?** Use [`docs/partner-playbook.md`](docs/partner-playbook.md).
+- **Designing the solution?** Read [`content/patterns/`](content/patterns) and study [`examples/scenarios/`](examples/scenarios).
+- **Need to know what you may / may not change?** See [`docs/customization-guide.md`](docs/customization-guide.md).
+
+---
+
+## Repo layout
+
+```
+.
+├── .github/
+│   ├── CODEOWNERS
+│   ├── copilot-instructions.md          # ships INTO every scaffolded customer repo
+│   └── chatmodes/delivery-guide.chatmode.md
+├── content/
+│   └── patterns/
+│       ├── architecture/                # topology, orchestration, HITL placement
+│       ├── waf-alignment/               # per-pillar Azure-agentic-AI decisions
+│       └── rai/                         # content filter, groundedness, red-team
+├── docs/
+│   ├── getting-started.md               # ← start here
+│   ├── partner-playbook.md              # phase-by-phase engagement guidance
+│   ├── customization-guide.md           # patterns to follow + where to diverge
+│   ├── enablement/                      # onboarding + self-assessment
+│   ├── templates/                       # SoW, decisions, RAI scoping minutes
+│   └── runbooks/                        # operational playbooks (Phase C)
+├── examples/
+│   ├── specs/                           # concrete Spec examples
+│   ├── scenarios/                       # 3 reference scenarios (+ starter)
+│   └── azd-templates/                   # 5 blessed bundles as azd templates
+├── delivery-assets/
+│   └── schema/spec.schema.json          # Spec schema
+├── baseline/                            # T1 core pip pkg
+├── baseline-cli/                        # `baseline` CLI pip pkg
+├── baseline-drift/                      # T2 portal-drift telemetry
+├── baseline-feedback/                   # T2 feedback + eval telemetry
+├── baseline-hitl/                       # T2 human-in-the-loop queue
+├── baseline-actions/                    # T2 side-effect tool wrappers
+├── baseline-cache/                      # T3 reference-only
+├── tools/                               # validators + scaffolder
+├── SUPPORT.md                           # community best-effort
+├── CONTRIBUTING.md, SECURITY.md, LICENSE
+```
+
+---
+
+## Bundles at a glance
+
+| Bundle | Side-effect tools | Network | Profile(s) |
 |---|---|---|---|
-| **A — Sandbox / Fast** | POC or demo | hours (certified partners) | Running sandbox deploy; no attestation |
-| **B — Production / Enterprise** | Customer production solution | weeks | Attested deploy, full WAF + RAI + support |
-| **C — Expansion** | Add scenarios on top of an existing attested deploy | days | Incremental attested scope |
+| `sandbox-only` | ❌ | public | dev-sandbox · guided-demo |
+| `retrieval-prod` | ❌ | public | prod-standard |
+| `retrieval-prod-pl` | ❌ | private-link | prod-privatelink |
+| `actioning-prod` | ✅ (HITL required) | public | prod-standard |
+| `actioning-prod-pl` | ✅ (HITL required) | private-link | prod-privatelink |
 
-See [`docs/partner-playbook.md`](docs/partner-playbook.md).
+Bundle variants are expressed via Spec parameters + profiles, NOT new bundles. See [`docs/customization-guide.md`](docs/customization-guide.md) for the rationale.
 
-## Quickstart (partner engineers)
+---
 
-```bash
-# 1. Fork/clone this repo as the template for a new customer engagement
-# 2. Scaffold a customer repo
-python tools/new-customer-repo.py --name "acme-supplier-risk" --bundle "retrieval-prod"
-# 3. Open the scaffolded repo in VS Code; Copilot is pre-configured
-# 4. Follow docs/partner-playbook.md (phase-gated; ~7 phases)
-# 5. Deploy
-azd up  # uses bundle-specific azd template
-# 6. Attest
-baseline attest --capture && baseline attest --issue
-# 7. Deploy-gate verification
-baseline deploy --verify <attestation-id>
-```
+## Contributing
 
-## Repository layout (top level)
+Internal accelerator engineering team owns the patterns + baseline + validator. Partners contribute reference scenarios, runbooks, and field feedback via PRs + issues. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-```
-baseline/              # T1 core pkg (pip: azure-agentic-baseline)
-baseline-drift/        # T2 profile-required (prod-standard+)
-baseline-feedback/     # T2 profile-required (prod-standard+)
-baseline-hitl/         # T2 profile-required (side-effect tools)
-baseline-actions/      # T2 profile-required (side-effect tools)
-baseline-cache/        # T3 reference only (not attestation-covered)
-baseline-cli/          # CLI: doctor, upgrade, materialize, attest, reconcile, waive, sbom
-delivery-assets/       # Bicep modules, workflows, schema, scaffolding (synced via upgrade)
-azd-templates/         # One per blessed bundle (supported fast path)
-compatibility/         # Release manifests, drift classification, upgrade transaction model
-.github/               # copilot-instructions.md, chatmodes, prompts, agents, MCP
-patterns/              # Architecture, WAF, RAI patterns
-examples/              # STUDY-ONLY annotated code references
-specs/                 # Spec schema + reference + example specs
-packs/                 # Scenario packs (supplier-risk, IT ops, knowledge concierge)
-discovery/             # Qualification matrix, use-case canvas, RAI IA, WAF checklist
-tools/                 # Validators, scaffolders
-docs/                  # Playbook, runbooks, governance, RAI, enablement, templates
-```
+## License + support
 
-## Key references
-
-- [Partner playbook](docs/partner-playbook.md) — the main phase-gated guide
-- [Supported customization boundary](docs/supported-customization-boundary.md) — what you MAY and MAY NOT change
-- [Spec schema](delivery-assets/schema/spec.schema.json) — the single source of truth for a solution
-- [Upgrade transaction model](compatibility/upgrade-transaction-model.md) — how you stay current + supported
-- [Attestation scope](docs/rai/attestation-scope.md) — what attestation covers + what it doesn't
-- [Governance board charter](docs/governance/governance-board-charter.md) — who approves waivers
-- [Copilot instructions](.github/copilot-instructions.md) — normative rules for vibecoding
-
-## Status: private preview
-
-This repo is currently **private / internal**. Partners receive a fork + engagement-specific access. Public release is v1.5+.
-
-## Contact
-
-See [CODEOWNERS](.github/CODEOWNERS).
+MIT license on the content + code. See [LICENSE](LICENSE) and [SUPPORT.md](SUPPORT.md).

@@ -1,55 +1,82 @@
 # Support
 
-## Scope
+> **TL;DR:** the Azure Agentic AI Solution Accelerator is **community-supported, best-effort**. Partners own the customer deployment end-to-end. Microsoft does not operate the pager for customer solutions built on this accelerator.
 
-Microsoft and partner support is honored **only** for engagements meeting **all** of:
+---
 
-1. **Current valid attestation** — issued < 30 days ago from a signed snapshot (< 24h live-state capture window at deploy).
-2. **Deployed state matches attested lockfile** — verified by `baseline reconcile`.
-3. **Active waivers approved and unexpired** — max 5 per repo, 90-day SLA.
-4. **Bundle listed in blessed matrix** — see `docs/supported-customization-boundary.md` §2.
+## What support looks like
 
-Tickets without a valid attestation ID are **rejected at intake**.
+### 1. Repo-level (what Microsoft provides)
 
-## Support tiers
+- **GitHub issues** on this repo — bug reports, pattern questions, content gaps, scenario requests.
+- **Releases + release notes** for the `baseline` pip package, validator, azd templates, and patterns content.
+- **Security vulnerabilities** — report privately per [SECURITY.md](SECURITY.md).
+- **Office hours** (if your partner org is onboarded) — periodic sync with the accelerator engineering team.
 
-| Tier | Components | Support posture |
-|---|---|---|
-| **T1** | `azure-agentic-baseline` core pkg, delivery assets, azd templates for blessed bundles | Full MSFT + partner support |
-| **T2** | `baseline-drift`, `baseline-feedback`, `baseline-hitl`, `baseline-actions` (within bundle where required) | Full support when bundle is blessed |
-| **T3** | `baseline-cache`, `examples/`, community patterns | Best-effort, community-tier, **not** covered by attestation |
+**What Microsoft does NOT provide via this repo:**
+- Production support for customer deployments.
+- 24×7 incident response.
+- Legal / contractual support commitments.
+- Customer-specific architecture review.
 
-## Degraded mode
+### 2. Engagement-level (what the partner provides)
 
-If MSFT validation backend (attestation verifier, reconcile API) OR external dependencies (GitHub API, sigstore Rekor) are unreachable > 5 minutes, tickets are **queued**, not rejected. Validation runs on recovery.
+Partners own:
+- Sev-1 response + customer comms.
+- Runbook execution.
+- Waiver tracking within the customer engagement.
+- Baseline upgrades on customer schedules.
+- Cost + RAI posture monitoring.
 
-Degraded-mode tickets > 72h auto-escalate to the Accelerator Governance Board for manual review (24h SLA).
+This accelerator gives partners the *tools + patterns* to do those jobs well. It does not replace them.
 
-## Sev-1 security emergency lane
+### 3. Microsoft field (when applicable)
 
-Tickets flagged `sev-1-security` bypass attestation freshness and reconcile checks. Signature still verified if available. Manual-review queue, 4h SLA. Post-incident reconciliation required within 7 days or attestation lapses.
+Depending on your partner's commercial relationship with Microsoft, a field Solutions Architect may be engaged per-customer for co-delivery on lighthouse or strategic engagements. That is outside the scope of this repo; coordinate through your Microsoft partner manager.
 
-## What support does NOT cover
+---
 
-- Business logic written by the partner (vibecoded per customer).
-- Non-blessed bundle combinations.
-- Forks of T1/T2 packages.
-- Partner-authored azd templates outside the shipped five.
-- Grounding content quality or drift (use `baseline-drift` telemetry; see `docs/rai/attestation-scope.md`).
-- Customer's own Azure subscription policies / landing zone (partner + customer responsibility).
+## How to file a useful issue
 
-## Opening a ticket
+Include:
 
-Every ticket must include:
+1. **What layer is the issue on?**
+   - Content (pattern doc / guidance)
+   - Tooling (validator, `baseline` CLI, azd template)
+   - Example (reference scenario, example Spec)
+2. **What version?** — release tag, or commit SHA.
+3. **Minimal repro** — Spec excerpt, CI log tail, validator output.
+4. **What you expected vs. what happened.**
+5. **Severity from your perspective** — blocking a production deploy / blocking dev / nice-to-have.
 
-- **Attestation ID** (required; else rejected)
-- **Bundle** and **profile**
-- **Baseline release** (from `baseline.lock.yaml`)
-- **Reproduction steps**
-- **Last successful reconcile timestamp**
+Good issues get turned around in weeks. Bad issues get closed as "needs repro."
 
-See `docs/runbooks/support-intake-workflow.md`.
+---
 
-## SLA
+## Known limitations (Phase A preview)
 
-**None outside attested engagements.** This is a controlled-lighthouse v1; broad-partner commercial SLA is v1.5+.
+- `baseline` CLI commands are stubs — `validate-spec` is partially working; `materialize`, `doctor`, `new-customer-repo` are not yet implemented.
+- `delivery-assets/bicep/modules/` are not shipped yet — azd templates are stubs.
+- Reference scenarios ship as READMEs — full runnable code lands in Phase D.
+- The validator currently checks Spec-schema only — pattern + WAF checks land in Phase B.
+
+See [docs/getting-started.md](docs/getting-started.md) for what's actually usable today.
+
+---
+
+## Security
+
+Security vulnerabilities go to MSRC via [SECURITY.md](SECURITY.md), not GitHub issues.
+
+---
+
+## Escalation paths
+
+| Situation | Where to go |
+|---|---|
+| Pattern bug or content error | GitHub issue on this repo |
+| Validator false positive / false negative | GitHub issue with repro |
+| Customer production incident | Partner's own on-call; accelerator engineering is not on the pager |
+| Security vulnerability in the accelerator | MSRC per SECURITY.md |
+| Need a new bundle / pattern / reference scenario | GitHub issue + discussion |
+| Disagree with a pattern recommendation | PR with rationale; accelerator engineering reviews |

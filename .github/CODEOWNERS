@@ -15,21 +15,16 @@
 
 # Delivery assets + azd templates — co-owned (eng + partner delivery)
 /delivery-assets/                   @microsoft/accelerator-eng @microsoft/smb-partner-delivery
-/azd-templates/                     @microsoft/accelerator-eng @microsoft/smb-partner-delivery
-
-# Compatibility + release manifests — accelerator eng only
-/compatibility/                     @microsoft/accelerator-eng
+/examples/azd-templates/            @microsoft/accelerator-eng @microsoft/smb-partner-delivery
 
 # Schema — requires schema steward approval
 /delivery-assets/schema/            @microsoft/accelerator-eng @microsoft/schema-stewards
-/specs/schema/                      @microsoft/accelerator-eng @microsoft/schema-stewards
 
-# RAI docs — RAI council approval required
-/docs/rai/                          @microsoft/rai-council @microsoft/accelerator-eng
-/patterns/rai/                      @microsoft/rai-council @microsoft/accelerator-eng
+# RAI content — RAI council review required
+/content/patterns/rai/              @microsoft/rai-council @microsoft/accelerator-eng
 
-# Governance — governance board only
-/docs/governance/                   @microsoft/accelerator-governance-board
+# Architecture + WAF patterns — eng + partner delivery
+/content/patterns/                  @microsoft/accelerator-eng @microsoft/smb-partner-delivery
 
 # Partner playbook + enablement — partner delivery + eng
 /docs/partner-playbook.md           @microsoft/smb-partner-delivery @microsoft/accelerator-eng

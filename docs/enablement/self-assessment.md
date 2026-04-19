@@ -1,6 +1,6 @@
 # Partner Self-Assessment
 
-> Quick test a partner org can run on itself before engaging MSFT for onboarding.
+> Quick test a partner org can run on itself before engaging Microsoft for onboarding.
 > Scoring: 1 point per "yes". Thresholds at the bottom.
 
 ## Skills
@@ -21,16 +21,16 @@
 11. [ ] We produce customer-facing runbooks on every engagement.
 12. [ ] We have an on-call rotation for customer-facing production incidents.
 13. [ ] We have an internal process for security review of customer-deployed code.
-14. [ ] We have handled at least one Azure production incident with MSFT support.
+14. [ ] We have handled at least one Azure production incident with Microsoft support.
 
 ## Customer + commercial
 15. [ ] We have identified 3+ customer opportunities for agentic AI in the next 2 quarters.
 16. [ ] Our customers typically have: data classification processes, CISO / security reviewers, Entra / AAD, an Azure footprint.
-17. [ ] We are willing to commit to the qualification bar (GitHub customer org, Rekor-signed attestations).
-18. [ ] We are willing to decline engagements that cannot meet Path B prerequisites rather than dilute the pattern.
+17. [ ] We are willing to follow the accelerator's patterns + hard invariants rather than fork them.
+18. [ ] We are willing to decline engagements that don't fit the v1 bundle matrix (or adapt them to fit).
 
 ## Scoring
 - **0–6:** not ready for the accelerator. Foundation work needed first.
-- **7–12:** ready for Path A; work with MSFT field before attempting Path B.
-- **13–15:** ready for co-delivered Path B.
-- **16–18:** ready for solo Path B; candidate for lighthouse engagements + Ring 1 pilot adoption.
+- **7–12:** ready for a sandbox / POC engagement with Microsoft field guidance.
+- **13–15:** ready for a co-delivered production engagement.
+- **16–18:** ready for solo production engagements; candidate for lighthouse + Ring-1 early adopter.

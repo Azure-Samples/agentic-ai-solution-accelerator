@@ -1,0 +1,147 @@
+#
+# Example Spec: Acme Manufacturing — Supplier Risk Triage
+# Pattern: B (2-agent a2a retrieval)
+# Bundle:  retrieval-prod
+#
+# This Spec matches the reference scenario in examples/scenarios/supplier-risk-triage/.
+# Copy this into your customer repo as `spec.agent.yaml` and adapt.
+#
+
+spec_version: "0.1.0"
+
+solution:
+  id: acme-supplier-risk
+  name: Acme Supplier Risk Triage
+  customer: Acme Manufacturing
+  partner: Contoso Consulting
+  industry: manufacturing
+  business_function: procurement
+  description: >
+    Procurement analysts ask natural-language questions about supplier risk
+    (financial, geopolitical, ESG, delivery history). The solution grounds
+    responses in Acme's supplier dossier library + Dun & Bradstreet extracts
+    + an AI Search index of recent news. No side-effect tools; retrieval only.
+
+bundle: retrieval-prod
+profile: prod-standard
+data_classification: confidential
+
+baseline_pin:
+  release: "1.0.0"
+  lockfile_ref: ./baseline.lock.yaml
+
+model:
+  id: gpt-5.2
+  alias: gpt-5.2-2026-03
+  region: eastus2
+  max_tokens: 4096
+  temperature: 0.2
+
+agents:
+  - id: triage
+    role: orchestrator
+    instructions_ref:
+      source: foundry-portal
+      foundry_agent_id: acme-triage-agent
+      snapshot_path: rai/snapshots/triage.md
+    tool_refs: []
+  - id: retriever
+    role: retriever
+    instructions_ref:
+      source: foundry-portal
+      foundry_agent_id: acme-retriever-agent
+      snapshot_path: rai/snapshots/retriever.md
+    tool_refs:
+      - supplier-dossier-lookup
+      - supplier-news-search
+      - dnb-extract-fetch
+
+tools:
+  - id: supplier-dossier-lookup
+    kind: foundry-builtin
+    side_effect: false
+    source:
+      connection_name: acme-sharepoint-suppliers
+    data_classification_max: confidential
+    allowed_in_profiles: [prod-standard, prod-privatelink]
+  - id: supplier-news-search
+    kind: foundry-builtin
+    side_effect: false
+    source:
+      connection_name: acme-ai-search-news
+    data_classification_max: internal
+    allowed_in_profiles: [prod-standard, prod-privatelink]
+  - id: dnb-extract-fetch
+    kind: rest-api
+    side_effect: false
+    source:
+      endpoint: https://dnb-extracts.acme.internal/v1
+      connection_name: acme-dnb-api
+    data_classification_max: confidential
+    allowed_in_profiles: [prod-standard, prod-privatelink]
+
+grounding:
+  sources:
+    - id: acme-supplier-dossiers
+      type: sharepoint
+      url_pattern: "/sites/procurement/Shared Documents/suppliers/.*"
+      acl_model: inherit-customer-entra
+      classification: confidential
+      last_snapshot_ref: rai/grounding/sharepoint-dossiers-2026-04.json
+    - id: supplier-news-index
+      type: ai-search-index
+      index_name: supplier-news-v2
+      acl_model: customer-rbac
+      classification: internal
+      last_snapshot_ref: rai/grounding/ai-search-news-2026-04.json
+    - id: dnb-extracts
+      type: rest-api
+      url_pattern: "https://dnb-extracts.acme.internal/v1/.*"
+      acl_model: partner-managed
+      classification: confidential
+
+topology:
+  agents: [triage, retriever]
+  edges:
+    - [triage, retriever]
+  human_in_loop_points: []   # retrieval-only; no side effects
+  a2a_cap: 2
+
+kpis:
+  - id: first-response-latency
+    name: P50 first-token latency
+    target: "p50 < 2s"
+    alert: warn
+  - id: groundedness
+    name: Response groundedness
+    target: "score >= 0.75"
+    alert: critical
+  - id: containment
+    name: Analyst self-service containment rate
+    target: ">= 60%"
+    alert: warn
+
+cost_ceiling:
+  monthly_usd: 2500
+  per_request_usd: 0.25
+  kill_switch_threshold_pct: 90
+
+evals:
+  quality:
+    dataset_ref: evals/quality/supplier-risk-v1.jsonl
+    metrics: [groundedness, relevance, citation-accuracy]
+    regression_threshold: 0.05
+  redteam:
+    suite: baseline-default
+    pass_threshold: 0.95
+
+rai:
+  impact_assessment_ref:
+    id: 2d1b4c7e-1a3a-4e7f-9c9e-acme-supplier-001
+    path: rai/impact-assessment.md
+    expires_at: "2026-10-01"
+    codeowners_approval_pr: "https://github.com/acme/supplier-risk-agent/pull/12"
+
+references:
+  override_files:
+    - infra/main.parameters.override.json

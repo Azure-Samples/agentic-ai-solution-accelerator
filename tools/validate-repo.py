@@ -1,13 +1,14 @@
 """validate-repo.py — Phase A stub.
 
 Repo-level conformance check. Verifies:
-  - baseline.lock.yaml present + signed
   - spec.agent.yaml present + validates (delegates to validate-spec.py)
-  - .qualification.yaml present + Rekor-verified (Path B/C)
-  - CODEOWNERS present + required-review on main
+  - baseline packages pinned per bundle (T1 core + required T2)
+  - CODEOWNERS present
+  - CI workflow runs validate-spec on PRs
   - materialized files unedited (DO-NOT-EDIT headers match hashes)
   - override files validate against override schemas
-  - no forbidden patterns (inline secrets, kill-switch bypass, cost-tracker disable)
+  - no forbidden patterns (inline secrets, kill-switch bypass, cost-tracker disable,
+    direct model SDK calls bypassing baseline.foundry_client)
 
 Phase B will implement full logic.
 """

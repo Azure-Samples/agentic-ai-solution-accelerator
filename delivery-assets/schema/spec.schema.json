@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://azure.github.io/agentic-ai-solution-accelerator/schema/spec.schema.json",
   "title": "Azure Agentic AI Solution Spec",
-  "description": "Single source of truth describing an agentic solution built on this accelerator. Materializers, validators, reconcile, and attestation all read from this document.",
+  "description": "Single source of truth describing an agentic solution built on this accelerator. Materializers + validators read from this document.",
   "type": "object",
   "version": "0.1.0",
   "required": [
@@ -46,7 +46,7 @@
     "bundle": {
       "type": "string",
       "enum": ["sandbox-only", "retrieval-prod", "retrieval-prod-pl", "actioning-prod", "actioning-prod-pl"],
-      "description": "Blessed bundle. Non-blessed combinations are not supported. See docs/supported-customization-boundary.md §2."
+      "description": "Blessed bundle. Non-blessed combinations are not supported. See docs/customization-guide.md §5."
     },
     "profile": {
       "type": "string",
@@ -83,7 +83,7 @@
       "type": "array",
       "minItems": 1,
       "maxItems": 2,
-      "description": "Agent definitions. v1 cap: 2 agents (a2a). Raising requires governance board approval.",
+      "description": "Agent definitions. v1 cap: 2 agents (a2a). See docs/customization-guide.md §5.",
       "items": {
         "type": "object",
         "required": ["id", "role", "instructions_ref"],
@@ -245,8 +245,7 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "qualification_manifest": { "type": "string", "description": "Path to .qualification.yaml (Path B/C). Omit for sandbox-only." },
-        "override_files":         { "type": "array", "items": { "type": "string" }, "description": "Partner override companions to materialized files." }
+        "override_files": { "type": "array", "items": { "type": "string" }, "description": "Partner override companions to materialized files." }
       }
     }
   }

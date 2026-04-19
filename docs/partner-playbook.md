@@ -1,286 +1,188 @@
-# Partner Playbook — Azure Agentic AI Solution Accelerator
+# Partner Playbook — Customer Engagement Flow
 
 > **Audience:** partner delivery lead, partner engineers, partner architects.
-> **Companion docs:** [`supported-customization-boundary.md`](supported-customization-boundary.md), [`rai/attestation-scope.md`](rai/attestation-scope.md), [`../compatibility/upgrade-transaction-model.md`](../compatibility/upgrade-transaction-model.md), [`governance/governance-board-charter.md`](governance/governance-board-charter.md).
-> **Companion chat mode:** `.github/chatmodes/delivery-guide.chatmode.md` — use it in VS Code; it reads this playbook's phase front-matter.
+> **Format:** phase-by-phase guidance. No formal sign-off gates. Partners own the engagement end-to-end.
 
-This is a **single-track, phase-gated playbook**. One workflow for all engagements. Different customers move through it at different velocities, but the phases and gates are identical. No role-split "SA track vs engineer track" — different skills show up in different phases.
-
-The playbook sits beside — not inside — [reference docs](supported-customization-boundary.md). When a phase needs deep reference, it links out.
+> **Note:** earlier drafts gated engagements on Microsoft-signed qualification + attestation. In the current model, Microsoft does not gate your engagement. These phases are *recommendations* based on what reliably works. Use them as a checklist, adapt to your customer.
 
 ---
 
-## 0. Paths at a glance
+## Phase 1 — Scope
 
-| Path | Bundle(s) | What it gets you | Qualification bar |
-|---|---|---|---|
-| **Path A — Sandbox / guided-demo** | `sandbox-only` | Demos, POCs, certification dry-run | Ack of limits + sandbox isolation (see §6) |
-| **Path B — Enterprise (first production)** | `retrieval-prod`, `retrieval-prod-pl`, `actioning-prod`, `actioning-prod-pl` | Attested production deployment | Full `.qualification.yaml` + GitHub review + Rekor entry |
-| **Path C — Expansion** | As Path B, for existing customer | Additional agents / tools / grounding on top of prior Path B | Prior valid attestation + new qualification for expansion scope |
+**Goal:** align customer + partner on what we're building + how we'll judge success.
 
----
+**Activities**
+- Run a 30–60 minute exec intro with the customer sponsor.
+- Use [`docs/templates/SoW.md`](templates/SoW.md) to document scope + responsibilities.
+- Pick a **bundle** (`sandbox-only`, `retrieval-prod`, `retrieval-prod-pl`, `actioning-prod`, `actioning-prod-pl`).
+- Pick a **profile** (`dev-sandbox`, `guided-demo`, `prod-standard`, `prod-privatelink`).
+- Pick a **reference scenario** closest to your customer's case.
+- Document key decisions using [`docs/templates/decisions-template.md`](templates/decisions-template.md).
 
-## 1. Phase 1 — Exec intro
+**Outputs**
+- `docs/engagement-brief.md` in your customer repo (1 page)
+- Bundle + profile chosen
+- Key decisions recorded
 
-**Entry criteria:** a customer sponsor has agreed to a 30-minute intro.
-
-**Decisions:**
-- Is this a real agentic AI opportunity or a traditional workflow?
-- Is the customer willing to commit to either Path A (sandbox) or the qualification bar of Path B?
-
-**Outputs:**
-- 1-page engagement brief in `docs/engagement-brief.md`
-- Bundle shortlist (1–2 candidates)
-- Proposed path (A / B)
-
-**Sign-off:** customer sponsor + partner delivery lead email ack. Not a legal document.
-
-**Aids:** `docs/templates/exec-intro-deck.md` (skeleton), `discovery/use-case-canvas.md`.
+**Common issues**
+- Customer wants features that require a new bundle → rescope within existing 5 bundles + parameter flags.
+- Customer classifies data as restricted + wants public network → steer to `*-pl` bundles.
 
 ---
 
-## 2. Phase 2 — 60-minute quickstart (sandbox-only, guarded)
+## Phase 2 — Design
 
-> ⚠️ **LOUD LABEL.** The 60-minute quickstart runs in the `sandbox-only` bundle **only**. It is NOT a replacement for qualification. It does NOT produce an attestation. Nothing built here may move to production without completing Phase 3 (Qualify) and later phases.
+**Goal:** land architecture + RAI posture + Spec before writing code.
 
-**Entry criteria:**
-- Phase 1 exec intro complete.
-- Partner has a dedicated sandbox Azure subscription **or** MG-scoped policy assignment (per `supported-customization-boundary.md` §2, referencing plan §6).
-- Guided-demo fallback accepted in writing if dedicated isolation not available.
+**Activities**
+- Read [`content/patterns/architecture/`](../content/patterns/architecture) — topology patterns (single-agent vs 2-agent a2a, retrieval-only vs actioning, HITL placement).
+- Read [`content/patterns/waf-alignment/`](../content/patterns/waf-alignment) — per-pillar decisions.
+- Read [`content/patterns/rai/`](../content/patterns/rai) — content filter, groundedness, red-team evals, HITL.
+- Hold RAI scoping meeting with customer using [`docs/templates/rai-scoping-minutes-template.md`](templates/rai-scoping-minutes-template.md).
+- Draft `spec.agent.yaml` — start from the closest example in [`examples/specs/`](../examples/specs).
+- Run `python tools/validate-spec.py path/to/spec.agent.yaml` until clean.
 
-**Decisions:**
-- Which reference scenario to demonstrate (supplier-risk / itops-triage / knowledge-concierge)?
-- Which customer-facing failure mode to show (HITL rejecting a bad tool call, cost ceiling hit, red-team eval trigger)?
+**Outputs**
+- Architecture sketch (diagram + topology choice)
+- RAI scoping minutes
+- Validated `spec.agent.yaml`
+- Decision records for material choices (network, identity, data classification)
 
-**Outputs:**
-- Running demo in sandbox subscription.
-- Customer-witnessed run of at least one supportability gate (eval regression, cost ceiling, kill switch, or HITL rejection).
-- Post-demo memo: customer interest level, bundle candidate, estimated Path B qualification effort.
-
-**Sign-off:** partner delivery lead signs that quickstart was completed AND that customer received the loud-label disclaimer in writing.
-
-**Aids:** `packs/starter/`, azd templates under `azd-templates/sandbox-only/`.
-
-**Explicit non-goals:**
-- Not a reference implementation of the customer's production use case.
-- Not a basis for "we'll just harden this later."
-- No attestation issued. No support coverage beyond sandbox.
+**Common issues**
+- Spec validator fails on `side_effect: true` tool + `retrieval-*` bundle → switch to `actioning-*` bundle or remove the tool.
+- Grounding source missing `acl_model` or `classification` → ask the customer; these can't be guessed.
+- Topology > 2 agents → split the problem or add the second capability as a second engagement later.
 
 ---
 
-## 3. Phase 3 — Qualify (Path A ack OR Path B/C qualification)
+## Phase 3 — Scaffold
 
-### 3a. Path A ack (Sandbox/guided-demo only)
+**Goal:** stand up a correct customer repo.
 
-**Entry criteria:** Phase 2 complete.
+**Activities (Phase A — manual today)**
+1. Create a new GitHub repo for the customer.
+2. Copy the chosen reference scenario from [`examples/scenarios/<scenario>/`](../examples/scenarios).
+3. Copy [`.github/copilot-instructions.md`](../.github/copilot-instructions.md) and [`.github/chatmodes/`](../.github/chatmodes) into the new repo's `.github/`.
+4. Copy the chosen azd template from [`examples/azd-templates/<bundle>/`](../examples/azd-templates) into `infra/`.
+5. Pin `azure-agentic-baseline` + required T2 packages in your `pyproject.toml`.
+6. Wire a CI workflow that runs `validate-spec` on every PR.
+7. Drop a CODEOWNERS file with branch protection expectations.
+8. Place the Spec at repo root as `spec.agent.yaml`.
+9. Commit initial scaffold to `main`.
 
-**Decisions:**
-- Continue on Path A indefinitely? (Valid, e.g., ongoing partner certification work.)
+**Activities (Phase B — once scaffolder lands)**
+```bash
+baseline new-customer-repo <customer-name> --bundle <bundle> --scenario <scenario>
+```
+One command produces all of the above.
 
-**Outputs:**
-- `.qualification.yaml` with `path: A` + sandbox ack fields (no customer data, no "hours" claim unless partner-certified + assisted-first).
-
-**Sign-off:** partner delivery lead.
-
-### 3b. Path B/C qualification
-
-**Entry criteria:** customer has agreed to engage on production.
-
-**Decisions** (all required, each a decision record in `docs/decisions/`):
-1. **Data classification** — customer-internal / confidential / restricted. Customer-CISO-delegate signs off.
-2. **Network topology** — `prod-standard` or `prod-privatelink`. Drives bundle.
-3. **Identity model** — customer-entra / customer-entra-b2b / partner-federated.
-4. **RAI IA scoping** — scope of use cases, HITL points, groundedness thresholds, side-effect tools. Minutes in `rai/scoping-minutes.md`.
-5. **Security review path** — customer-internal / joint / msft-assisted.
-6. **Operating model** — partner-managed / customer-managed / joint.
-
-**Outputs:**
-- `.qualification.yaml` fully populated + validator-clean.
-- GitHub PR with required CODEOWNERS reviews approved.
-- OIDC-signed `qualify.yml` workflow run with Rekor UUID captured.
-- Governance board notified for any high-severity waiver requests.
-
-**Sign-off:**
-- `prerequisites_signed_by` = partner-lead + customer-sponsor (both; validator enforces).
-- Approval SHAs + numeric actor IDs recorded.
-
-**Aids:** `discovery/qualification-matrix.md`, `discovery/rai-impact-assessment.md`, `docs/templates/decisions-template.md`, `docs/enablement/customer-github-onboarding.md` (if customer lacks GitHub org).
-
-**Exit gate:** validator passes on `.qualification.yaml`; Rekor entry live; attestation-issue prerequisite met.
+**Outputs**
+- Customer repo on `main` with CI green on first commit
+- IDE kit in place for Copilot
+- Spec validated
 
 ---
 
-## 4. Phase 4 — Spec
+## Phase 4 — Vibecode
 
-**Entry criteria:** Phase 3 qualification complete (or Path A ack).
+**Goal:** build the customer's business logic using Copilot in VS Code, within the Spec contract.
 
-**Decisions:**
-- Agent count (cap 2 for v1 a2a).
-- Tool set (which are `side_effect: true`).
-- Grounding sources (IDs, types, URL patterns, ACL models, classifications).
-- KPIs + quality thresholds + cost ceiling + red-team eval set.
+**Activities**
+- Open the customer repo in VS Code with GitHub Copilot enabled.
+- Use `@delivery-guide` chat mode for orchestration questions.
+- Implement agent modules under `src/agents/<agent_name>/` following the 4-file pattern (`prompt.py`, `tools.py`, `transform.py`, `validate.py`).
+- Implement tool wrappers — all tool calls go through `baseline.foundry_client`.
+- Implement grounding glue against sources declared in Spec.
+- Author evals under `evals/` — quality + red-team suites, both required.
+- Snapshot agent instructions from Foundry portal into `rai/snapshots/` whenever they change.
+- Run `validate-spec` + local CI on every push.
 
-**Outputs:**
-- `spec.agent.yaml` validated against `spec.schema.json`.
-- RAI IA document with immutable UUID + 180d expiry.
-- Materialized params + evals + dashboards + alerts files (DO-NOT-EDIT headers in place).
-- Override companion files (`.override.yaml|json`) where the partner needs to extend.
+**What Copilot should do (because instructions tell it to)**
+- Use `baseline.foundry_client` for every Foundry call.
+- Wrap every side-effect tool through `baseline-actions` + `baseline-hitl`.
+- Declare new tools in Spec before writing implementation.
+- Add kill-switch + cost-tracker wiring on model calls.
+- Generate evals alongside code.
 
-**Sign-off:** partner delivery lead + customer-sponsor (CODEOWNERS on `spec.agent.yaml`).
-
-**Aids:** `specs/examples/` (3 reference specs), `.github/chatmodes/delivery-guide.chatmode.md`.
-
-**Exit gate:** `baseline validate-spec` green; materializers run clean; bundle↔profile pairing valid; side-effect tools paired with `actioning-*` bundle.
-
----
-
-## 5. Phase 5 — Scaffold
-
-**Entry criteria:** Phase 4 Spec validated.
-
-**Decisions:**
-- Customer repo location (customer org / partner org with customer CODEOWNERS team).
-- azd template bundle path (`azd-templates/<bundle>/`).
-
-**Outputs:**
-- Customer repo created via `baseline new-customer-repo` (scaffolds structure + CODEOWNERS + workflows + azd template overlay).
-- `baseline.lock.yaml` initialized.
-- First CI run green (validator + pip-audit + cost-tag + preflight).
-- Sandbox environment deployed via `azd up` in a non-prod subscription for local iteration.
-
-**Sign-off:** partner engineer lead.
-
-**Exit gate:** PR merged to `main` with initial scaffold; CI green; sandbox deploy reachable.
+**Common issues**
+- Copilot tries to put agent instructions in Python. Stop it. Instructions live in Foundry portal; code references by agent ID.
+- Copilot suggests inline secrets. Stop it. Use Key Vault references via managed identity.
+- Copilot skips HITL for a side-effect tool to move fast. Validator catches; fix properly.
 
 ---
 
-## 6. Phase 6 — Implement (vibecoding with Copilot)
+## Phase 5 — Deploy
 
-**Entry criteria:** Phase 5 scaffold complete.
+**Goal:** get the solution running in the customer's Azure environment.
 
-**Decisions:**
-- Per-agent: prompt design (in Foundry portal), tool wrappers, grounding glue, transform/validate logic.
-- Eval dataset content + red-team eval set.
+**Activities (Phase A — customer's existing flow)**
+- Use whatever Azure deploy path the customer already has (azd, bicep, terraform, manual).
+- Ensure MI-based identity + KV-backed secrets + App Insights wiring match Spec.
+- Deploy to sandbox first; validate evals pass in-env; then prod.
 
-**Outputs:**
-- Agent modules under `src/agents/<agent>/` following the 4-file pattern (`prompt.py`, `tools.py`, `transform.py`, `validate.py`).
-- Grounding pipelines wired to declared sources.
-- Evaluation datasets under `evals/`.
-- Unit + integration tests green.
-- CI green including eval-regression-gate and red-team-evals.
+**Activities (Phase C — once Bicep modules land)**
+```bash
+azd up
+```
 
-**Sign-off:** partner engineer lead + partner delivery lead.
+**Outputs**
+- Running solution in target subscription
+- Evals passing post-deploy
+- Telemetry flowing to App Insights
+- Runbooks staged for the ops team
 
-**Aids:** `.github/copilot-instructions.md`, `packs/<scenario>/` reference implementations, `patterns/architecture/`.
-
-**Exit gate:** CI green on all supportability gates; `baseline reconcile` clean against sandbox deploy; RAI IA matches implementation.
-
----
-
-## 7. Phase 7 — Attest
-
-**Entry criteria:** Phase 6 implement complete.
-
-**Decisions:**
-- Capture window chosen (need to deploy within 24h of capture).
-- Any drift flagged in `baseline reconcile`: accept (auto-adopt), reconcile (warn), or re-attest (block).
-
-**Outputs:**
-- `baseline attest --capture` → signed snapshot under `.baseline/snapshots/<ts>/`.
-- `baseline attest --issue` → OIDC-signed in-toto attestation + Rekor UUID.
-- Attestation ID recorded in `.baseline/attestations/<ts>.json` + `baseline.lock.yaml`.
-
-**Sign-off:** partner delivery lead (automated by OIDC-signed workflow; human trigger via PR merge).
-
-**Exit gate:** attestation issued; capture-to-deploy window open (24h).
-
-See `docs/rai/attestation-scope.md` §4 for the full sequence.
+**Common issues**
+- SKU regional availability — especially private-link SKUs for `*-pl` bundles.
+- Customer Entra tenant RBAC doesn't grant Foundry data-plane to the deploy SP — pre-flight this.
 
 ---
 
-## 8. Phase 8 — Deploy
+## Phase 6 — Day-2 ownership
 
-**Entry criteria:** Phase 7 attestation issued; < 24h since capture.
+**Goal:** hand off to customer ops. Partner stays on the pager for an agreed window; customer owns after that.
 
-**Decisions:**
-- Canary percentage (default 10%).
-- Traffic-shift cadence.
-- Go / no-go at each canary stage.
+**Activities**
+- Walk through each runbook in [`docs/runbooks/`](runbooks) with customer ops.
+- Run a sev-1 tabletop.
+- Document the ownership matrix (who pages whom, escalation path).
+- Confirm upgrade cadence + who's responsible for tracking baseline releases.
+- Confirm cost + RAI posture monitoring ownership.
 
-**Outputs:**
-- `baseline deploy --verify <attestation-id>` green.
-- Bicep whatIf reviewed + merged.
-- Canary revision deployed; health + eval-in-prod gates green.
-- Traffic shifted; post-deploy reconcile fingerprint matches.
-
-**Sign-off:** partner delivery lead + customer-sponsor (prod go-live).
-
-**Exit gate:** 100% traffic on new revision; no open sev-1/sev-2 incidents; 24h stability observed.
+**Outputs**
+- Runbook walkthrough completed
+- Sev-1 tabletop notes
+- `docs/day2-ownership.md` in customer repo
 
 ---
 
-## 9. Phase 9 — Day-2 customer ops handoff
+## Cross-phase guidance
 
-> This phase is non-optional. Skipping it is the single most common cause of downstream escalation.
+### Waivers (informal)
+When you need to diverge from a pattern temporarily (e.g., alert threshold raised during a load test), document it:
+- In the customer repo: `docs/waivers/<short-name>.md` with rationale + expiry.
+- Review quarterly. Expired waivers without renewal signal technical debt.
 
-**Entry criteria:** Phase 8 deploy stable for 7 calendar days.
+### RAI scoping refresh
+Material changes to topology / grounding / tools / model → hold a short scoping refresh + update the RAI minutes. Don't let drift accumulate.
 
-**Decisions:**
-- Who holds the pager? (partner / customer / joint).
-- Sev-1 drill schedule.
-- Waiver register transfer (customer receives copy + active expiry dates).
-- Baseline upgrade cadence ownership.
+### Baseline upgrades
+- Watch the `baseline` release feed.
+- Upgrade within 2 minor versions of current. Older than that, patterns + security expectations may have shifted.
+- Run the validator + eval suite after every upgrade.
 
-**Outputs:**
-- Completed runbook walkthrough using `docs/runbooks/` (first-failure-modes, cost-excursion, eval-regression, portal-drift, HITL-backlog, kill-switch-trigger).
-- Sev-1 tabletop exercise conducted + documented.
-- Customer acknowledges `SUPPORT.md` intake workflow (attestation ID required).
-- Customer-facing Day-2 ownership matrix in `docs/day2-ownership.md`.
-
-**Sign-off:** partner delivery lead + customer-sponsor + customer-ops-lead.
-
-**Exit gate:** customer-ops-lead acknowledges readiness to receive a sev-1 page.
+### Bundle variant requests from customer
+- Variants are Spec parameters + profiles, NOT new bundles. See [`docs/customization-guide.md`](customization-guide.md) §5.
+- "Give me retrieval-prod with cache" → add `baseline-cache` T3 dep; perf SLOs that depend on cache hit rate are on you.
+- "3-agent graph" → not in v1. Split the problem.
 
 ---
 
-## 10. Phase 10 — Shared deep reference (ongoing)
+## Velocity expectations (honest)
 
-**Not a gated phase.** Pointers the engagement returns to throughout delivery + post-go-live:
+These are observations, not commitments.
 
-- `docs/supported-customization-boundary.md` — invariants.
-- `docs/rai/attestation-scope.md` — attestation lifecycle.
-- `compatibility/upgrade-transaction-model.md` — upgrade semantics + emergency patch lane.
-- `compatibility/drift-classification.yaml` — drift rules.
-- `docs/governance/*` — waiver + board + logs.
-- `patterns/waf-alignment/` — WAF pillar mapping.
+- **Sandbox demo:** hours for a partner with scaffolding ready; days if starting from zero.
+- **First prod deploy:** weeks to months. Dominated by customer RAI scoping, security review, and data classification — not by accelerator tooling.
+- **Second prod deploy for the same customer:** much faster; patterns + scaffold + Copilot reuse compounds.
 
----
-
-## Cross-phase policies
-
-### Waivers
-Tracked in `.baseline/waivers.yaml`. Max 5 active. 90d expiry. Severity per rubric. See `governance/waiver-severity-rubric.md`.
-
-### RAI IA refresh
-180-day expiry. Refresh must happen BEFORE expiry; expired IA blocks any re-attestation.
-
-### Security patches
-Emergency lane: 7 calendar days partner adoption window. `baseline doctor` surfaces patch urgency.
-
-### Support intake
-Every ticket requires attestation ID. See `SUPPORT.md` + `docs/support-intake-workflow.md`.
-
-### Bundle variants
-Not field-approvable. Route through governance board per `supported-customization-boundary.md` §5.
-
----
-
-## Velocity expectations (NOT SLAs)
-
-Velocity varies materially by customer maturity. These are reference points, not commitments.
-
-- **Path A sandbox** — hours IF partner-certified + dedicated isolation + assisted-first-deployment. Otherwise: days, no "hours" claim.
-- **Path B first deploy** — weeks to months, dominated by qualification + security review cadence, not by accelerator velocity.
-- **Path C expansion** — hours to days per expansion once qualified (validator-enforced prereqs).
-
-The accelerator compresses the engineering phases, not the governance phases. If qualification takes 8 weeks, the accelerator cannot make it 8 days.
+The accelerator compresses engineering phases. It does not compress governance phases. If your customer's security review takes 8 weeks, no accelerator changes that.

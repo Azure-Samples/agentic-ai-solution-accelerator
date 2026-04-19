@@ -1,0 +1,12 @@
+name: sandbox-only
+metadata:
+  template: agentic-ai-accelerator/sandbox-only@0.1.0
+services:
+  api:
+    project: ./src
+    language: python
+    host: containerapp
+hooks:
+  preprovision:
+    shell: sh
+    run: echo "⚠ sandbox-only — NOT production. Use a dedicated dev subscription."

@@ -1,7 +1,7 @@
 [project]
 name = "azure-agentic-baseline-cache"
 version = "0.1.0"
-description = "T3 reference/example-only: Redis-backed result cache. No attestation support; no cache-dependent SLOs permitted."
+description = "T3 reference/example-only: Redis-backed result cache. No cache-dependent SLOs permitted in customer KPIs."
 requires-python = ">=3.11"
 license = { text = "MIT" }
 dependencies = ["azure-agentic-baseline>=0.1.0", "redis>=5.0"]
