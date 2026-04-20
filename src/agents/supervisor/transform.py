@@ -14,4 +14,7 @@ def transform_response(raw: str | dict[str, Any]) -> dict[str, Any]:
         "recommended_outreach": data.get("recommended_outreach", {}),
         "next_steps": list(data.get("next_steps", []))[:3],
         "requires_approval": list(data.get("requires_approval", [])),
+        # Map of tool_name -> kwargs. The workflow reads this to call
+        # side-effect tools; without it the run short-circuits gracefully.
+        "tool_args": dict(data.get("tool_args", {})),
     }

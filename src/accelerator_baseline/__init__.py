@@ -8,7 +8,7 @@ verifying shape, not by a separate package release.
 
 from .cost import UsageSample, estimate_call_cost, record_call_cost
 from .evals import Acceptance, EvalResult, evaluate_acceptance
-from .hitl import HITLDenied, checkpoint
+from .hitl import HITLDenied, HITLMisconfigured, checkpoint
 from .killswitch import KillSwitchEngaged, assert_enabled
 from .telemetry import KPI_EVENTS, Event, emit_event
 
@@ -17,6 +17,7 @@ __all__ = [
     "Event",
     "EvalResult",
     "HITLDenied",
+    "HITLMisconfigured",
     "KPI_EVENTS",
     "KillSwitchEngaged",
     "UsageSample",

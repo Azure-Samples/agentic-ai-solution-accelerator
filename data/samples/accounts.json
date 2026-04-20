@@ -1,0 +1,50 @@
+[
+  {
+    "id": "contoso-ltd-01",
+    "content": "Contoso Ltd is a discrete manufacturer of automotive components headquartered in Detroit. In Q1 2026 they announced a $180M investment to modernize their supplier network and reduce inbound logistics volatility. CEO Jane Price cited supply-chain resilience as the #1 board priority.",
+    "source": "https://investors.contoso.example/press/q1-2026",
+    "company_name": "Contoso Ltd",
+    "industry": "Manufacturing & Industrial",
+    "last_refreshed": "2026-03-14T00:00:00Z"
+  },
+  {
+    "id": "contoso-ltd-02",
+    "content": "Contoso Ltd signed a partnership with a large cloud provider in February 2026 to move ERP workloads to a hybrid architecture. The program is led by CIO Mark Hall and is scheduled to complete in 18 months.",
+    "source": "https://contoso.example/newsroom/erp-hybrid",
+    "company_name": "Contoso Ltd",
+    "industry": "Manufacturing & Industrial",
+    "last_refreshed": "2026-02-21T00:00:00Z"
+  },
+  {
+    "id": "fabrikam-financial-01",
+    "content": "Fabrikam Financial is a Tier-2 regional bank with 3,400 employees. Following a 2025 consent order, Fabrikam is investing heavily in KYC automation and back-office process re-engineering. CTO Priya Ramanathan announced in March 2026 that agentic-AI pilots will begin in claims and customer service.",
+    "source": "https://fabrikam.example/ir/march-2026-earnings",
+    "company_name": "Fabrikam Financial",
+    "industry": "Financial Services",
+    "last_refreshed": "2026-03-02T00:00:00Z"
+  },
+  {
+    "id": "fabrikam-financial-02",
+    "content": "Fabrikam Financial operates in a highly regulated environment with explicit data-residency obligations in the EU. Any AI rollout must run with customer-managed keys and private networking, and is subject to model-risk management review.",
+    "source": "https://fabrikam.example/compliance/ai-policy",
+    "company_name": "Fabrikam Financial",
+    "industry": "Financial Services",
+    "last_refreshed": "2026-01-11T00:00:00Z"
+  },
+  {
+    "id": "adventure-works-01",
+    "content": "Adventure Works is a mid-market outdoor-goods retailer with 4,800 employees across North America. Head of Digital Sarah Lee announced a 2026 initiative to move from batch analytics to real-time propensity-to-buy models across their 230 storefronts and e-commerce site.",
+    "source": "https://adventure-works.example/press/2026-plan",
+    "company_name": "Adventure Works",
+    "industry": "Retail & Consumer Goods",
+    "last_refreshed": "2026-02-04T00:00:00Z"
+  },
+  {
+    "id": "adventure-works-02",
+    "content": "Adventure Works' buying committee typically includes the Head of Digital, VP Merchandising, and the CIO. Pilots are evaluated against a 90-day revenue-lift measurement bar.",
+    "source": "https://adventure-works.example/partners/evaluation-framework",
+    "company_name": "Retail & Consumer Goods",
+    "industry": "Retail & Consumer Goods",
+    "last_refreshed": "2026-01-18T00:00:00Z"
+  }
+]

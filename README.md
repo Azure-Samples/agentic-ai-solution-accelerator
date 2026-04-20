@@ -38,7 +38,7 @@ agentic-ai-solution-accelerator/
 │   ├── agents/                   three-layer pattern per agent (prompt, transform, validate)
 │   ├── tools/                    HITL-gated side-effect tools (CRM write, email send)
 │   ├── retrieval/                Azure AI Search grounding
-│   ├── workflow/                 WorkflowBuilder supervisor + aggregator
+│   ├── workflow/                 supervisor + parallel workers + HITL gate (asyncio fan-out; WorkflowBuilder migration on roadmap)
 │   └── accelerator_baseline/     partner-owned primitives: telemetry, HITL, killswitch, evals, cost
 ├── infra/                        Bicep + azd (Foundry, Search, KV, ACA, App Insights, dashboards)
 ├── evals/

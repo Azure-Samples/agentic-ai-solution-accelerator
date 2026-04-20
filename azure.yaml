@@ -19,10 +19,24 @@ infra:
   module: main
 hooks:
   postprovision:
-    shell: sh
-    run: |
-      echo "Provisioning complete. Run 'azd deploy' to push the agent."
-      echo "See QUICKSTART.md step 4 for next actions."
+    posix:
+      shell: sh
+      run: |
+        set -e
+        echo "[postprovision] creating/verifying Foundry agents..."
+        python scripts/foundry-bootstrap.py
+        echo "[postprovision] creating/seeding AI Search 'accounts' index..."
+        python scripts/seed-search.py
+        echo "[postprovision] done. Run 'azd deploy' to push the agent."
+    windows:
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+        Write-Host "[postprovision] creating/verifying Foundry agents..."
+        python scripts/foundry-bootstrap.py
+        Write-Host "[postprovision] creating/seeding AI Search 'accounts' index..."
+        python scripts/seed-search.py
+        Write-Host "[postprovision] done. Run 'azd deploy' to push the agent."
   postdeploy:
     shell: sh
     run: |

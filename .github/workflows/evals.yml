@@ -12,36 +12,25 @@ permissions:
 jobs:
   evals:
     runs-on: ubuntu-latest
-    # Only run evals when the deployed dev environment is reachable.
-    if: ${{ vars.EVALS_API_URL != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - name: Install deps
-        run: pip install httpx
+        run: pip install httpx pyyaml
+      - name: Enforce EVALS_API_URL is configured
+        # Fail early: a private pilot that's green because evals never ran is
+        # worse than an obvious "please configure this" error.
+        run: |
+          if [ -z "${{ vars.EVALS_API_URL }}" ]; then
+            echo "::error::repo variable EVALS_API_URL is not set; acceptance cannot be verified."
+            exit 1
+          fi
       - name: Quality evals
         run: python evals/quality/run.py --api-url "${{ vars.EVALS_API_URL }}"
       - name: Red-team evals
         run: python evals/redteam/run.py --api-url "${{ vars.EVALS_API_URL }}"
-      - name: Enforce acceptance
-        run: |
-          python - <<'PY'
-          import json, pathlib, sys
-          import yaml
-          m = yaml.safe_load(pathlib.Path('accelerator.yaml').read_text())
-          acc = m.get('acceptance', {})
-          q = [json.loads(l) for l in pathlib.Path('evals/quality/results.jsonl').read_text().splitlines() if l.strip()]
-          r = [json.loads(l) for l in pathlib.Path('evals/redteam/results.jsonl').read_text().splitlines() if l.strip()]
-          failures = []
-          if q:
-              avg = sum((x.get('score') or 0) for x in q)/len(q)
-              if avg < acc.get('quality_threshold', 0):
-                  failures.append(f"quality avg {avg:.3f} < {acc['quality_threshold']}")
-          if any(not x['passed'] for x in r):
-              failures.append(f"{sum(1 for x in r if not x['passed'])} red-team failures")
-          if failures:
-              print('\n'.join(failures)); sys.exit(1)
-          print('ACCEPT: all gates passed')
-          PY
+      - name: Enforce full acceptance block from accelerator.yaml
+        run: python scripts/enforce-acceptance.py
+

@@ -1,9 +1,15 @@
 """Human-in-the-Loop checkpoint primitive.
 
-Every side-effect tool MUST call ``checkpoint`` before executing. In dev, a
-console reviewer is the default; in production, the ``HITL_APPROVER_ENDPOINT``
-env var points to a partner-hosted approval service (Teams bot, ITSM queue,
-web UI).
+Every side-effect tool MUST call ``checkpoint`` before executing.
+
+- In **production** an approver endpoint is required. Set
+  ``HITL_APPROVER_ENDPOINT`` to a partner-hosted approval service (Teams bot,
+  ITSM queue, web UI). The checkpoint blocks until a decision arrives.
+- In **development** (smoke tests, local runs), set ``HITL_DEV_MODE=1`` to
+  enable the console reviewer which auto-approves with a loud warning.
+- With neither set, ``checkpoint`` **fails closed** — it will NOT silently
+  approve actions. This is deliberate to prevent a misconfigured production
+  environment from side-effecting without a human in the loop.
 
 Policy format (from accelerator.yaml + per-tool):
     always           — block until a human approves
@@ -33,6 +39,14 @@ class HITLDenied(Exception):
     """Raised when a human reviewer rejects the action."""
 
 
+class HITLMisconfigured(Exception):
+    """Raised when side-effect tools run without any configured approver.
+
+    Fail-closed: a production deployment that forgot to set
+    ``HITL_APPROVER_ENDPOINT`` must not silently approve side-effect calls.
+    """
+
+
 async def checkpoint(
     *,
     tool: str,
@@ -53,10 +67,21 @@ async def checkpoint(
         return
 
     approver = os.getenv("HITL_APPROVER_ENDPOINT")
-    if not approver:
+    dev_mode = os.getenv("HITL_DEV_MODE", "").lower() in ("1", "true", "on")
+
+    if approver:
+        approved = await _remote_review(approver, tool, args, reviewer_context or {})
+    elif dev_mode:
         approved = await _console_review(tool, args, reviewer_context or {})
     else:
-        approved = await _remote_review(approver, tool, args, reviewer_context or {})
+        # Fail closed — never silently approve a side-effect in prod.
+        emit_event(Event(name="tool.hitl_misconfigured",
+                         args_redacted=dict(args), external_system=tool,
+                         ok=False, error="no approver and not dev mode"))
+        raise HITLMisconfigured(
+            f"HITL required for tool={tool} but neither HITL_APPROVER_ENDPOINT "
+            f"is set nor HITL_DEV_MODE=1. Refusing to execute side-effect."
+        )
 
     if approved:
         emit_event(Event(name="tool.hitl_approved", args_redacted=dict(args),
@@ -91,10 +116,11 @@ def _policy_requires_approval(policy: str, args: Mapping[str, Any]) -> bool:
 # ---------------------------------------------------------------------------
 async def _console_review(tool: str, args: Mapping[str, Any],
                           ctx: Mapping[str, Any]) -> bool:
-    # Dev-only console approver. In prod, set HITL_APPROVER_ENDPOINT.
-    logger.warning("HITL console review (DEV ONLY) — tool=%s args=%s",
+    # DEV-ONLY. Reachable only when HITL_DEV_MODE=1 is explicitly set AND
+    # no HITL_APPROVER_ENDPOINT is configured.
+    logger.warning("HITL_DEV_MODE console review — tool=%s args=%s",
                    tool, json.dumps(dict(args), default=str))
-    return True  # dev fallback; override with HITL_APPROVER_ENDPOINT in prod
+    return True
 
 
 async def _remote_review(endpoint: str, tool: str, args: Mapping[str, Any],

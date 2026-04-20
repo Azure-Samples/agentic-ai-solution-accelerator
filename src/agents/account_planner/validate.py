@@ -6,10 +6,14 @@ from typing import Any
 
 REQUIRED_FIELDS = (
     "company_overview", "industry", "recent_news",
-    "strategic_initiatives", "buying_committee", "citations",
+    "strategic_initiatives", "technology_landscape",
+    "buying_committee", "opportunity_signals", "citations",
 )
 
-FORBIDDEN_FIELDS = ("icp_fit_score", "competitors", "outreach_subject")
+FORBIDDEN_FIELDS = (
+    "fit_score", "maturity_level", "aws_intensity",
+    "nnr_opportunities", "outreach_subject",
+)
 
 
 def validate_response(response: dict[str, Any]) -> tuple[bool, str]:

@@ -50,11 +50,10 @@ except Exception:  # pragma: no cover — SDK may not be installed in lint envs
     AzureAIClient = None  # type: ignore
     WorkflowBuilder = None  # type: ignore
 
-from ..accelerator_baseline.hitl import checkpoint
 from ..accelerator_baseline.killswitch import assert_enabled
 from ..accelerator_baseline.telemetry import Event, emit_event
 from ..agents import (
-    account_researcher,
+    account_planner,
     competitive_context,
     icp_fit_analyst,
     outreach_personalizer,
@@ -79,32 +78,44 @@ class SalesResearchWorkflow:
         emit_event(Event(name="request.received",
                          args_redacted={"company": request["company_name"]}))
 
-        # 1. Supervisor plans (returns a context the workers share).
+        # 1. Supervisor plans (scopes which workers to run for this request).
         yield {"type": "status", "stage": "supervisor.planning"}
         plan = await self._invoke_agent(
             supervisor.AGENT_NAME, supervisor.build_prompt(request)
         )
 
-        account_profile: dict[str, Any] = {}
-        # 2. Parallel worker fan-out.
+        # 2. Account Planner runs FIRST — downstream workers need the real
+        #    account profile, not a placeholder. Retrieval grounding is
+        #    attached here so the agent can cite from the ``accounts`` index.
+        yield {"type": "status", "stage": "account_planner"}
+        grounding_chunks = await self._retrieve_grounding(
+            request["company_name"]
+        )
+        account_profile = await self._run_worker(
+            account_planner,
+            {"company_name": request["company_name"],
+             "domain": request.get("domain", ""),
+             "context_hints": request.get("context_hints", []),
+             "grounding_chunks": grounding_chunks},
+        )
+        yield {"type": "partial", "account_profile": account_profile}
+
+        # 3. ICP-Fit and Competitive-Context run in parallel against the
+        #    account profile.
         yield {"type": "status", "stage": "workers.parallel"}
-        acct, icp, comp = await asyncio.gather(
+        icp, comp = await asyncio.gather(
             self._run_worker(
-                account_researcher, {"company_name": request["company_name"],
-                                     "domain": request.get("domain", ""),
-                                     "context_hints": request.get("context_hints", [])},
-            ),
-            self._run_worker(
-                icp_fit_analyst, {"account_profile": "<placeholder>",
+                icp_fit_analyst, {"account_profile": account_profile,
                                   "icp_definition": request["icp_definition"]},
             ),
             self._run_worker(
-                competitive_context, {"account_profile": "<placeholder>",
+                competitive_context, {"account_profile": account_profile,
                                       "our_solution": request["our_solution"]},
             ),
         )
-        account_profile = acct
 
+        # 4. Outreach Personalizer depends on all three earlier worker outputs.
+        yield {"type": "status", "stage": "outreach_personalizer"}
         outreach = await self._run_worker(
             outreach_personalizer,
             {"account_profile": account_profile,
@@ -112,10 +123,9 @@ class SalesResearchWorkflow:
              "competitive_context": comp,
              "persona": request.get("persona", "Decision maker")},
         )
-        yield {"type": "partial", "account_profile": account_profile,
-               "icp": icp, "competitive": comp, "outreach": outreach}
+        yield {"type": "partial", "icp": icp, "competitive": comp, "outreach": outreach}
 
-        # 3. Aggregator: re-invoke supervisor with all worker outputs to
+        # 5. Aggregator: re-invoke supervisor with all worker outputs to
         #    compose the final briefing (Foundry instructions define the
         #    synthesis behaviour).
         yield {"type": "status", "stage": "aggregating"}
@@ -123,15 +133,21 @@ class SalesResearchWorkflow:
             request, account_profile, icp, comp, outreach, plan
         )
 
-        # 4. Optional side-effect tools with HITL.
+        # 6. Optional side-effect tools.
+        #    HITL is enforced inside each tool module; do NOT double-gate here.
         approvals_needed = final.get("requires_approval", [])
+        tool_args_map = final.get("tool_args", {}) or {}
         for tool_name in approvals_needed:
             if tool_name not in SIDE_EFFECT_TOOLS:
                 continue
-            fn, schema = SIDE_EFFECT_TOOLS[tool_name]
-            args = final.get("tool_args", {}).get(tool_name, {})
-            await checkpoint(tool=tool_name, args=args, policy="always",
-                             reviewer_context={"briefing": final})
+            fn, _schema = SIDE_EFFECT_TOOLS[tool_name]
+            args = tool_args_map.get(tool_name, {})
+            if not args:
+                # Supervisor failed to produce tool args — surface & skip
+                # rather than silently call tools with {}.
+                yield {"type": "tool_skipped", "tool": tool_name,
+                       "reason": "no tool_args produced by supervisor"}
+                continue
             result = await fn(**args)
             yield {"type": "tool_result", "tool": tool_name, "result": result}
 
@@ -161,6 +177,38 @@ class SalesResearchWorkflow:
         emit_event(Event(name="worker.completed", ok=True,
                          external_system=module.AGENT_NAME))
         return data
+
+    async def _retrieve_grounding(self, company_name: str) -> list[dict[str, Any]]:
+        """Pull top-K grounded chunks from Azure AI Search.
+
+        Fails open to an empty list when retrieval isn't configured (so the
+        unit-test stub path still works); the agent's validator enforces
+        that any factual claim has a citation.
+        """
+        try:
+            from ..retrieval.ai_search import AccountRetriever
+        except Exception:
+            return []
+        try:
+            retriever = AccountRetriever()
+        except Exception:
+            return []
+        try:
+            chunks = await retriever.search(company_name, top=5)
+            return [
+                {"id": c.id, "content": c.content, "source": c.source,
+                 "score": c.score}
+                for c in chunks
+            ]
+        except Exception as exc:
+            emit_event(Event(name="retrieval.returned", ok=False,
+                             error=str(exc)))
+            return []
+        finally:
+            try:
+                await retriever.close()
+            except Exception:
+                pass
 
     async def _aggregate(self, request, account_profile, icp, comp, outreach,
                          plan) -> dict[str, Any]:
