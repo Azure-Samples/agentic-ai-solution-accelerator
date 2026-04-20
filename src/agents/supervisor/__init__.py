@@ -1,8 +1,9 @@
 """Supervisor — plans workers, then synthesises final briefing.
 
-Reference: SMB Agent Hub ``supervisor`` agent (supervisor-routing pattern).
-Same contract: plan → delegate → aggregate. Side-effect tools are gated
-by HITL, not called directly by the supervisor.
+Implements the supervisor-routing pattern (plan → delegate → aggregate).
+Not referencing a specific Agent Hub worker — this is the orchestration
+primitive that drives the four workers below. Side-effect tools are
+gated by HITL; the supervisor never calls them directly.
 """
 from .prompt import build_prompt
 from .transform import transform_response

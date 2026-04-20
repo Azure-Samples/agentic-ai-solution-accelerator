@@ -27,10 +27,15 @@ Do NOT reference these `.md` files at runtime. Do NOT import from them.
 
 ## Flagship agents (5)
 
-| Agent name                             | Reference (SMB Agent Hub)                |
+| Agent name                             | Agent Hub reference (partner set)        |
 |----------------------------------------|------------------------------------------|
-| `accel-sales-research-supervisor`      | `supervisor`                             |
+| `accel-sales-research-supervisor`      | none (orchestration primitive)           |
 | `accel-account-planner`                | `account_planner`                        |
 | `accel-icp-fit-analyst`                | `nnr_agent` + `portfolio_planner`        |
 | `accel-competitive-context`            | `compete_advisor` + `cloud_footprint`    |
-| `accel-outreach-personalizer`          | (loose) `content_curator` personalization |
+| `accel-outreach-personalizer`          | none (scenario-specific side-effect worker) |
+
+The partner-cited reference set is: Account Planner, Portfolio Planner,
+Zero Trust, Cloud Footprint, Compete Advisor, NNR Agent. Zero Trust is not
+used by this flagship (different scenario); it remains a candidate for a
+future pattern variant.

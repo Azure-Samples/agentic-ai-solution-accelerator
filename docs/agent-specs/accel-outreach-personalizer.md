@@ -1,8 +1,11 @@
 # Agent: accel-outreach-personalizer
 
 **Model:** gpt-5.2
-**Reference:** Loosely based on SMB Agent Hub `content_curator`
-personalization output, scoped down to a single email per briefing.
+**Reference:** none — no analog in the Agent Hub reference set used by this
+flagship (Account Planner, Portfolio Planner, Zero Trust, Cloud Footprint,
+Compete Advisor, NNR Agent). Kept as a scenario-specific side-effect
+worker so the flagship exercises the HITL + tool-invocation path. Partners
+can delete this worker if their scenario has no outreach step.
 
 ## Instructions
 

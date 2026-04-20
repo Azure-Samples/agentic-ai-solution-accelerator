@@ -1,7 +1,8 @@
 # Agent: accel-sales-research-supervisor
 
 **Model:** gpt-5.2
-**Reference:** SMB Agent Hub `supervisor` agent
+**Reference:** none — supervisor is the orchestration primitive (plan →
+delegate → aggregate pattern), not a specific Agent Hub worker.
 
 ## Instructions
 
