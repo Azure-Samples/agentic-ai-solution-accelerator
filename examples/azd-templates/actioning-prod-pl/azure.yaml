@@ -1,8 +1,0 @@
-name: actioning-prod-pl
-metadata:
-  template: agentic-ai-accelerator/actioning-prod-pl@0.1.0
-services:
-  api:
-    project: ./src
-    language: python
-    host: containerapp

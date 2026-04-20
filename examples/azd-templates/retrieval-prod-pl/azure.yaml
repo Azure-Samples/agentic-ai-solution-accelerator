@@ -1,8 +1,0 @@
-name: retrieval-prod-pl
-metadata:
-  template: agentic-ai-accelerator/retrieval-prod-pl@0.1.0
-services:
-  api:
-    project: ./src
-    language: python
-    host: containerapp

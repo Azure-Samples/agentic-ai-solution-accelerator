@@ -1,0 +1,59 @@
+# accelerator.yaml — engagement manifest
+#
+# One source of truth for the engagement. Filled by the partner during the
+# discovery workshop (or by `/scaffold-from-brief` chat mode reading
+# docs/discovery/solution-brief.md). Read by:
+#   - scripts/accelerator-lint.py (policy checks in CI)
+#   - infra/ (some fields flow to Bicep parameters)
+#   - evals/ (acceptance thresholds become CI gates)
+#   - fleet reporting (rolled up across partner engagements)
+#
+# Keep it small and stable. If it feels like a DSL, something is wrong.
+
+schema_version: "1.0"
+accelerator_version: "1.0.0"   # pins to the template version partner cloned
+
+# -----------------------------------------------------------------------------
+# solution:  WHO + WHAT — derived from docs/discovery/solution-brief.md
+# -----------------------------------------------------------------------------
+solution:
+  name: ""                     # e.g. "acme-supplier-risk-triage"
+  brief: docs/discovery/solution-brief.md   # canonical engagement doc
+  pattern: single-agent        # single-agent | supervisor-routing | chat-with-actioning
+  hitl: required               # required | optional | none
+  data_residency: unset        # unset | us | eu | apac | custom
+  identity: entra-id           # entra-id | external-id | custom
+
+# -----------------------------------------------------------------------------
+# acceptance:  MEASURABLE GATES — lint verifies each has a matching eval
+# -----------------------------------------------------------------------------
+acceptance:
+  quality_threshold: 0.0       # e.g. 0.95 agreement with golden cases
+  groundedness_threshold: 0.0  # e.g. 0.90 on RAG cases
+  p95_latency_ms: 0            # e.g. 90000
+  cost_per_call_usd: 0.0       # e.g. 0.40
+  redteam_must_pass: true      # XPIA + jailbreak suite must pass
+
+# -----------------------------------------------------------------------------
+# controls:  NON-NEGOTIABLES — enforced by lint + infra
+# -----------------------------------------------------------------------------
+controls:
+  managed_identity: true       # no keys in app code
+  key_vault: true              # all secrets referenced, never inlined
+  content_filters: iac         # iac | portal (portal is a lint failure)
+  private_endpoints: optional  # required | optional (env-dependent)
+  telemetry: required          # App Insights wired, custom events emitted
+  evals_in_ci: required        # evals/ runs on every PR
+
+# -----------------------------------------------------------------------------
+# kpis:  ROI INSTRUMENTATION — typed events emitted by accelerator_baseline.telemetry
+# -----------------------------------------------------------------------------
+kpis: []
+  # - name: review_completion_time
+  #   type: duration_ms
+  #   baseline: 14400000       # 4 hours in ms
+  #   target:   1800000        # 30 min in ms
+  # - name: escalation_rate
+  #   type: ratio
+  #   baseline: 0.15
+  #   target:   0.05
