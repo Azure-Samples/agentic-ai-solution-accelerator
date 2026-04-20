@@ -4,6 +4,7 @@ param tags object
 param identityId string
 param appInsightsConnectionString string
 param foundryEndpoint string
+param modelDeploymentName string
 param searchEndpoint string
 
 resource env 'Microsoft.App/managedEnvironments@2024-03-01' = {
@@ -50,6 +51,7 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
           env: [
             { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
             { name: 'AZURE_AI_FOUNDRY_ENDPOINT', value: foundryEndpoint }
+            { name: 'AZURE_AI_FOUNDRY_MODEL', value: modelDeploymentName }
             { name: 'AZURE_AI_SEARCH_ENDPOINT', value: searchEndpoint }
           ]
         }

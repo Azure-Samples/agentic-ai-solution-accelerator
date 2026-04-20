@@ -1,5 +1,10 @@
 name: deploy
 
+# Deploy is gated on the accelerator lint AND evals. Both jobs are defined
+# inline (rather than as separate workflow references) so that the lint rule
+# `deploy_gated_on_lint_and_evals` can statically verify the chain in a single
+# file.
+
 on:
   workflow_dispatch:
   push:
@@ -10,7 +15,50 @@ permissions:
   id-token: write
 
 jobs:
+  accelerator-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dev deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff pyright pyyaml
+      - name: Ruff
+        run: ruff check src patterns scripts
+      - name: Pyright
+        run: pyright src patterns
+      - name: Accelerator lint
+        run: python scripts/accelerator-lint.py
+
+  evals:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: pip install httpx pyyaml
+      - name: Enforce EVALS_API_URL is configured
+        # Fail early: a pilot that's green because evals never ran is worse
+        # than an obvious "please configure this" error.
+        run: |
+          if [ -z "${{ vars.EVALS_API_URL }}" ]; then
+            echo "::error::repo variable EVALS_API_URL is not set; acceptance cannot be verified."
+            exit 1
+          fi
+      - name: Quality evals
+        run: python evals/quality/run.py --api-url "${{ vars.EVALS_API_URL }}"
+      - name: Red-team evals
+        run: python evals/redteam/run.py --api-url "${{ vars.EVALS_API_URL }}"
+      - name: Enforce acceptance block from accelerator.yaml
+        run: python scripts/enforce-acceptance.py
+
   azd-up:
+    needs: [accelerator-lint, evals]
     runs-on: ubuntu-latest
     environment: dev
     steps:

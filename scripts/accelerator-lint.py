@@ -299,6 +299,279 @@ def acceptance_wired_to_evals(ctx: Ctx) -> list[Finding]:
 
 
 # ---------------------------------------------------------------------------
+# Foundry / Bicep policy enforcement
+# ---------------------------------------------------------------------------
+_BICEP_DEPLOYMENT_RE = re.compile(
+    r"resource\s+\w+\s+'Microsoft\.CognitiveServices/accounts/deployments@"
+)
+_BICEP_RAI_RE = re.compile(
+    r"resource\s+\w+\s+'Microsoft\.CognitiveServices/accounts/raiPolicies@"
+)
+_BICEP_RAI_REF_RE = re.compile(r"raiPolicyName\s*:")
+
+
+@check
+def bicep_has_model_deployment(ctx: Ctx) -> list[Finding]:
+    """azd up must provision at least one model deployment (no "bring your own")."""
+    infra = ROOT / "infra"
+    if not infra.exists():
+        return []
+    for p, c in ctx.iter(".bicep"):
+        if "infra" not in p.parts:
+            continue
+        if _BICEP_DEPLOYMENT_RE.search(c):
+            return []
+    return [Finding("bicep-model-deployment", "block", "infra/",
+                    "no Microsoft.CognitiveServices/accounts/deployments resource "
+                    "found under infra/**; azd up must deploy a model, not rely on "
+                    "a pre-existing one.")]
+
+
+@check
+def bicep_has_content_filter(ctx: Ctx) -> list[Finding]:
+    """Every model deployment must have a content filter bound."""
+    infra = ROOT / "infra"
+    if not infra.exists():
+        return []
+    has_policy = False
+    has_binding = False
+    for p, c in ctx.iter(".bicep"):
+        if "infra" not in p.parts:
+            continue
+        if _BICEP_RAI_RE.search(c):
+            has_policy = True
+        if _BICEP_RAI_REF_RE.search(c):
+            has_binding = True
+    out: list[Finding] = []
+    if not has_policy:
+        out.append(Finding("bicep-rai-policy", "block", "infra/",
+                           "no Microsoft.CognitiveServices/accounts/raiPolicies "
+                           "resource found; a default content-filter policy must "
+                           "be declared in IaC, not in the Foundry portal."))
+    if not has_binding:
+        out.append(Finding("bicep-rai-binding", "block", "infra/",
+                           "no deployment references raiPolicyName; content filter "
+                           "must be bound to the model deployment to prevent "
+                           "portal-level bypass."))
+    return out
+
+
+def _load_ga_exceptions() -> dict[str, str]:
+    """Load {resource_type: api_version} from infra/.ga-exceptions.yaml."""
+    f = ROOT / "infra/.ga-exceptions.yaml"
+    if not f.exists():
+        return {}
+    try:
+        import yaml
+    except ImportError:
+        return {}
+    try:
+        data = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return {}
+    return {
+        e.get("resource_type", ""): str(e.get("api_version", ""))
+        for e in data.get("exceptions", [])
+        if e.get("resource_type") and e.get("api_version")
+    }
+
+
+_BICEP_RESOURCE_RE = re.compile(
+    r"resource\s+\w+\s+'([A-Za-z0-9./]+)@([0-9A-Za-z.\-]+)'", re.MULTILINE
+)
+
+
+@check
+def no_preview_api_versions(ctx: Ctx) -> list[Finding]:
+    """Every Bicep resource under infra/ must use a non-preview api-version,
+    unless explicitly allow-listed in infra/.ga-exceptions.yaml."""
+    exceptions = _load_ga_exceptions()
+    out: list[Finding] = []
+    for p, c in ctx.iter(".bicep"):
+        if "infra" not in p.parts:
+            continue
+        for match in _BICEP_RESOURCE_RE.finditer(c):
+            resource_type, api_version = match.group(1), match.group(2)
+            if "preview" not in api_version.lower() and not re.search(
+                r"(alpha|beta|rc)", api_version.lower()
+            ):
+                continue
+            allowed = exceptions.get(resource_type)
+            if allowed == api_version:
+                continue
+            out.append(Finding(
+                "ga-api-version",
+                "block",
+                _rel(p),
+                f"{resource_type}@{api_version} is a preview api-version; "
+                f"either switch to GA or add a documented exception to "
+                f"infra/.ga-exceptions.yaml.",
+            ))
+    return out
+
+
+# ---------------------------------------------------------------------------
+# CI chaining: deploy must depend on lint + evals
+# ---------------------------------------------------------------------------
+@check
+def deploy_gated_on_lint_and_evals(ctx: Ctx) -> list[Finding]:
+    f = ROOT / ".github/workflows/deploy.yml"
+    if not f.exists():
+        return [Finding("deploy-gate", "block", ".github/workflows/deploy.yml",
+                        "deploy.yml is missing")]
+    try:
+        import yaml
+    except ImportError:
+        return []
+    try:
+        data = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
+    except Exception as exc:
+        return [Finding("deploy-gate", "block", ".github/workflows/deploy.yml",
+                        f"deploy.yml is not valid YAML: {exc}")]
+    jobs = data.get("jobs", {}) or {}
+    deploy_job = None
+    for name, body in jobs.items():
+        if name in {"azd-up", "deploy"}:
+            deploy_job = (name, body or {})
+            break
+    if deploy_job is None:
+        return [Finding("deploy-gate", "block", ".github/workflows/deploy.yml",
+                        "no `azd-up` or `deploy` job found.")]
+    name, body = deploy_job
+    needs = body.get("needs", [])
+    if isinstance(needs, str):
+        needs = [needs]
+    needs_set = set(needs or [])
+    required = {"accelerator-lint", "evals"}
+    missing = required - needs_set
+    if missing:
+        return [Finding("deploy-gate", "block", ".github/workflows/deploy.yml",
+                        f"job '{name}' must have `needs: [accelerator-lint, evals]`; "
+                        f"missing: {sorted(missing)}")]
+    # Check that jobs named accelerator-lint and evals exist in the same workflow.
+    missing_jobs = [n for n in ("accelerator-lint", "evals") if n not in jobs]
+    if missing_jobs:
+        return [Finding("deploy-gate", "block", ".github/workflows/deploy.yml",
+                        f"deploy.yml references jobs that do not exist in the same "
+                        f"workflow: {missing_jobs}. Define them inline or via `uses:`.")]
+    return []
+
+
+# ---------------------------------------------------------------------------
+# Workflow secrets must be documented
+# ---------------------------------------------------------------------------
+_SECRET_REF_RE = re.compile(r"\$\{\{\s*(secrets|vars)\.([A-Z0-9_]+)\s*\}\}")
+
+
+@check
+def workflow_secrets_documented(ctx: Ctx) -> list[Finding]:
+    wf_dir = ROOT / ".github/workflows"
+    doc = ROOT / "docs/getting-started.md"
+    if not wf_dir.exists():
+        return []
+    names: set[str] = set()
+    for p in wf_dir.glob("*.yml"):
+        c = p.read_text(encoding="utf-8", errors="ignore")
+        for m in _SECRET_REF_RE.finditer(c):
+            names.add(m.group(2))
+    # GITHUB_TOKEN is auto-provisioned; don't require it in the doc.
+    names.discard("GITHUB_TOKEN")
+    if not names:
+        return []
+    if not doc.exists():
+        return [Finding("secrets-doc", "block", "docs/getting-started.md",
+                        f"docs/getting-started.md is missing but workflows reference "
+                        f"{len(names)} secrets/vars: {sorted(names)}")]
+    doc_txt = doc.read_text(encoding="utf-8")
+    missing = sorted(n for n in names if n not in doc_txt)
+    if missing:
+        return [Finding("secrets-doc", "block", "docs/getting-started.md",
+                        f"workflow secrets/vars not documented: {missing}")]
+    return []
+
+
+# ---------------------------------------------------------------------------
+# SDKs pinned to GA versions (no preview/alpha/beta/rc)
+# ---------------------------------------------------------------------------
+_BAD_VERSION_TAG = re.compile(r"(a\d|b\d|rc\d|alpha|beta|preview|dev\d)", re.IGNORECASE)
+
+
+def _parse_pyproject_pins() -> dict[str, str]:
+    f = ROOT / "pyproject.toml"
+    if not f.exists():
+        return {}
+    try:
+        import tomllib  # py311+
+    except ImportError:
+        try:
+            import tomli as tomllib  # type: ignore[no-redef]
+        except ImportError:
+            return {}
+    data = tomllib.loads(f.read_text(encoding="utf-8"))
+    deps = (data.get("project", {}) or {}).get("dependencies", []) or []
+    pins: dict[str, str] = {}
+    for dep in deps:
+        # Split on first non-name char to get package name
+        m = re.match(r"([A-Za-z0-9_\-]+)(.*)", dep.strip())
+        if m:
+            pins[m.group(1).lower()] = m.group(2).strip()
+    return pins
+
+
+def _load_ga_manifest() -> dict[str, dict]:
+    f = ROOT / "ga-versions.yaml"
+    if not f.exists():
+        return {}
+    try:
+        import yaml
+    except ImportError:
+        return {}
+    try:
+        data = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return {}
+    return data.get("sdks", {}) or {}
+
+
+@check
+def sdks_pinned_to_ga(ctx: Ctx) -> list[Finding]:
+    """Canonical SDK set (agent-framework, azure-ai-*, azure-identity,
+    azure-search-documents) must be pinned to non-preview versions, and the
+    pin specifiers in pyproject.toml must match ga-versions.yaml."""
+    manifest = _load_ga_manifest()
+    if not manifest:
+        return [Finding("ga-versions-manifest", "block", "ga-versions.yaml",
+                        "ga-versions.yaml is required at repo root "
+                        "(see d1-ga-sdk-enforce).")]
+    pins = _parse_pyproject_pins()
+    out: list[Finding] = []
+    for sdk, spec in manifest.items():
+        sdk_key = sdk.lower()
+        actual = pins.get(sdk_key)
+        if actual is None:
+            out.append(Finding("ga-pin-missing", "block", "pyproject.toml",
+                               f"{sdk} is in ga-versions.yaml but not pinned in "
+                               f"pyproject.toml dependencies."))
+            continue
+        if _BAD_VERSION_TAG.search(actual):
+            out.append(Finding("ga-pin-preview", "block", "pyproject.toml",
+                               f"{sdk} pin contains a non-GA tag "
+                               f"(preview/alpha/beta/rc): {actual!r}"))
+            continue
+        min_v = str(spec.get("min", "")).strip()
+        upper = str(spec.get("upper_exclusive", "")).strip()
+        if min_v and f">={min_v}" not in actual:
+            out.append(Finding("ga-pin-mismatch", "block", "pyproject.toml",
+                               f"{sdk} min version mismatch: pyproject has "
+                               f"{actual!r}, manifest requires >={min_v}"))
+        if upper and f"<{upper}" not in actual:
+            out.append(Finding("ga-pin-mismatch", "block", "pyproject.toml",
+                               f"{sdk} upper bound mismatch: pyproject has "
+                               f"{actual!r}, manifest requires <{upper}"))
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 def main() -> int:

@@ -1,0 +1,21 @@
+# GA API-version exceptions for the accelerator's IaC.
+#
+# The accelerator lint (`scripts/accelerator-lint.py`) rejects any Azure
+# resource in `infra/**` that uses a `*-preview` api-version. Entries here are
+# the ONLY narrow exemptions, each of which MUST have:
+#   - resource_type: full ARM type, e.g. Microsoft.X/y/z
+#   - api_version: the preview version in use
+#   - reason: why no GA equivalent exists yet
+#   - revisit_by: month/year to re-evaluate and remove
+#
+# Adding an entry here is not a green light; it is an admission that the
+# accelerator cannot currently claim "fully GA" for that one resource.
+
+exceptions:
+  - resource_type: Microsoft.CognitiveServices/accounts/projects
+    api_version: 2025-04-01-preview
+    reason: >-
+      Azure AI Foundry project sub-resource does not yet have a non-preview
+      api-version. Model deployments and RAI policies (the actual enforcement
+      surfaces) are on GA 2024-10-01; only the project container is preview.
+    revisit_by: 2026-10

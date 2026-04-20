@@ -21,6 +21,18 @@ param enablePrivateLink bool = false
 @description('Resource token for unique naming')
 param resourceToken string = uniqueString(subscription().id, resourceGroup().id, envName)
 
+@description('Foundry model to deploy (OpenAI format).')
+param modelName string = 'gpt-4o-mini'
+
+@description('Foundry model version.')
+param modelVersion string = '2024-07-18'
+
+@description('Foundry model deployment name (becomes MODEL_DEPLOYMENT_NAME).')
+param modelDeploymentName string = 'gpt-4o-mini'
+
+@description('Foundry model deployment capacity (TPM in thousands for GlobalStandard).')
+param modelCapacity int = 30
+
 param tags object = {
   'azd-env-name': envName
   workload: 'sales-research-accelerator'
@@ -73,6 +85,10 @@ module foundry 'modules/foundry.bicep' = {
     location: location
     tags: tags
     rbacPrincipalId: identity.outputs.principalId
+    modelName: modelName
+    modelVersion: modelVersion
+    modelDeploymentName: modelDeploymentName
+    modelCapacity: modelCapacity
   }
 }
 
@@ -85,11 +101,17 @@ module containerApp 'modules/container-app.bicep' = {
     identityId: identity.outputs.id
     appInsightsConnectionString: monitor.outputs.appInsightsConnectionString
     foundryEndpoint: foundry.outputs.projectEndpoint
+    modelDeploymentName: foundry.outputs.modelDeploymentName
     searchEndpoint: search.outputs.endpoint
   }
 }
 
 output AZURE_AI_FOUNDRY_ENDPOINT string = foundry.outputs.projectEndpoint
+output AZURE_AI_FOUNDRY_ACCOUNT_ENDPOINT string = foundry.outputs.accountEndpoint
+output AZURE_AI_FOUNDRY_ACCOUNT_NAME string = foundry.outputs.accountName
+output AZURE_AI_FOUNDRY_PROJECT_NAME string = foundry.outputs.projectName
+output AZURE_AI_FOUNDRY_MODEL string = foundry.outputs.modelDeploymentName
+output AZURE_AI_FOUNDRY_RAI_POLICY string = foundry.outputs.raiPolicyName
 output AZURE_AI_SEARCH_ENDPOINT string = search.outputs.endpoint
 output APPLICATIONINSIGHTS_CONNECTION_STRING string = monitor.outputs.appInsightsConnectionString
 output API_URL string = containerApp.outputs.fqdn

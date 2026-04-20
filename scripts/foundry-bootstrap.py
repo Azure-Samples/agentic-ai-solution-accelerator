@@ -3,21 +3,31 @@
 Called from ``azure.yaml`` ``postprovision`` hook. Idempotent.
 
 Behaviour:
-1. Reads the 5 agent spec Markdown files in ``docs/agent-specs/``.
-2. Connects to the Foundry project identified by ``AZURE_AI_FOUNDRY_ENDPOINT``
+1. Pre-flight: verifies the project endpoint is reachable, the expected model
+   deployment exists on the parent Cognitive Services account, and a RAI
+   (content filter) policy is bound to that deployment. If any check fails,
+   exits non-zero with an actionable message so partners know to re-run
+   ``azd up`` or fix quota rather than chasing a Foundry agent error.
+2. Reads the 5 agent spec Markdown files in ``docs/agent-specs/``.
+3. Connects to the Foundry project identified by ``AZURE_AI_FOUNDRY_ENDPOINT``
    using ``DefaultAzureCredential``.
-3. For each spec, creates or updates the named agent with the spec's
+4. For each spec, creates or updates the named agent with the spec's
    instructions + model. The bootstrap is the ONLY place instructions flow
    from the repo into Foundry — after this, the Foundry portal is the
    runtime source of truth.
-4. Exits non-zero if any agent is missing and we cannot create it.
+5. Exits non-zero if any agent is missing and we cannot create it.
 
 Required env:
-    AZURE_AI_FOUNDRY_ENDPOINT   project endpoint from Bicep output
-    AZURE_AI_FOUNDRY_MODEL      model deployment name (default: gpt-5.2)
+    AZURE_AI_FOUNDRY_ENDPOINT           project endpoint from Bicep output
+    AZURE_AI_FOUNDRY_ACCOUNT_NAME       parent Cognitive Services account
+    AZURE_AI_FOUNDRY_MODEL              model deployment name (default: gpt-4o-mini)
+    AZURE_SUBSCRIPTION_ID               subscription for management-plane checks
+    AZURE_RESOURCE_GROUP                resource group of the account
 
 Optional:
-    --verify-only    fail if any agent is missing; don't create.
+    --verify-only       fail if any agent is missing; don't create.
+    --skip-preflight    skip the management-plane deployment/RAI checks
+                        (useful in CI where the MI lacks Reader on the RG).
 """
 from __future__ import annotations
 
@@ -37,6 +47,12 @@ except ImportError:
     print("::error::azure-ai-projects is not installed; pip install -U azure-ai-projects",
           file=sys.stderr)
     sys.exit(1)
+
+try:
+    from azure.mgmt.cognitiveservices import CognitiveServicesManagementClient
+    _HAS_MGMT = True
+except ImportError:
+    _HAS_MGMT = False
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SPECS_DIR = ROOT / "docs/agent-specs"
@@ -64,10 +80,65 @@ def _parse_spec(path: pathlib.Path, default_model: str) -> tuple[str, str]:
     return model, instr_match.group(1).strip()
 
 
+def _preflight(credential: DefaultAzureCredential) -> list[str]:
+    """Management-plane checks. Returns list of error strings (empty == ok)."""
+    errors: list[str] = []
+    subscription_id = os.environ.get("AZURE_SUBSCRIPTION_ID")
+    resource_group = os.environ.get("AZURE_RESOURCE_GROUP")
+    account_name = os.environ.get("AZURE_AI_FOUNDRY_ACCOUNT_NAME")
+    deployment_name = os.environ.get("AZURE_AI_FOUNDRY_MODEL", "gpt-4o-mini")
+
+    if not (subscription_id and resource_group and account_name):
+        errors.append(
+            "pre-flight skipped: set AZURE_SUBSCRIPTION_ID, AZURE_RESOURCE_GROUP, "
+            "and AZURE_AI_FOUNDRY_ACCOUNT_NAME to run the deployment/RAI checks "
+            "(or pass --skip-preflight)"
+        )
+        return errors
+
+    if not _HAS_MGMT:
+        errors.append(
+            "azure-mgmt-cognitiveservices is not installed; "
+            "pip install azure-mgmt-cognitiveservices or pass --skip-preflight"
+        )
+        return errors
+
+    mgmt = CognitiveServicesManagementClient(credential, subscription_id)
+
+    try:
+        deployment = mgmt.deployments.get(resource_group, account_name, deployment_name)
+    except Exception as exc:
+        errors.append(
+            f"model deployment '{deployment_name}' not found on account "
+            f"'{account_name}' in '{resource_group}': {exc}. "
+            "Re-run `azd up` or fix model capacity quota."
+        )
+        return errors
+
+    rai_policy = getattr(deployment.properties, "rai_policy_name", None)
+    if not rai_policy:
+        errors.append(
+            f"model deployment '{deployment_name}' has no RAI (content filter) "
+            "policy bound. Re-run `azd up` so Bicep reapplies the default "
+            "accelerator content filter policy."
+        )
+        return errors
+
+    print(
+        f"preflight ok: model={deployment_name} "
+        f"sku={getattr(deployment.sku, 'name', '?')} "
+        f"capacity={getattr(deployment.sku, 'capacity', '?')} "
+        f"rai_policy={rai_policy}"
+    )
+    return errors
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--verify-only", action="store_true",
                     help="fail if any agent is missing; do not create.")
+    ap.add_argument("--skip-preflight", action="store_true",
+                    help="skip management-plane deployment/RAI checks.")
     args = ap.parse_args()
 
     endpoint = os.environ.get("AZURE_AI_FOUNDRY_ENDPOINT")
@@ -75,9 +146,18 @@ def main() -> int:
         print("::error::AZURE_AI_FOUNDRY_ENDPOINT is not set", file=sys.stderr)
         return 1
 
-    default_model = os.environ.get("AZURE_AI_FOUNDRY_MODEL", "gpt-5.2")
+    default_model = os.environ.get("AZURE_AI_FOUNDRY_MODEL", "gpt-4o-mini")
 
-    client = AIProjectClient(endpoint=endpoint, credential=DefaultAzureCredential())
+    credential = DefaultAzureCredential()
+
+    if not args.skip_preflight:
+        errors = _preflight(credential)
+        if errors:
+            for err in errors:
+                print(f"::error::{err}", file=sys.stderr)
+            return 1
+
+    client = AIProjectClient(endpoint=endpoint, credential=credential)
 
     existing_by_name: dict[str, object] = {}
     try:

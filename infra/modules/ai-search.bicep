@@ -4,7 +4,7 @@ param tags object
 param rbacPrincipalId string
 param enablePrivateLink bool = false
 
-resource search 'Microsoft.Search/searchServices@2024-03-01-preview' = {
+resource search 'Microsoft.Search/searchServices@2023-11-01' = {
   name: name
   location: location
   tags: tags

@@ -1,0 +1,26 @@
+# Canonical GA-only SDK version pins for the accelerator.
+#
+# The lint (`scripts/accelerator-lint.py`) asserts that `pyproject.toml` pins
+# these exact minimum versions and that the pin specifier contains NO preview
+# / alpha / beta / rc tags. A weekly `ga-sdk-freshness` CI job re-checks PyPI
+# and opens an issue if a newer GA is available.
+#
+# Bumping a version here is the only place a partner (or CI) should do it.
+# The lint will catch drift.
+
+sdks:
+  agent-framework:
+    min: "1.0.0"
+    upper_exclusive: "2.0.0"
+  azure-ai-projects:
+    min: "1.0.0"
+    upper_exclusive: "2.0.0"
+  azure-ai-agents:
+    min: "1.0.0"
+    upper_exclusive: "2.0.0"
+  azure-identity:
+    min: "1.18.0"
+    upper_exclusive: "2.0.0"
+  azure-search-documents:
+    min: "11.5.0"
+    upper_exclusive: "12.0.0"
