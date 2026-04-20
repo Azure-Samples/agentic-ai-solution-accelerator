@@ -1,106 +1,114 @@
-# GitHub Copilot Instructions — Azure Agentic AI Solution Accelerator
+# Copilot instructions for this accelerator-based repo
 
-> **Scope:** this file governs how GitHub Copilot (VS Code, agent mode, chat) behaves in partner customer repos scaffolded from this accelerator.
-> **Primary audience:** GitHub Copilot itself.
-> **Secondary audience:** partner engineers reading over Copilot's shoulder.
+> This file is read by GitHub Copilot (VS Code, Chat, code review) on every interaction in this repo. It encodes the **non-negotiable rules** that make a solution built from this template production-grade and compliant. Keep it in sync with the top-level `AGENTS.md`.
 
-You are assisting a partner engineer building a production agentic AI solution on Azure using the **Azure Agentic AI Solution Accelerator**. The accelerator ships the *platform layer* (baseline packages, Bicep modules, Spec schema, reference scenarios). The partner + customer vibe-code the *business layer* (agent logic, tools, grounding glue, evals, domain rules). You help them do that — consistently.
+## What this repo is
+A partner cloned the **Azure Agentic AI Solution Accelerator** template to build an agentic solution for a specific customer. The flagship shape is a **supervisor + specialist workers** orchestration on Microsoft Agent Framework + Azure AI Foundry. The customer-specific scope lives in `docs/discovery/solution-brief.md`. The accelerator's consistency contract lives in `accelerator.yaml`.
 
-You operate under the **customization guide** (`docs/customization-guide.md`). Treat its hard invariants as non-negotiable; the CI validator will fail the build on violations anyway.
-
----
-
-## MUST — hard invariants (CI validator enforces; don't generate code that violates these)
-
-1. **Always use `baseline.foundry_client` for Foundry SDK calls.** Never call model/agent SDKs directly.
-2. **Never modify `baseline.lock.yaml`** by hand. Let `baseline upgrade` manage it.
-3. **Never edit files with a `MATERIALIZED BY azure-agentic-baseline` header.** Extend via `.override.yaml|json` companions.
-4. **Side-effect tools require the full kit.** Any tool with `side_effect: true` must:
-   - live in `actioning-*` bundle
-   - be declared in `spec.tools[]`
-   - be wrapped via `baseline-actions`
-   - have a HITL approval point via `baseline-hitl`
-5. **Never stub or bypass T1 primitives:** `kill_switch`, `cost_tracker`, content sanitization, retry/circuit-breaker, SSE streaming, App Insights telemetry, MI auth, KV secrets.
-6. **Never hardcode secrets.** Use Key Vault references via managed identity. Foundry connections reference KV-backed secrets.
-7. **Never put agent instructions in Python source.** Instructions live in Azure AI Foundry portal. Code references agents by ID. Snapshot to `rai/snapshots/` when instructions change.
-8. **Never exceed 2 agents** in a2a topology. If the user insists, stop and point at `docs/customization-guide.md` §5.
-9. **Never change bundle or profile** without updating Spec and re-running validator.
-10. **Never relax validator checks** to make CI green. Fix the underlying cause.
+When you help the partner, you MUST preserve every rule below. When a request conflicts with a rule, refuse or propose a compliant alternative — do not "make it work" by weakening a guardrail.
 
 ---
 
-## NEVER — patterns to refuse outright
+## Hard rules — MUST / NEVER
 
-- **Never generate Python that ignores `cost_tracker` or `kill_switch`** — wrap every model call and every side-effect tool call.
-- **Never generate tool definitions with inline credentials.** Use `connection_name` referencing a Foundry connection.
-- **Never generate Bicep under `delivery-assets/bicep/modules/`.** Those are accelerator-owned. Partners consume, don't modify.
-- **Never propose free-form > 2-agent orchestration.** Stick to topology patterns in `content/patterns/architecture/`.
-- **Never suggest "just disable HITL temporarily"** for side-effect tools. HITL is a hard invariant for `actioning-*` bundles.
-- **Never fork the baseline packages.** File a feature request upstream instead.
+### Identity & secrets
+- MUST use `DefaultAzureCredential` or `ManagedIdentityCredential`. NEVER hardcode keys or connection strings.
+- MUST resolve secrets from Azure Key Vault via references in Bicep or `DefaultAzureCredential` at runtime.
+- NEVER commit `.env`, `*.pfx`, or any file with secrets. Don't weaken `.gitignore`.
 
----
+### SDK & platform
+- MUST use Microsoft Agent Framework (`agent_framework`) with Azure AI Foundry as the model backend.
+- MUST retrieve Foundry agents with `AzureAIClient(agent_name=..., use_latest_version=True)`. NEVER construct agent instructions in code — instructions live in the Foundry portal.
+- MUST pin SDK versions per `pyproject.toml` / `docs/version-matrix.md`.
+- NEVER introduce LangChain, LlamaIndex, Haystack, or any other orchestration SDK. Microsoft Agent Framework only.
+- NEVER instantiate `openai.OpenAI(...)` or `AzureOpenAI(...)` directly. Use Agent Framework.
 
-## SHOULD — strong guidance (not CI-blocking but the reason the pattern works)
+### Agent structure (3-layer pattern)
+Every agent lives under `src/agents/<agent_name>/` with exactly three files:
+- `prompt.py` — `build_prompt(request_data: dict) -> str`
+- `transform.py` — `transform_response(response: str) -> dict`
+- `validate.py` — `validate_response(response: dict) -> tuple[bool, str]`
 
-- **Start from a Spec.** If the user asks for a new capability, check `spec.agent.yaml` first. If not declared, propose updating Spec before writing code.
-- **Reference WAF pillars in reasoning.** Call out implications for Reliability / Security / Cost / OpEx / Performance / AI workload.
-- **Prefer `baseline materialize`** outputs for params / evals / dashboards / alerts over handwriting them.
-- **Add grounding sources to Spec first** (with id, type, url_pattern, acl_model, classification) before wiring retrieval code.
-- **Start from the closest reference scenario** in `examples/scenarios/` rather than inventing from scratch.
-- **Write evals alongside code.** Every agent path worth shipping has a quality eval + a red-team eval under `evals/`.
-- **Emit telemetry via `baseline.telemetry`** — custom events follow the baseline schema.
-- **Snapshot Foundry instructions** when the user says they changed them in the portal.
+Do not hand-scaffold. Use `/add-worker-agent` to create a new agent and wire it into the supervisor.
 
----
+### Supervisor + workers wiring
+- Workers are stateless. Supervisor routes based on intent classification in its prompt.
+- Supervisor MUST emit a structured decision record (`src/accelerator_baseline/telemetry.py` event) naming which worker(s) it invoked and why.
+- Aggregation (combining worker outputs) happens in an explicit executor, not inside a worker's transform.
 
-## Expected code patterns
+### HITL (Human-in-the-Loop)
+- MUST gate every side-effect tool through `src/accelerator_baseline/hitl.py.checkpoint(...)`.
+- Side-effect = writes to external systems (CRM, ticketing, DB), sends (email, chat, webhook), destructive calls (restart, delete).
+- HITL policy declared in `accelerator.yaml -> solution.hitl` AND per-tool in the tool module.
+- NEVER bypass HITL "just for a demo." If `hitl = none`, the action MUST be reversible and MUST be logged.
 
-### Agent module layout (partner-owned)
-```
-src/agents/<agent_name>/
-├── prompt.py         # builds prompt from Spec + request data
-├── tools.py          # tool wrappers calling baseline.foundry_client
-├── transform.py      # normalizes Foundry response
-├── validate.py       # schema check on response
-└── __init__.py       # exports orchestrator
-```
+### Grounding / RAG
+- MUST use `src/retrieval/ai_search.py` (Azure AI Search) for retrieval. No direct HTTP to content sources.
+- MUST return citations. `validate_response` rejects ungrounded factual claims.
+- NEVER inject retrieved content into the system prompt without a size cap; chunk and select.
 
-### Spec-driven KPIs + alerts
-User adds a KPI to Spec → `baseline materialize alerts` generates alert rule + Action Group → partner overrides via `.override.yaml` if needed. Don't handwrite alert rules.
+### Telemetry
+- MUST emit typed events via `src/accelerator_baseline/telemetry.py`. Custom KPI events declared in `accelerator.yaml -> kpis` MUST appear in code.
+- MUST wire Application Insights via `azure-monitor-opentelemetry` in `src/main.py` startup. NEVER disable.
+- NEVER use `print()` or ad-hoc logging for observability.
 
-### Adding a tool
-1. Add to `spec.tools[]` with name, kind, side_effect flag, config.
-2. If `side_effect: true`: ensure bundle is `actioning-*`, pin `baseline-hitl` + `baseline-actions`, declare HITL point in topology.
-3. Run `baseline validate-spec`.
-4. Write the wrapper in `src/agents/<agent>/tools.py` using `baseline.foundry_client` + `baseline-actions`.
-5. Add a targeted eval probe.
+### Responsible AI
+- MUST apply Azure AI content filters via IaC (`infra/modules/foundry.bicep`). `controls.content_filters = iac` in `accelerator.yaml`.
+- MUST keep `evals/redteam/` XPIA + jailbreak suites passing. New tools trigger new redteam cases.
+- MUST flag PII handling in the solution brief; map RAI risks to eval cases.
+- See `docs/patterns/rai/README.md` for the full RAI checklist.
 
-### Adding a grounding source
-1. Add to `spec.grounding.sources[]` with full metadata (id, type, url_pattern, acl_model, classification).
-2. Run `baseline validate-spec`.
-3. Implement retrieval code honoring ACL model.
-4. Add a grounding quality eval probe.
+### Well-Architected Framework + Azure Landing Zone
+- Follow `docs/patterns/waf-alignment/README.md` (reliability · security · cost · op-ex · performance).
+- Follow `docs/patterns/architecture/README.md` for topology, hub-spoke, private endpoints.
+- Regulated workloads: `controls.private_endpoints = required` AND `controls.key_vault = true`.
 
----
-
-## When to stop coding and escalate
-
-| Situation | Point the user at |
-|---|---|
-| New bundle variant requested | `docs/customization-guide.md` §5 |
-| Customer wants > 2 agents | `docs/customization-guide.md` §5 |
-| Customer has no GitHub org | `docs/enablement/partner-onboarding-checklist.md` — check Copilot seat availability |
-| Customer insists on Terraform | `docs/customization-guide.md` §6 — fine, match the contracts |
-| RAI concerns raised mid-build | `content/patterns/rai/` + hold a RAI scoping refresh |
-| CI validator firing on something that looks correct | File an issue against the accelerator |
-| Partner wants to fork a baseline package | Refuse. File a feature request instead. |
+### CI gates
+- MUST keep `scripts/accelerator-lint.py` green. It reads `accelerator.yaml` + repo state.
+- MUST keep `evals/quality/` acceptance thresholds from `accelerator.yaml -> acceptance` green before merge.
+- MUST NOT disable the `version-matrix.yml` weekly job.
 
 ---
 
-## Tone
+## How to help the partner
 
-- Be direct. Partners are engineers under delivery pressure.
-- When refusing, explain the invariant + link the doc.
-- When proposing, call out WAF + RAI implications.
-- Prefer "add it to Spec first" over "let's just code it."
-- If the user explicitly asks to bypass a MUST, refuse + point at the customization guide. This isn't gatekeeping — it's the pattern.
+### Adding a side-effect tool (e.g., "create a ServiceNow ticket")
+1. Tell the partner to run `/add-tool` for a guided scaffold.
+2. If coding directly: create `src/tools/<tool_name>.py`, wrap the side effect with `hitl.checkpoint(...)`, emit telemetry, add a unit test, add a redteam case.
+3. Register it on the worker agent that should use it.
+4. Never skip HITL.
+
+### Adding a specialist worker agent
+1. Run `/add-worker-agent`.
+2. Create `src/agents/<agent_name>/{prompt.py, transform.py, validate.py}`.
+3. Wire into the supervisor in `src/workflow/sales_research_workflow.py`.
+4. Update `src/agents/supervisor/prompt.py` with the new worker's capability and routing cue.
+
+### Switching solution shape
+- Partner wants single-agent: run `/switch-to-variant single-agent`. Moves the supervisor+workers into archive and materializes `patterns/single-agent/src/`.
+- Partner wants conversational chat: `/switch-to-variant chat-with-actioning`.
+
+### Starting a new customer
+- Run `/discover-scenario` to fill `docs/discovery/solution-brief.md`.
+- Then `/scaffold-from-brief` to customize prompts, tools, retrieval, HITL, evals, manifest.
+
+---
+
+## Things that will fail code review / lint (don't do these)
+- `openai.OpenAI()` / `AzureOpenAI()` direct instantiation
+- `requests.post` to any LLM endpoint
+- Hardcoded resource names, subscription IDs, tenant IDs
+- Adding a side-effect tool without `hitl.checkpoint`
+- Editing `src/accelerator_baseline/` to wrap Azure SDKs (it is for primitives only)
+- Writing agent instructions in code instead of Foundry portal
+- Disabling content filters, evals, or telemetry
+- `time.sleep` in async code, bare `except:`, swallowing errors silently
+
+---
+
+## Reference
+- Top-level: `README.md`, `QUICKSTART.md`, `AGENTS.md`
+- Engagement: `accelerator.yaml`, `docs/discovery/solution-brief.md`
+- Patterns: `docs/patterns/{architecture,waf-alignment,rai}/README.md`
+- Scenarios: `docs/references/`
+- Version matrix: `docs/version-matrix.md`

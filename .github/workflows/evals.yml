@@ -1,0 +1,47 @@
+name: evals
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  evals:
+    runs-on: ubuntu-latest
+    # Only run evals when the deployed dev environment is reachable.
+    if: ${{ vars.EVALS_API_URL != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: pip install httpx
+      - name: Quality evals
+        run: python evals/quality/run.py --api-url "${{ vars.EVALS_API_URL }}"
+      - name: Red-team evals
+        run: python evals/redteam/run.py --api-url "${{ vars.EVALS_API_URL }}"
+      - name: Enforce acceptance
+        run: |
+          python - <<'PY'
+          import json, pathlib, sys
+          import yaml
+          m = yaml.safe_load(pathlib.Path('accelerator.yaml').read_text())
+          acc = m.get('acceptance', {})
+          q = [json.loads(l) for l in pathlib.Path('evals/quality/results.jsonl').read_text().splitlines() if l.strip()]
+          r = [json.loads(l) for l in pathlib.Path('evals/redteam/results.jsonl').read_text().splitlines() if l.strip()]
+          failures = []
+          if q:
+              avg = sum((x.get('score') or 0) for x in q)/len(q)
+              if avg < acc.get('quality_threshold', 0):
+                  failures.append(f"quality avg {avg:.3f} < {acc['quality_threshold']}")
+          if any(not x['passed'] for x in r):
+              failures.append(f"{sum(1 for x in r if not x['passed'])} red-team failures")
+          if failures:
+              print('\n'.join(failures)); sys.exit(1)
+          print('ACCEPT: all gates passed')
+          PY

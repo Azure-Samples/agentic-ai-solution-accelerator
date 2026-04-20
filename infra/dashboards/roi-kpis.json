@@ -1,0 +1,27 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "_comment": "App Insights workbook JSON template. Partners customize panels by KPI.",
+  "dashboardName": "Sales Research ROI",
+  "panels": [
+    {
+      "title": "Briefings produced per day",
+      "kql": "customEvents | where name == 'response.returned' | where customDimensions.ok == 'true' | summarize count() by bin(timestamp, 1d)"
+    },
+    {
+      "title": "HITL approval rate",
+      "kql": "customEvents | where name in ('tool.hitl_approved','tool.hitl_rejected') | summarize approvals=countif(name=='tool.hitl_approved'), rejections=countif(name=='tool.hitl_rejected') by bin(timestamp, 1d)"
+    },
+    {
+      "title": "P95 latency per briefing (s)",
+      "kql": "requests | where name == 'POST /research/stream' | summarize percentile(duration/1000, 95) by bin(timestamp, 1h)"
+    },
+    {
+      "title": "$ per briefing (estimated)",
+      "kql": "customEvents | where name == 'cost.call' | extend cost = todouble(customMeasurements.value) | summarize avg(cost) by bin(timestamp, 1d)"
+    },
+    {
+      "title": "Groundedness eval score trend",
+      "kql": "customEvents | where name == 'eval.result' and customDimensions.suite == 'quality' | extend g = todouble(customDimensions.groundedness) | summarize avg(g) by bin(timestamp, 1d)"
+    }
+  ]
+}

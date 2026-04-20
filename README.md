@@ -1,131 +1,103 @@
-# Azure Agentic AI Solution Accelerator
+# Agentic AI Solution Accelerator
 
-> **What this is:** a content pack + Copilot IDE kit + validator that helps Microsoft delivery partners ship agentic AI solutions on Azure for their customers, following WAF best practices, RAI guidance, and the latest Azure AI Foundry patterns.
->
-> **Audience:** Microsoft delivery partners (engineers, architects, delivery leads) who have a customer + a use case + want to vibe-code the solution with GitHub Copilot in VS Code.
->
-> **Status:** Phase A draft — **internal preview**. Not all tooling is implemented yet. See [docs/getting-started.md](docs/getting-started.md) for what's usable today.
+> **A GitHub template partners clone to ship production-grade multi-agent Azure solutions for customers in days, not months.**
 
----
+**Flagship scenario:** Sales Research & Personalized Outreach — a supervisor agent routes a research request across specialist workers (Account Researcher, ICP/Fit Analyst, Competitive Context, Outreach Personalizer) and returns a grounded, citeable sales brief with a CRM-ready outreach draft. Human-in-the-loop gates every CRM write and every email send.
 
-## What you get
+**Stack:** Microsoft Agent Framework · Azure AI Foundry · Azure AI Search · Managed Identity · Key Vault · Container Apps · Application Insights · `azd` for infra.
 
-| # | Asset | Purpose |
-|---|---|---|
-| 1 | **Patterns + guidance** ([`content/patterns/`](content/patterns)) | Architecture patterns, WAF-by-pillar decisions, RAI posture — the intellectual payload. |
-| 2 | **Copilot IDE kit** ([`.github/copilot-instructions.md`](.github/copilot-instructions.md), [`.github/chatmodes/`](.github/chatmodes)) | Drops into your customer repo's `.github/`. Shapes every Copilot code suggestion so it lands in-pattern. |
-| 3 | **Spec schema + validator** ([`delivery-assets/schema/spec.schema.json`](delivery-assets/schema/spec.schema.json), [`tools/validate-spec.py`](tools/validate-spec.py)) | Declarative solution description. Validator runs in your CI and fails the build on drift. |
-| 4 | **Reference scenarios** ([`examples/scenarios/`](examples/scenarios)) | Three worked scenarios (supplier risk, IT Ops triage, knowledge concierge) to study + copy from. |
-| 5 | **azd templates** ([`examples/azd-templates/`](examples/azd-templates)) | Five Azure-deployable starting points, one per bundle. |
-| 6 | **Baseline pip packages** ([`baseline/`](baseline), [`baseline-*/`](.)) | T1 core + T2 profile-required primitives (auth, telemetry, cost ceiling, kill switch, HITL, actions). Pin in your customer repo. |
-| 7 | **Partner playbook + templates** ([`docs/`](docs)) | Phase-by-phase guidance, SoW template, decision-record template, RAI scoping minutes template. |
+**Adoption model:** `gh repo create --template` → Copilot-guided discovery → `azd up` → iterate in VS Code → merge through CI gates.
 
 ---
 
-## How partners use this — three-layer consistency model
+## How partners use this
 
-Partners don't clone this repo wholesale. They **scaffold a new customer repo from this accelerator**, which drops the three consistency layers into their customer engagement:
-
-```
- ┌────────────────────────────────────────────────────────────────────┐
- │  Layer 1 — Scaffolding (repo creation)                             │
- │  `baseline new-customer-repo --bundle <bundle> --scenario <name>`  │
- │  drops IDE kit, CI, validator, pinned baseline, a reference        │
- │  scenario as starting code, Spec skeleton. Partner starts from a   │
- │  correct repo, not a blank one.                                    │
- └────────────────────────────────────────────────────────────────────┘
-                                ↓
- ┌────────────────────────────────────────────────────────────────────┐
- │  Layer 2 — Copilot IDE kit (authoring time)                        │
- │  copilot-instructions.md + chatmode + prompts sit in .github/.     │
- │  Every Copilot prompt is shaped by our patterns. Copilot writes    │
- │  code that uses baseline primitives, declares tools in Spec, wires │
- │  HITL for side-effects, emits required telemetry.                  │
- └────────────────────────────────────────────────────────────────────┘
-                                ↓
- ┌────────────────────────────────────────────────────────────────────┐
- │  Layer 3 — Validator (CI time)                                     │
- │  On every PR, validator checks Spec conformance, bundle↔profile,   │
- │  HITL wiring, grounding classification, WAF patterns. Fails build  │
- │  on drift.                                                         │
- └────────────────────────────────────────────────────────────────────┘
+```bash
+gh repo create <customer>-agents \
+  --template Azure/agentic-ai-solution-accelerator --private
+cd <customer>-agents && code .
 ```
 
-Good-faith partners following the guidance land in-pattern by default. Validator catches drift before merge.
+Then in VS Code:
 
-> **Important:** this accelerator is **community-supported, best-effort**. It is NOT a Microsoft-supported managed product. Partners own their customer deployments end-to-end. See [SUPPORT.md](SUPPORT.md).
+1. `/discover-scenario` — Copilot interviews you (or the customer) and writes `docs/discovery/solution-brief.md`: business context, success criteria, ROI hypothesis, constraints, acceptance evals.
+2. `/scaffold-from-brief` — Copilot adapts the repo to the brief (prompts, tools, retrieval, HITL, evals, telemetry, manifest).
+3. `azd up` — provisions Foundry + Search + KV + ACA + App Insights in customer Azure and deploys the agents.
+4. Iterate in Copilot Chat; every PR is gated by `scripts/accelerator-lint.py`, `evals/quality/`, and `evals/redteam/`.
 
----
-
-## First steps
-
-- **New here?** Read [docs/getting-started.md](docs/getting-started.md) — the partner journey in plain English.
-- **Evaluating fit?** Run [`docs/enablement/self-assessment.md`](docs/enablement/self-assessment.md) against your org.
-- **Onboarding your partner org?** Work through [`docs/enablement/partner-onboarding-checklist.md`](docs/enablement/partner-onboarding-checklist.md).
-- **Ready to scope a customer engagement?** Use [`docs/partner-playbook.md`](docs/partner-playbook.md).
-- **Designing the solution?** Read [`content/patterns/`](content/patterns) and study [`examples/scenarios/`](examples/scenarios).
-- **Need to know what you may / may not change?** See [`docs/customization-guide.md`](docs/customization-guide.md).
+Full walkthrough: **[QUICKSTART.md](QUICKSTART.md)**.
 
 ---
 
-## Repo layout
+## What's in the box
 
 ```
-.
-├── .github/
-│   ├── CODEOWNERS
-│   ├── copilot-instructions.md          # ships INTO every scaffolded customer repo
-│   └── chatmodes/delivery-guide.chatmode.md
-├── content/
-│   └── patterns/
-│       ├── architecture/                # topology, orchestration, HITL placement
-│       ├── waf-alignment/               # per-pillar Azure-agentic-AI decisions
-│       └── rai/                         # content filter, groundedness, red-team
+agentic-ai-solution-accelerator/
+├── accelerator.yaml              engagement manifest (solution, acceptance, controls, KPIs)
+├── src/                          flagship: sales research & outreach (supervisor + 4 workers)
+│   ├── agents/                   three-layer pattern per agent (prompt, transform, validate)
+│   ├── tools/                    HITL-gated side-effect tools (CRM write, email send)
+│   ├── retrieval/                Azure AI Search grounding
+│   ├── workflow/                 WorkflowBuilder supervisor + aggregator
+│   └── accelerator_baseline/     partner-owned primitives: telemetry, HITL, killswitch, evals, cost
+├── infra/                        Bicep + azd (Foundry, Search, KV, ACA, App Insights, dashboards)
+├── evals/
+│   ├── quality/                  golden cases + CI gates from accelerator.yaml.acceptance
+│   └── redteam/                  XPIA + jailbreak + brief-specific RAI cases
+├── patterns/
+│   ├── single-agent/             variant: when orchestration isn't needed
+│   └── chat-with-actioning/      variant: conversational front-end with tools
 ├── docs/
-│   ├── getting-started.md               # ← start here
-│   ├── partner-playbook.md              # phase-by-phase engagement guidance
-│   ├── customization-guide.md           # patterns to follow + where to diverge
-│   ├── enablement/                      # onboarding + self-assessment
-│   ├── templates/                       # SoW, decisions, RAI scoping minutes
-│   └── runbooks/                        # operational playbooks (Phase C)
-├── examples/
-│   ├── specs/                           # concrete Spec examples
-│   ├── scenarios/                       # 3 reference scenarios (+ starter)
-│   └── azd-templates/                   # 5 blessed bundles as azd templates
-├── delivery-assets/
-│   └── schema/spec.schema.json          # Spec schema
-├── baseline/                            # T1 core pip pkg
-├── baseline-cli/                        # `baseline` CLI pip pkg
-├── baseline-drift/                      # T2 portal-drift telemetry
-├── baseline-feedback/                   # T2 feedback + eval telemetry
-├── baseline-hitl/                       # T2 human-in-the-loop queue
-├── baseline-actions/                    # T2 side-effect tool wrappers
-├── baseline-cache/                      # T3 reference-only
-├── tools/                               # validators + scaffolder
-├── SUPPORT.md                           # community best-effort
-├── CONTRIBUTING.md, SECURITY.md, LICENSE
+│   ├── discovery/                solution-brief.md + SOLUTION-BRIEF-GUIDE.md
+│   ├── references/               scenario walkthroughs (customer service, RFP response)
+│   ├── patterns/                 architecture · WAF · RAI
+│   ├── partner-playbook.md       full engagement guide
+│   ├── version-matrix.md         known-good SDK pins (weekly CI validates against latest)
+│   └── customization-guide.md    what to change, what not to
+├── .github/
+│   ├── copilot-instructions.md   hard rules: Agent Framework, MI, HITL, evals, RAI
+│   ├── AGENTS.md (top-level)     mirror for Cursor/Claude Code/Codex CLI
+│   ├── chatmodes/                discover-scenario, scaffold-from-brief, add-*, switch-to-variant
+│   └── workflows/                lint, evals, deploy, version-matrix (weekly pinned-latest)
+└── scripts/accelerator-lint.py   ~30 deterministic policy checks (local + CI)
 ```
 
 ---
 
-## Bundles at a glance
+## Why this instead of starting from scratch
 
-| Bundle | Side-effect tools | Network | Profile(s) |
-|---|---|---|---|
-| `sandbox-only` | ❌ | public | dev-sandbox · guided-demo |
-| `retrieval-prod` | ❌ | public | prod-standard |
-| `retrieval-prod-pl` | ❌ | private-link | prod-privatelink |
-| `actioning-prod` | ✅ (HITL required) | public | prod-standard |
-| `actioning-prod-pl` | ✅ (HITL required) | private-link | prod-privatelink |
-
-Bundle variants are expressed via Spec parameters + profiles, NOT new bundles. See [`docs/customization-guide.md`](docs/customization-guide.md) for the rationale.
+| Without the accelerator | With the accelerator |
+|---|---|
+| Partner re-invents auth, telemetry, HITL, evals, RAI posture every engagement | Ships as partner-owned source in `src/accelerator_baseline/`; used from day one |
+| Discovery notes disconnected from code | Solution Brief drives scaffolding, evals, manifest, dashboards |
+| "Should we use single-agent or supervisor?" → guesswork | Flagship + two variants + four reference scenarios; pick-and-scaffold |
+| Compliance & WAF done at the end (if at all) | Enforced from commit 1 via `copilot-instructions.md` + CI lint + IaC content filters |
+| ROI promises are slides | KPIs in `accelerator.yaml` → typed telemetry events → live dashboards in customer Azure |
 
 ---
 
-## Contributing
+## Reference scenarios (in `docs/references/`)
 
-Internal accelerator engineering team owns the patterns + baseline + validator. Partners contribute reference scenarios, runbooks, and field feedback via PRs + issues. See [CONTRIBUTING.md](CONTRIBUTING.md).
+- **customer-service-actioning/** — multi-agent service assistant that looks up orders, issues refunds/credits via HITL, updates CRM. Deflection + AHT ROI.
+- **rfp-response/** — multi-specialist (pricing · legal · tech · security) aggregator that drafts proposal responses. Response time days → hours; win rate lift.
 
-## License + support
+Flagship itself (sales research & outreach) is fully runnable in `src/`.
 
-MIT license on the content + code. See [LICENSE](LICENSE) and [SUPPORT.md](SUPPORT.md).
+---
+
+## What this accelerator does NOT try to be
+
+- Not a runtime platform. No services Microsoft operates for partners.
+- Not a cryptographic attestation or governance gate. Consistency is enforced by CI lint + pinned SDK + starter defaults + Copilot shaping — not by Microsoft blocking partners at deploy time.
+- Not a DSL. `accelerator.yaml` is ~12 fields of plain YAML. No `spec.agent.yaml`.
+- Not IDE-locked. Copilot-first; AGENTS.md mirrors the rules for Cursor, Claude Code, Codex CLI.
+
+---
+
+## Contributing / feedback
+
+- GitHub Issues are the intake for scenario requests, bug reports, pattern suggestions.
+- Monthly triage; quarterly blessed-pattern promotions (criteria in `CONTRIBUTING.md`).
+- Version matrix is maintained weekly; deprecation policy is N-1 minor.
+
+See `SECURITY.md` for vulnerability reporting and `SUPPORT.md` for channels.

@@ -1,0 +1,114 @@
+# QUICKSTART — Deploy an Agentic AI Solution in ~15 minutes
+
+> Partner's 5-step path from "new customer meeting" to "working agent in customer Azure."
+
+---
+
+## Step 1 — Clone the template
+
+```bash
+gh repo create <customer>-agents --template Azure/agentic-ai-solution-accelerator --private
+cd <customer>-agents
+code .
+```
+
+VS Code opens with Copilot already configured via `.github/copilot-instructions.md`. Copilot now knows the hard rules: Agent Framework + Foundry only, DefaultAzureCredential only, HITL required for side effects, evals gate deploys, content filters via IaC.
+
+---
+
+## Step 2 — Run the discovery workshop
+
+In Copilot Chat:
+
+```
+/discover-scenario
+```
+
+Copilot interviews you — either after a customer workshop or live in the room — and writes `docs/discovery/solution-brief.md`. The brief captures:
+
+- Business context, sponsor, problem statement
+- Users, journeys, success criteria
+- **ROI hypothesis** (baseline cost, target savings, payback, KPIs to instrument)
+- Solution shape (single-agent · supervisor · chat-with-actioning)
+- Constraints (residency, identity, compliance)
+- Acceptance evals (quality, groundedness, safety, latency, cost)
+
+The brief is the **single source of truth** for the engagement. Every downstream artifact derives from it.
+
+---
+
+## Step 3 — Scaffold the solution from the brief
+
+```
+/scaffold-from-brief
+```
+
+Copilot reads the filled brief and customizes the repo:
+
+| Brief field → | Lands in |
+|---|---|
+| Problem + persona | `src/agents/supervisor/prompt.py` system prompt |
+| Solution shape | Keep flagship OR run `/switch-to-variant` for `patterns/single-agent` or `patterns/chat-with-actioning` |
+| Grounding sources | `src/retrieval/ai_search.py` + `infra/modules/ai-search.bicep` |
+| Side-effect tools | New files under `src/tools/` with HITL scaffolding |
+| HITL gates | `src/accelerator_baseline/hitl.py` rules |
+| Constraints | `infra/main.parameters.json` + `accelerator.yaml` |
+| Success criteria | `evals/quality/golden_cases.jsonl` + CI gates |
+| RAI risks | `evals/redteam/` custom adversarial cases |
+| ROI KPIs | `src/accelerator_baseline/telemetry.py` events + `infra/dashboards/roi-kpis.json` |
+
+Commit the scaffolded changes. CI lint now runs; it will flag anything missing.
+
+---
+
+## Step 4 — Provision + deploy to customer's Azure
+
+```bash
+az login --tenant <customer-tenant-id>
+azd auth login
+azd env new <customer>-dev
+azd up
+```
+
+`azd up` provisions: Azure AI Foundry · Azure AI Search · Key Vault · Container Apps · Application Insights · Managed Identity. No keys. Content filters via IaC. Dashboards pre-wired to the brief's KPI events.
+
+~10–15 minutes; URL of the deployed agent prints at the end.
+
+---
+
+## Step 5 — Iterate with Copilot; ship through CI gates
+
+In VS Code, just talk to Copilot:
+
+> *"Add a tool to create a ticket in ServiceNow; it should require HITL for anything with priority high."*
+
+Copilot follows `copilot-instructions.md` — creates `src/tools/servicenow_ticket.py` with HITL scaffolding, wires it, adds a unit test.
+
+```bash
+git checkout -b feat/servicenow-tool
+git add -A && git commit -m "Add ServiceNow tool"
+gh pr create
+```
+
+The PR triggers:
+1. `scripts/accelerator-lint.py` (30 deterministic rules)
+2. `evals/quality/` (must clear thresholds in `accelerator.yaml -> acceptance`)
+3. `evals/redteam/` (XPIA + jailbreak must pass)
+4. `build + type check`
+
+Any red light blocks merge. Green = `azd deploy` against customer env.
+
+---
+
+## Need a different shape?
+
+- **Simpler** than supervisor-routing? Run `/switch-to-variant` → pick `single-agent`.
+- **Conversational** front-end? Run `/switch-to-variant` → pick `chat-with-actioning`.
+- **Different business scenario?** See `docs/references/` for Customer Service and RFP Response walkthroughs.
+
+## Need help?
+
+- `docs/partner-playbook.md` — full end-to-end engagement guide
+- `docs/discovery/SOLUTION-BRIEF-GUIDE.md` — how to run the workshop
+- `docs/version-matrix.md` — known-good SDK pins
+- Issues in this repo — intake for feedback and new patterns

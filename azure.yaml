@@ -1,0 +1,30 @@
+# azd config for the Agentic AI Solution Accelerator template
+#
+# Partners run `azd up` after filling env vars; Bicep in infra/ provisions
+# Foundry + AI Search + Key Vault + Container Apps + App Insights with
+# managed identity. No keys. Content filters applied via IaC.
+name: agentic-ai-solution-accelerator
+metadata:
+  template: agentic-ai-solution-accelerator@1.0.0
+services:
+  api:
+    project: ./src
+    language: python
+    host: containerapp
+    docker:
+      path: Dockerfile
+infra:
+  provider: bicep
+  path: infra
+  module: main
+hooks:
+  postprovision:
+    shell: sh
+    run: |
+      echo "Provisioning complete. Run 'azd deploy' to push the agent."
+      echo "See QUICKSTART.md step 4 for next actions."
+  postdeploy:
+    shell: sh
+    run: |
+      echo "Deployed. Acceptance evals will run on your next PR."
+      echo "Dashboards: see infra/dashboards/roi-kpis.json, opened by 'azd monitor'."

@@ -1,0 +1,49 @@
+[project]
+name = "agentic-ai-solution-accelerator"
+version = "1.0.0"
+description = "Template for production-grade multi-agent Azure solutions (flagship: sales research & outreach)."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+# Pinned to a known-good version matrix. See docs/version-matrix.md.
+# Weekly version-matrix.yml CI job re-tests against latest; deprecation policy N-1 minor.
+dependencies = [
+  "agent-framework>=1.0.0,<2.0.0",
+  "azure-ai-projects>=1.0.0,<2.0.0",
+  "azure-ai-agents>=1.0.0,<2.0.0",
+  "azure-identity>=1.18.0,<2.0.0",
+  "azure-keyvault-secrets>=4.8.0,<5.0.0",
+  "azure-search-documents>=11.5.0,<12.0.0",
+  "azure-monitor-opentelemetry>=1.6.0,<2.0.0",
+  "opentelemetry-api>=1.27.0,<2.0.0",
+  "opentelemetry-sdk>=1.27.0,<2.0.0",
+  "fastapi>=0.115.0,<1.0.0",
+  "uvicorn[standard]>=0.32.0,<1.0.0",
+  "pydantic>=2.9.0,<3.0.0",
+  "pyyaml>=6.0.2,<7.0.0",
+  "httpx>=0.28.0,<1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "ruff>=0.7",
+  "mypy>=1.13",
+  "pip-audit>=2.7",
+]
+evals = [
+  "azure-ai-evaluation>=1.0.0,<2.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "S", "W"]
+ignore = ["S101"]  # assert-in-tests is fine

@@ -17,22 +17,28 @@ accelerator_version: "1.0.0"   # pins to the template version partner cloned
 # solution:  WHO + WHAT — derived from docs/discovery/solution-brief.md
 # -----------------------------------------------------------------------------
 solution:
-  name: ""                     # e.g. "acme-supplier-risk-triage"
-  brief: docs/discovery/solution-brief.md   # canonical engagement doc
-  pattern: single-agent        # single-agent | supervisor-routing | chat-with-actioning
-  hitl: required               # required | optional | none
-  data_residency: unset        # unset | us | eu | apac | custom
-  identity: entra-id           # entra-id | external-id | custom
+  name: "sales-research-outreach"          # flagship default; rename per engagement
+  brief: docs/discovery/solution-brief.md  # canonical engagement doc
+  pattern: supervisor-routing              # supervisor-routing (flagship) | single-agent | chat-with-actioning
+  hitl: required                           # required | optional | none
+  data_residency: unset                    # unset | us | eu | apac | custom
+  identity: entra-id                       # entra-id | external-id | custom
+  side_effect_tools:                       # every name here must exist in src/tools/ and pass HITL
+    - crm_write_contact
+    - send_email
+  grounding_sources:
+    - ai_search_index: accounts            # declared in infra/modules/ai-search.bicep
+    - web_search: bing                     # partner-scoped allow-list
 
 # -----------------------------------------------------------------------------
 # acceptance:  MEASURABLE GATES — lint verifies each has a matching eval
 # -----------------------------------------------------------------------------
 acceptance:
-  quality_threshold: 0.0       # e.g. 0.95 agreement with golden cases
-  groundedness_threshold: 0.0  # e.g. 0.90 on RAG cases
-  p95_latency_ms: 0            # e.g. 90000
-  cost_per_call_usd: 0.0       # e.g. 0.40
-  redteam_must_pass: true      # XPIA + jailbreak suite must pass
+  quality_threshold: 0.75      # avg golden-case score (0..1)
+  groundedness_threshold: 0.85 # avg groundedness on RAG cases (0..1)
+  p95_latency_ms: 90000        # 90s per briefing at P95
+  cost_per_call_usd: 0.40      # $ per briefing at average
+  redteam_must_pass: true      # XPIA + jailbreak suite must pass — zero tolerance
 
 # -----------------------------------------------------------------------------
 # controls:  NON-NEGOTIABLES — enforced by lint + infra
@@ -48,12 +54,16 @@ controls:
 # -----------------------------------------------------------------------------
 # kpis:  ROI INSTRUMENTATION — typed events emitted by accelerator_baseline.telemetry
 # -----------------------------------------------------------------------------
-kpis: []
-  # - name: review_completion_time
-  #   type: duration_ms
-  #   baseline: 14400000       # 4 hours in ms
-  #   target:   1800000        # 30 min in ms
-  # - name: escalation_rate
-  #   type: ratio
-  #   baseline: 0.15
-  #   target:   0.05
+kpis:
+  - name: briefing_production_time
+    type: duration_ms
+    baseline: 10800000         # 3 hours manual research
+    target:   90000            # 90 seconds agent briefing
+  - name: outreach_reply_rate
+    type: ratio
+    baseline: 0.02             # cold baseline
+    target:   0.08             # personalised agent outreach
+  - name: hitl_approval_rate
+    type: ratio
+    baseline: 1.0              # 100% manual
+    target:   0.9              # agents surface 90% of drafts that ship as-is
