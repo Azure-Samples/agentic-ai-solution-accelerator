@@ -1,0 +1,249 @@
+"""Scenario registry — parses ``accelerator.yaml`` and returns a bundle.
+
+Responsibilities (enforced at process startup):
+- Require a top-level ``scenario:`` block.
+- Validate ``scenario.package`` leaf uses underscores (Python-importable).
+- Resolve ``request_schema`` to a Pydantic ``BaseModel`` subclass.
+- Resolve ``workflow_factory`` to a callable that returns a ``BaseWorkflow``.
+- Parse ``endpoint.path``, ``agents[]``, ``retrieval.indexes[]``, ``evals``.
+
+The registry imports scenario modules. ``scripts/accelerator-lint.py`` does
+AST-only validation of the same manifest so CI can catch mis-wiring without
+executing any code.
+"""
+from __future__ import annotations
+
+import importlib
+import pathlib
+import re
+from dataclasses import dataclass
+from typing import Any, Callable
+
+from pydantic import BaseModel
+
+from .base import BaseWorkflow
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
+DEFAULT_MANIFEST = ROOT / "accelerator.yaml"
+
+_IMPORT_REF_RE = re.compile(
+    r"^[A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*:[A-Za-z_][\w]*$"
+)
+
+
+@dataclass(frozen=True)
+class ScenarioAgent:
+    id: str
+    foundry_name: str
+
+
+@dataclass(frozen=True)
+class ScenarioIndex:
+    name: str
+    seed: str
+    schema_callable: Callable[[str], Any]
+
+
+@dataclass(frozen=True)
+class ScenarioContext:
+    """Passed to ``workflow_factory`` - everything except the workflow itself."""
+
+    id: str
+    package: str
+    request_schema: type[BaseModel]
+    endpoint_path: str
+    agents: tuple[ScenarioAgent, ...]
+    retrieval_indexes: tuple[ScenarioIndex, ...]
+    evals_quality: str
+    evals_redteam: str
+
+
+@dataclass(frozen=True)
+class ScenarioBundle:
+    """Final loaded scenario - fully wired, safe to serve."""
+
+    id: str
+    package: str
+    request_schema: type[BaseModel]
+    workflow: BaseWorkflow
+    endpoint_path: str
+    agents: tuple[ScenarioAgent, ...]
+    retrieval_indexes: tuple[ScenarioIndex, ...]
+    evals_quality: str
+    evals_redteam: str
+
+
+def _load_yaml(path: pathlib.Path) -> dict:
+    import yaml
+
+    return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+
+
+def _validate_ref(ref: str, package: str, field: str) -> tuple[str, str]:
+    if not isinstance(ref, str) or not _IMPORT_REF_RE.match(ref):
+        raise ValueError(
+            f"scenario.{field}: expected 'module:attr' form, got {ref!r}"
+        )
+    module_suffix, attr = ref.split(":")
+    return module_suffix, attr
+
+
+def _resolve_attr(package: str, ref: str, field: str) -> Any:
+    module_suffix, attr = _validate_ref(ref, package, field)
+    full_module = f"{package}.{module_suffix}"
+    try:
+        mod = importlib.import_module(full_module)
+    except ImportError as exc:
+        raise ValueError(
+            f"scenario.{field}: cannot import {full_module!r}: {exc}"
+        ) from exc
+    try:
+        return getattr(mod, attr)
+    except AttributeError as exc:
+        raise ValueError(
+            f"scenario.{field}: {full_module} has no attribute {attr!r}"
+        ) from exc
+
+
+def _require_keys(d: dict, keys: list[str], where: str) -> None:
+    missing = [k for k in keys if k not in d]
+    if missing:
+        raise ValueError(f"{where}: missing required keys {missing}")
+
+
+def load_scenario(manifest_path: pathlib.Path | None = None) -> ScenarioBundle:
+    """Parse ``accelerator.yaml`` and return the wired ``ScenarioBundle``.
+
+    Raises ``ValueError`` on any manifest error with a path-prefixed message.
+    """
+    path = manifest_path or DEFAULT_MANIFEST
+    data = _load_yaml(path)
+    scenario = data.get("scenario")
+    if not scenario:
+        raise ValueError(
+            f"{path}: missing top-level 'scenario' block (required since D2). "
+            "See docs/getting-started.md for the manifest shape."
+        )
+
+    _require_keys(
+        scenario,
+        ["id", "package", "request_schema", "workflow_factory",
+         "endpoint", "agents"],
+        f"{path}:scenario",
+    )
+
+    package = scenario["package"]
+    if not isinstance(package, str) or not package:
+        raise ValueError("scenario.package must be a non-empty dotted string")
+    leaf = package.split(".")[-1]
+    if "-" in leaf or not leaf.isidentifier():
+        raise ValueError(
+            f"scenario.package leaf must be a Python identifier "
+            f"(underscores, no hyphens): {leaf!r}"
+        )
+
+    # request_schema
+    schema_cls = _resolve_attr(package, scenario["request_schema"], "request_schema")
+    if not (isinstance(schema_cls, type) and issubclass(schema_cls, BaseModel)):
+        raise ValueError(
+            "scenario.request_schema must resolve to a pydantic BaseModel subclass"
+        )
+
+    # workflow_factory
+    factory = _resolve_attr(package, scenario["workflow_factory"], "workflow_factory")
+    if not callable(factory):
+        raise ValueError("scenario.workflow_factory must resolve to a callable")
+
+    # endpoint
+    endpoint = scenario.get("endpoint") or {}
+    endpoint_path = endpoint.get("path")
+    if not isinstance(endpoint_path, str) or not endpoint_path.startswith("/"):
+        raise ValueError(
+            "scenario.endpoint.path must be a string starting with '/'"
+        )
+
+    # agents
+    agents_raw = scenario.get("agents") or []
+    if not isinstance(agents_raw, list) or not agents_raw:
+        raise ValueError("scenario.agents must be a non-empty list")
+    agents: list[ScenarioAgent] = []
+    for i, a in enumerate(agents_raw):
+        if not isinstance(a, dict) or "id" not in a or "foundry_name" not in a:
+            raise ValueError(
+                f"scenario.agents[{i}]: each entry needs 'id' and 'foundry_name'"
+            )
+        agents.append(ScenarioAgent(id=a["id"], foundry_name=a["foundry_name"]))
+
+    # retrieval.indexes (optional)
+    retrieval = scenario.get("retrieval") or {}
+    idx_raw = retrieval.get("indexes") or []
+    indexes: list[ScenarioIndex] = []
+    for i, entry in enumerate(idx_raw):
+        if not isinstance(entry, dict):
+            raise ValueError(f"scenario.retrieval.indexes[{i}] must be a mapping")
+        _require_keys(
+            entry, ["name", "seed", "schema"],
+            f"scenario.retrieval.indexes[{i}]",
+        )
+        schema_fn = _resolve_attr(
+            package, entry["schema"], f"retrieval.indexes[{i}].schema"
+        )
+        if not callable(schema_fn):
+            raise ValueError(
+                f"scenario.retrieval.indexes[{i}].schema must resolve to a callable"
+            )
+        indexes.append(ScenarioIndex(
+            name=entry["name"], seed=entry["seed"], schema_callable=schema_fn
+        ))
+
+    evals = scenario.get("evals") or {}
+    quality_dataset = evals.get("quality_dataset", "")
+    redteam_dataset = evals.get("redteam_dataset", "")
+
+    ctx = ScenarioContext(
+        id=scenario["id"],
+        package=package,
+        request_schema=schema_cls,
+        endpoint_path=endpoint_path,
+        agents=tuple(agents),
+        retrieval_indexes=tuple(indexes),
+        evals_quality=quality_dataset,
+        evals_redteam=redteam_dataset,
+    )
+
+    workflow = factory(ctx)
+    if not hasattr(workflow, "stream") or not callable(
+        getattr(workflow, "stream")
+    ):
+        raise ValueError(
+            "workflow_factory must return an object with an async 'stream' method"
+        )
+
+    return ScenarioBundle(
+        id=ctx.id,
+        package=ctx.package,
+        request_schema=ctx.request_schema,
+        workflow=workflow,
+        endpoint_path=ctx.endpoint_path,
+        agents=ctx.agents,
+        retrieval_indexes=ctx.retrieval_indexes,
+        evals_quality=ctx.evals_quality,
+        evals_redteam=ctx.evals_redteam,
+    )
+
+
+def read_scenario_raw(
+    manifest_path: pathlib.Path | None = None,
+) -> dict[str, Any]:
+    """Return the raw ``scenario:`` block without resolving imports.
+
+    Used by scripts (seed-search, foundry-bootstrap, evals) that need the
+    declared values without booting the whole app. Raises ``ValueError`` if
+    the block is missing or the manifest is unreadable.
+    """
+    path = manifest_path or DEFAULT_MANIFEST
+    data = _load_yaml(path)
+    scenario = data.get("scenario")
+    if not scenario:
+        raise ValueError(f"{path}: missing top-level 'scenario' block")
+    return scenario

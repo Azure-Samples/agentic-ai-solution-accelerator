@@ -13,6 +13,46 @@
 schema_version: "1.0"
 accelerator_version: "1.0.0"   # pins to the template version partner cloned
 
+schema_version: "1.0"
+accelerator_version: "1.0.0"   # pins to the template version partner cloned
+
+# -----------------------------------------------------------------------------
+# scenario:  HOW the accelerator plugs a concrete workflow into the framework.
+# The partner changes this (or runs `scripts/scaffold-scenario.py`) to swap
+# scenarios. Every field is resolved at process startup by
+# `src.workflow.registry.load_scenario`.
+#
+# - `id`: scenario slug (hyphens allowed; appears in /healthz + logs).
+# - `package`: dotted Python import path (leaf MUST use underscores).
+# - `request_schema` / `workflow_factory` / `retrieval.indexes[].schema`:
+#   "module:attr" form, relative to `package`. `request_schema` resolves to a
+#   pydantic BaseModel subclass; `workflow_factory` resolves to a callable
+#   that receives a `ScenarioContext` and returns a `BaseWorkflow`.
+# - `endpoint.path`: the single POST route the FastAPI app mounts for this
+#   scenario. Evals + smoke tests read this so nothing hardcodes `/research`.
+# -----------------------------------------------------------------------------
+scenario:
+  id: sales-research
+  package: src.scenarios.sales_research
+  request_schema: schema:ResearchRequest
+  workflow_factory: workflow:build_workflow
+  endpoint:
+    path: /research/stream
+  agents:
+    - { id: supervisor,            foundry_name: accel-sales-research-supervisor }
+    - { id: account_planner,       foundry_name: accel-account-planner }
+    - { id: icp_fit_analyst,       foundry_name: accel-icp-fit-analyst }
+    - { id: competitive_context,   foundry_name: accel-competitive-context }
+    - { id: outreach_personalizer, foundry_name: accel-outreach-personalizer }
+  retrieval:
+    indexes:
+      - name: accounts
+        seed: data/samples/accounts.json
+        schema: retrieval:index_definition
+  evals:
+    quality_dataset: evals/quality/golden_cases.jsonl
+    redteam_dataset: evals/redteam/cases.jsonl
+
 # -----------------------------------------------------------------------------
 # solution:  WHO + WHAT — derived from docs/discovery/solution-brief.md
 # -----------------------------------------------------------------------------

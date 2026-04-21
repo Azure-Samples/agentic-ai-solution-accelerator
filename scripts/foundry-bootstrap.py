@@ -1,6 +1,11 @@
-"""Create or verify Foundry agents for the flagship workflow.
+"""Create or verify Foundry agents for the loaded scenario.
 
 Called from ``azure.yaml`` ``postprovision`` hook. Idempotent.
+
+Manifest-driven: reads ``scenario.agents[]`` from ``accelerator.yaml`` and
+expects a spec file at ``docs/agent-specs/<foundry_name>.md`` for each. The
+``accel-sales-research-supervisor``-shaped list is no longer hardcoded here
+so partners who scaffold a new scenario don't have to edit this file.
 
 Behaviour:
 1. Pre-flight: verifies the project endpoint is reachable, the expected model
@@ -8,12 +13,12 @@ Behaviour:
    (content filter) policy is bound to that deployment. If any check fails,
    exits non-zero with an actionable message so partners know to re-run
    ``azd up`` or fix quota rather than chasing a Foundry agent error.
-2. Reads the 5 agent spec Markdown files in ``docs/agent-specs/``.
+2. Reads the agent spec Markdown files in ``docs/agent-specs/``.
 3. Connects to the Foundry project identified by ``AZURE_AI_FOUNDRY_ENDPOINT``
    using ``DefaultAzureCredential``.
 4. For each spec, creates or updates the named agent with the spec's
    instructions + model. The bootstrap is the ONLY place instructions flow
-   from the repo into Foundry — after this, the Foundry portal is the
+   from the repo into Foundry - after this, the Foundry portal is the
    runtime source of truth.
 5. Exits non-zero if any agent is missing and we cannot create it.
 
@@ -40,8 +45,6 @@ import sys
 from azure.identity import DefaultAzureCredential
 
 try:
-    # azure-ai-projects is the current Foundry SDK; agents are accessed via
-    # `project_client.agents` (wrapping azure-ai-agents).
     from azure.ai.projects import AIProjectClient
 except ImportError:
     print("::error::azure-ai-projects is not installed; pip install -U azure-ai-projects",
@@ -56,24 +59,36 @@ except ImportError:
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 SPECS_DIR = ROOT / "docs/agent-specs"
-
-AGENT_NAMES = [
-    "accel-sales-research-supervisor",
-    "accel-account-planner",
-    "accel-icp-fit-analyst",
-    "accel-competitive-context",
-    "accel-outreach-personalizer",
-]
+sys.path.insert(0, str(ROOT))
 
 
 _MODEL_RE = re.compile(r"^\*\*Model:\*\*\s*(\S+)", re.MULTILINE)
 _INSTRUCTIONS_RE = re.compile(r"## Instructions\s*\n(.*)", re.DOTALL)
 
 
+def _load_agent_names_from_manifest() -> list[str]:
+    """Return the list of Foundry agent names declared by the scenario."""
+    from src.workflow.registry import read_scenario_raw
+
+    scenario = read_scenario_raw(ROOT / "accelerator.yaml")
+    agents = scenario.get("agents") or []
+    names: list[str] = []
+    for i, a in enumerate(agents):
+        name = (a or {}).get("foundry_name")
+        if not name:
+            raise ValueError(
+                f"accelerator.yaml: scenario.agents[{i}] missing 'foundry_name'"
+            )
+        names.append(name)
+    if not names:
+        raise ValueError("accelerator.yaml: scenario.agents is empty")
+    return names
+
+
 def _parse_spec(path: pathlib.Path) -> str:
     """Return the ``## Instructions`` body of the spec file.
 
-    Model is deliberately NOT read from the spec — every agent uses the
+    Model is deliberately NOT read from the spec - every agent uses the
     single model deployed by Bicep, exposed as ``AZURE_AI_FOUNDRY_MODEL``.
     The accelerator lint rejects any spec that re-introduces ``**Model:**``.
     """
@@ -164,6 +179,13 @@ def main() -> int:
               file=sys.stderr)
         return 1
 
+    try:
+        agent_names = _load_agent_names_from_manifest()
+    except Exception as exc:
+        print(f"::error::failed to load agents from accelerator.yaml: {exc}",
+              file=sys.stderr)
+        return 1
+
     credential = DefaultAzureCredential()
 
     if not args.skip_preflight:
@@ -184,7 +206,7 @@ def main() -> int:
         return 1
 
     failures: list[str] = []
-    for name in AGENT_NAMES:
+    for name in agent_names:
         spec_path = SPECS_DIR / f"{name}.md"
         if not spec_path.exists():
             failures.append(f"{name}: missing spec file {spec_path}")
@@ -226,7 +248,7 @@ def main() -> int:
             print(f"::error::{f}", file=sys.stderr)
         return 1
 
-    print(f"bootstrap ok: {len(AGENT_NAMES)} agents verified in {endpoint}")
+    print(f"bootstrap ok: {len(agent_names)} agents verified in {endpoint}")
     return 0
 
 

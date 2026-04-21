@@ -5,7 +5,9 @@ Usage:
     python evals/quality/run.py --api-url $API_URL --out results.jsonl
 
 Each case is a JSON line with ``expected`` thresholds. Results land in
-``results.jsonl`` for CI's ``accept`` gate.
+``results.jsonl`` for CI's ``accept`` gate. The endpoint path comes from
+``scenario.endpoint.path`` in ``accelerator.yaml`` so renaming ``/research/stream``
+to something scenario-specific doesn't break evals.
 """
 from __future__ import annotations
 
@@ -19,10 +21,26 @@ import time
 import httpx
 
 HERE = pathlib.Path(__file__).parent
+REPO_ROOT = HERE.parent.parent
 CASES = HERE / "golden_cases.jsonl"
+sys.path.insert(0, str(REPO_ROOT))
 
 
-async def run_case(client: httpx.AsyncClient, api_url: str, case: dict) -> dict:
+def _load_endpoint_path() -> str:
+    from src.workflow.registry import read_scenario_raw
+
+    scenario = read_scenario_raw(REPO_ROOT / "accelerator.yaml")
+    path = (scenario.get("endpoint") or {}).get("path")
+    if not path:
+        raise RuntimeError(
+            "accelerator.yaml: scenario.endpoint.path is required"
+        )
+    return path
+
+
+async def run_case(
+    client: httpx.AsyncClient, api_url: str, endpoint_path: str, case: dict,
+) -> dict:
     started = time.time()
     payload = {k: case[k] for k in (
         "company_name", "domain", "persona",
@@ -30,8 +48,9 @@ async def run_case(client: httpx.AsyncClient, api_url: str, case: dict) -> dict:
     )}
     final_briefing = None
     try:
-        async with client.stream("POST", f"{api_url}/research/stream",
-                                  json=payload, timeout=120.0) as resp:
+        async with client.stream(
+            "POST", f"{api_url}{endpoint_path}", json=payload, timeout=120.0,
+        ) as resp:
             async for line in resp.aiter_lines():
                 if not line.startswith("data:"):
                     continue
@@ -81,11 +100,12 @@ async def main() -> int:
     p.add_argument("--out", default=str(HERE / "results.jsonl"))
     args = p.parse_args()
 
-    cases = [json.loads(l) for l in CASES.read_text().splitlines() if l.strip()]
+    endpoint_path = _load_endpoint_path()
+    cases = [json.loads(line) for line in CASES.read_text().splitlines() if line.strip()]
     async with httpx.AsyncClient() as client:
         results = []
         for case in cases:
-            r = await run_case(client, args.api_url, case)
+            r = await run_case(client, args.api_url, endpoint_path, case)
             results.append(r)
             print(json.dumps(r))
 

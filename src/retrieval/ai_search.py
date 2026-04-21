@@ -1,8 +1,9 @@
-"""Azure AI Search retrieval — the ONLY grounding path for agents.
+"""Azure AI Search retrieval - the ONLY grounding path for agents.
 
 Agents MUST NOT call out to arbitrary HTTP endpoints for grounding. If you
 need a new source, add an index here (and its infra in
-``infra/modules/ai-search.bicep``).
+``infra/modules/ai-search.bicep``) and declare it under
+``scenario.retrieval.indexes`` in ``accelerator.yaml``.
 """
 from __future__ import annotations
 
@@ -25,34 +26,51 @@ class RetrievedChunk:
     metadata: dict[str, Any]
 
 
-class AccountRetriever:
-    """Grounded retrieval over the ``accounts`` index.
+class SearchRetriever:
+    """Generic grounded retrieval over an AI Search index.
 
-    Index schema (indicative — create in infra/):
-        id                str (key)
-        content           str
-        source            str (url)
-        company_name      str (filterable)
-        industry          str (filterable)
-        last_refreshed    datetime
-        embedding         vector
+    The index *name* is passed by the scenario (via the manifest); the
+    *endpoint* and managed-identity auth come from settings. Agents should
+    NOT instantiate this directly - the workflow wires the correct index
+    name per scenario.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, index_name: str) -> None:
+        if not index_name:
+            raise ValueError("SearchRetriever requires a non-empty index_name")
         s = load_settings()
+        self._index_name = index_name
         self._client = SearchClient(
             endpoint=s.ai_search_endpoint,
-            index_name=s.ai_search_index,
+            index_name=index_name,
             credential=DefaultAzureCredential(),
         )
 
-    async def search(self, query: str, *, top: int = 5,
-                     filter_expr: str | None = None) -> list[RetrievedChunk]:
-        emit_event(Event(name="retrieval.query",
-                         args_redacted={"query_len": len(query), "top": top}))
+    @property
+    def index_name(self) -> str:
+        return self._index_name
+
+    async def search(
+        self,
+        query: str,
+        *,
+        top: int = 5,
+        filter_expr: str | None = None,
+    ) -> list[RetrievedChunk]:
+        emit_event(Event(
+            name="retrieval.query",
+            args_redacted={
+                "index": self._index_name,
+                "query_len": len(query),
+                "top": top,
+            },
+        ))
         results = await self._client.search(
-            search_text=query, top=top, filter=filter_expr,
-            query_type="semantic", semantic_configuration_name="default",
+            search_text=query,
+            top=top,
+            filter=filter_expr,
+            query_type="semantic",
+            semantic_configuration_name="default",
         )
         out: list[RetrievedChunk] = []
         async for r in results:
@@ -64,8 +82,11 @@ class AccountRetriever:
                 metadata={k: v for k, v in r.items()
                           if k not in ("id", "content", "source")},
             ))
-        emit_event(Event(name="retrieval.returned",
-                         value=float(len(out)), unit="chunks"))
+        emit_event(Event(
+            name="retrieval.returned",
+            value=float(len(out)),
+            unit="chunks",
+        ))
         return out
 
     async def close(self) -> None:

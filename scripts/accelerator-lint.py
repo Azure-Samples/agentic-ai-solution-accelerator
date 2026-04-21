@@ -77,7 +77,7 @@ def manifest_present(ctx: Ctx) -> list[Finding]:
         return [Finding("manifest-present", "block", "accelerator.yaml",
                         "accelerator.yaml is required at repo root")]
     txt = m.read_text(encoding="utf-8")
-    required_keys = ["solution:", "acceptance:", "controls:", "kpis:"]
+    required_keys = ["scenario:", "solution:", "acceptance:", "controls:", "kpis:"]
     missing = [k for k in required_keys if k not in txt]
     return [Finding("manifest-required-keys", "block", "accelerator.yaml",
                     f"missing top-level key: {k}") for k in missing]
@@ -98,13 +98,198 @@ def solution_brief_present(ctx: Ctx) -> list[Finding]:
 
 
 # ---------------------------------------------------------------------------
+# Scenario manifest — structural (AST-only) validation
+# ---------------------------------------------------------------------------
+_IMPORT_REF_RE = re.compile(r"^[A-Za-z_][\w]*(?:\.[A-Za-z_][\w]*)*:[A-Za-z_][\w]*$")
+
+
+def _ast_defines(path: pathlib.Path, attr: str) -> bool:
+    """Return True if the given file defines ``attr`` at module scope.
+
+    AST-only: we never execute or import the module; this keeps lint safe on
+    machines missing runtime deps (Azure SDKs, Foundry creds, etc.).
+    """
+    if not path.exists():
+        return False
+    try:
+        import ast as _ast
+        tree = _ast.parse(path.read_text(encoding="utf-8"))
+    except Exception:
+        return False
+    for node in tree.body:
+        if isinstance(node, (_ast.FunctionDef, _ast.AsyncFunctionDef, _ast.ClassDef)):
+            if node.name == attr:
+                return True
+        elif isinstance(node, _ast.Assign):
+            for t in node.targets:
+                if isinstance(t, _ast.Name) and t.id == attr:
+                    return True
+        elif isinstance(node, _ast.AnnAssign):
+            if isinstance(node.target, _ast.Name) and node.target.id == attr:
+                return True
+    return False
+
+
+def _resolve_ref_path(package: str, ref: str) -> tuple[pathlib.Path, str]:
+    """Return the filesystem path and attr for a ``module:attr`` import ref."""
+    module_suffix, attr = ref.split(":")
+    full_module = f"{package}.{module_suffix}"
+    fs = ROOT / pathlib.Path(*full_module.split("."))
+    candidate_file = fs.with_suffix(".py")
+    candidate_pkg = fs / "__init__.py"
+    if candidate_file.exists():
+        return candidate_file, attr
+    return candidate_pkg, attr
+
+
+@check
+def scenario_manifest_valid(ctx: Ctx) -> list[Finding]:
+    """AST-validate the ``scenario:`` block.
+
+    - Must exist with required keys.
+    - ``package`` leaf must be a Python identifier (no hyphens).
+    - Referenced modules must exist on disk and define the named attributes.
+    - ``endpoint.path`` must start with ``/``.
+    Does NOT import anything; runtime wiring is validated separately in
+    :func:`src.workflow.registry.load_scenario`.
+    """
+    m = ROOT / "accelerator.yaml"
+    if not m.exists():
+        return []
+    try:
+        import yaml
+    except ImportError:
+        return [Finding("scenario-manifest", "warn", "accelerator.yaml",
+                        "pyyaml not installed; skipping scenario lint")]
+    try:
+        data = yaml.safe_load(m.read_text(encoding="utf-8")) or {}
+    except Exception as exc:
+        return [Finding("scenario-manifest", "block", "accelerator.yaml",
+                        f"accelerator.yaml is not valid YAML: {exc}")]
+
+    scenario = data.get("scenario")
+    if not scenario:
+        return [Finding("scenario-manifest", "block", "accelerator.yaml",
+                        "missing top-level 'scenario' block (required since D2).")]
+
+    out: list[Finding] = []
+    required = ["id", "package", "request_schema",
+                "workflow_factory", "endpoint", "agents"]
+    for k in required:
+        if k not in scenario:
+            out.append(Finding("scenario-manifest", "block", "accelerator.yaml",
+                               f"scenario.{k} is required"))
+
+    package = scenario.get("package", "")
+    if package:
+        leaf = package.split(".")[-1]
+        if "-" in leaf or not leaf.isidentifier():
+            out.append(Finding("scenario-manifest", "block", "accelerator.yaml",
+                               f"scenario.package leaf must be a Python "
+                               f"identifier (underscores only): {leaf!r}"))
+
+    # Endpoint path
+    endpoint = scenario.get("endpoint") or {}
+    ep_path = endpoint.get("path", "")
+    if not isinstance(ep_path, str) or not ep_path.startswith("/"):
+        out.append(Finding("scenario-manifest", "block", "accelerator.yaml",
+                           "scenario.endpoint.path must start with '/'"))
+
+    # AST-check each import ref
+    def _check_ref(field: str, ref: str) -> None:
+        if not isinstance(ref, str) or not _IMPORT_REF_RE.match(ref):
+            out.append(Finding("scenario-manifest", "block", "accelerator.yaml",
+                               f"scenario.{field} must match 'module:attr', "
+                               f"got {ref!r}"))
+            return
+        if not package:
+            return
+        fs_path, attr = _resolve_ref_path(package, ref)
+        if not fs_path.exists():
+            out.append(Finding("scenario-manifest", "block", "accelerator.yaml",
+                               f"scenario.{field}: target file not found: "
+                               f"{_rel(fs_path)}"))
+            return
+        if not _ast_defines(fs_path, attr):
+            out.append(Finding("scenario-manifest", "block", "accelerator.yaml",
+                               f"scenario.{field}: {_rel(fs_path)} does not "
+                               f"define {attr!r}"))
+
+    if "request_schema" in scenario:
+        _check_ref("request_schema", scenario["request_schema"])
+    if "workflow_factory" in scenario:
+        _check_ref("workflow_factory", scenario["workflow_factory"])
+
+    # Agents: non-empty list of {id, foundry_name}
+    agents = scenario.get("agents") or []
+    if not isinstance(agents, list) or not agents:
+        out.append(Finding("scenario-manifest", "block", "accelerator.yaml",
+                           "scenario.agents must be a non-empty list"))
+    else:
+        for i, a in enumerate(agents):
+            if not isinstance(a, dict) or "id" not in a or "foundry_name" not in a:
+                out.append(Finding("scenario-manifest", "block",
+                                   "accelerator.yaml",
+                                   f"scenario.agents[{i}] needs 'id' and "
+                                   "'foundry_name'"))
+
+    # Retrieval indexes (optional, but if present each must be well-formed)
+    retrieval = scenario.get("retrieval") or {}
+    idx = retrieval.get("indexes") or []
+    for i, entry in enumerate(idx):
+        if not isinstance(entry, dict):
+            out.append(Finding("scenario-manifest", "block", "accelerator.yaml",
+                               f"scenario.retrieval.indexes[{i}] must be a mapping"))
+            continue
+        for k in ("name", "seed", "schema"):
+            if k not in entry:
+                out.append(Finding("scenario-manifest", "block",
+                                   "accelerator.yaml",
+                                   f"scenario.retrieval.indexes[{i}].{k} required"))
+        if "schema" in entry:
+            _check_ref(f"retrieval.indexes[{i}].schema", entry["schema"])
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Agent code shape
 # ---------------------------------------------------------------------------
+def _scenario_agents_root() -> pathlib.Path | None:
+    """Resolve the agents package directory from ``scenario.package``.
+
+    Returns ``None`` if the manifest is missing the scenario block or pyyaml
+    isn't installed; other checks will surface those failures.
+    """
+    m = ROOT / "accelerator.yaml"
+    if not m.exists():
+        return None
+    try:
+        import yaml
+    except ImportError:
+        return None
+    try:
+        data = yaml.safe_load(m.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return None
+    scenario = data.get("scenario") or {}
+    package = scenario.get("package")
+    if not package or not isinstance(package, str):
+        return None
+    fs = ROOT / pathlib.Path(*package.split("."))
+    agents_dir = fs / "agents"
+    return agents_dir if agents_dir.exists() else None
+
+
 @check
 def agents_three_layer(ctx: Ctx) -> list[Finding]:
-    agents_root = ROOT / "src/agents"
-    if not agents_root.exists():
-        return []
+    agents_root = _scenario_agents_root()
+    if agents_root is None:
+        # Back-compat: pre-D2 layouts put agents under src/agents. If both are
+        # absent, other checks (scenario-manifest) will report the real issue.
+        legacy = ROOT / "src/agents"
+        if not legacy.exists():
+            return []
+        agents_root = legacy
     out: list[Finding] = []
     for agent_dir in agents_root.iterdir():
         if not agent_dir.is_dir() or agent_dir.name.startswith("_"):

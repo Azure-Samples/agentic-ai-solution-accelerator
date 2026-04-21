@@ -1,38 +1,35 @@
 """Sales Research & Outreach workflow — Supervisor + parallel workers.
 
-Graph:
+Graph::
 
     [request]
-        │
-        ▼
-    supervisor (plan) ──────────────┐
-        │                           │
-        ▼                           │
-    ┌────────┬──────────┬──────────┤
-    │        │          │          │
-    ▼        ▼          ▼          ▼
+        |
+        v
+    supervisor (plan) -----------+
+        |                        |
+        v                        |
+    +--------+----------+--------+
+    |        |          |        |
+    v        v          v        v
   account  icp_fit   competitive  outreach  (parallel)
-  researcher analyst  context      personalizer
-    │        │          │          │
-    └────────┴─────┬────┴──────────┘
-                   ▼
-              aggregator
-                   │
-          requires_approval?
-              ┌────┴─────┐
-              ▼          ▼
+  planner  analyst   context      personalizer
+    |        |          |         |
+    +--------+-----+----+---------+
+                   v
+               aggregator
+                   |
+           requires_approval?
+               +----+-----+
+               v          v
            HITL gate    done
-              │
-              ▼
-         side-effect tools
-         (crm_write_contact,
-          send_email)
+               |
+               v
+          side-effect tools
 
 The aggregator composes the Supervisor's final briefing and then (if the
 supervisor flagged any side-effect tools in ``requires_approval``) drives the
-HITL checkpoint and invokes the tool. The agent framework's ``WorkflowBuilder``
-is used here — Foundry holds the system instructions of each agent; this code
-never materialises agent instructions.
+HITL checkpoint and invokes the tool. Foundry holds the system instructions
+of each agent; this code never materialises agent instructions.
 """
 from __future__ import annotations
 
@@ -45,21 +42,23 @@ from azure.identity import DefaultAzureCredential
 # executor to keep test startup cheap.
 try:
     from agent_framework.azure import AzureAIClient  # type: ignore
-    from agent_framework import WorkflowBuilder  # type: ignore
-except Exception:  # pragma: no cover — SDK may not be installed in lint envs
+    from agent_framework import WorkflowBuilder  # type: ignore  # noqa: F401
+except Exception:  # pragma: no cover - SDK may not be installed in lint envs
     AzureAIClient = None  # type: ignore
     WorkflowBuilder = None  # type: ignore
 
-from ..accelerator_baseline.killswitch import assert_enabled
-from ..accelerator_baseline.telemetry import Event, emit_event
-from ..agents import (
+from src.accelerator_baseline.killswitch import assert_enabled
+from src.accelerator_baseline.telemetry import Event, emit_event
+from src.tools import SIDE_EFFECT_TOOLS
+from src.workflow.base import BaseWorkflow
+
+from .agents import (
     account_planner,
     competitive_context,
     icp_fit_analyst,
     outreach_personalizer,
     supervisor,
 )
-from ..tools import SIDE_EFFECT_TOOLS
 
 
 class SalesResearchWorkflow:
@@ -70,8 +69,9 @@ class SalesResearchWorkflow:
     class; the agents and tools are unchanged.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, *, primary_index_name: str = "accounts") -> None:
         self._credential = DefaultAzureCredential()
+        self._primary_index_name = primary_index_name
 
     async def stream(self, request: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
         assert_enabled("workflow")
@@ -84,13 +84,11 @@ class SalesResearchWorkflow:
             supervisor.AGENT_NAME, supervisor.build_prompt(request)
         )
 
-        # 2. Account Planner runs FIRST — downstream workers need the real
-        #    account profile, not a placeholder. Retrieval grounding is
-        #    attached here so the agent can cite from the ``accounts`` index.
+        # 2. Account Planner runs FIRST - downstream workers need the real
+        #    account profile. Retrieval grounding is attached here so the
+        #    agent can cite from the configured index.
         yield {"type": "status", "stage": "account_planner"}
-        grounding_chunks = await self._retrieve_grounding(
-            request["company_name"]
-        )
+        grounding_chunks = await self._retrieve_grounding(request["company_name"])
         account_profile = await self._run_worker(
             account_planner,
             {"company_name": request["company_name"],
@@ -100,21 +98,22 @@ class SalesResearchWorkflow:
         )
         yield {"type": "partial", "account_profile": account_profile}
 
-        # 3. ICP-Fit and Competitive-Context run in parallel against the
-        #    account profile.
+        # 3. ICP-Fit and Competitive-Context run in parallel.
         yield {"type": "status", "stage": "workers.parallel"}
         icp, comp = await asyncio.gather(
             self._run_worker(
-                icp_fit_analyst, {"account_profile": account_profile,
-                                  "icp_definition": request["icp_definition"]},
+                icp_fit_analyst,
+                {"account_profile": account_profile,
+                 "icp_definition": request["icp_definition"]},
             ),
             self._run_worker(
-                competitive_context, {"account_profile": account_profile,
-                                      "our_solution": request["our_solution"]},
+                competitive_context,
+                {"account_profile": account_profile,
+                 "our_solution": request["our_solution"]},
             ),
         )
 
-        # 4. Outreach Personalizer depends on all three earlier worker outputs.
+        # 4. Outreach Personalizer depends on all three earlier outputs.
         yield {"type": "status", "stage": "outreach_personalizer"}
         outreach = await self._run_worker(
             outreach_personalizer,
@@ -123,18 +122,16 @@ class SalesResearchWorkflow:
              "competitive_context": comp,
              "persona": request.get("persona", "Decision maker")},
         )
-        yield {"type": "partial", "icp": icp, "competitive": comp, "outreach": outreach}
+        yield {"type": "partial", "icp": icp, "competitive": comp,
+               "outreach": outreach}
 
-        # 5. Aggregator: re-invoke supervisor with all worker outputs to
-        #    compose the final briefing (Foundry instructions define the
-        #    synthesis behaviour).
+        # 5. Aggregator: re-invoke supervisor with all worker outputs.
         yield {"type": "status", "stage": "aggregating"}
         final = await self._aggregate(
             request, account_profile, icp, comp, outreach, plan
         )
 
-        # 6. Optional side-effect tools.
-        #    HITL is enforced inside each tool module; do NOT double-gate here.
+        # 6. Optional side-effect tools. HITL enforced inside tool modules.
         approvals_needed = final.get("requires_approval", [])
         tool_args_map = final.get("tool_args", {}) or {}
         for tool_name in approvals_needed:
@@ -143,8 +140,6 @@ class SalesResearchWorkflow:
             fn, _schema = SIDE_EFFECT_TOOLS[tool_name]
             args = tool_args_map.get(tool_name, {})
             if not args:
-                # Supervisor failed to produce tool args — surface & skip
-                # rather than silently call tools with {}.
                 yield {"type": "tool_skipped", "tool": tool_name,
                        "reason": "no tool_args produced by supervisor"}
                 continue
@@ -178,31 +173,30 @@ class SalesResearchWorkflow:
                          external_system=module.AGENT_NAME))
         return data
 
-    async def _retrieve_grounding(self, company_name: str) -> list[dict[str, Any]]:
-        """Pull top-K grounded chunks from Azure AI Search.
+    async def _retrieve_grounding(self, query: str) -> list[dict[str, Any]]:
+        """Pull top-K grounded chunks from the scenario's primary AI Search index.
 
         Fails open to an empty list when retrieval isn't configured (so the
         unit-test stub path still works); the agent's validator enforces
         that any factual claim has a citation.
         """
         try:
-            from ..retrieval.ai_search import AccountRetriever
+            from src.retrieval.ai_search import SearchRetriever
         except Exception:
             return []
         try:
-            retriever = AccountRetriever()
+            retriever = SearchRetriever(self._primary_index_name)
         except Exception:
             return []
         try:
-            chunks = await retriever.search(company_name, top=5)
+            chunks = await retriever.search(query, top=5)
             return [
                 {"id": c.id, "content": c.content, "source": c.source,
                  "score": c.score}
                 for c in chunks
             ]
         except Exception as exc:
-            emit_event(Event(name="retrieval.returned", ok=False,
-                             error=str(exc)))
+            emit_event(Event(name="retrieval.returned", ok=False, error=str(exc)))
             return []
         finally:
             try:
@@ -212,7 +206,6 @@ class SalesResearchWorkflow:
 
     async def _aggregate(self, request, account_profile, icp, comp, outreach,
                          plan) -> dict[str, Any]:
-        # Supervisor synthesises worker outputs.
         synthesis_prompt = supervisor.build_prompt(request) + (
             f"\n\nWORKER OUTPUTS:\n"
             f"account_profile = {account_profile}\n"
@@ -226,3 +219,16 @@ class SalesResearchWorkflow:
         if not ok:
             raise ValueError(f"supervisor aggregator: {err}")
         return data
+
+
+def build_workflow(context: Any) -> BaseWorkflow:
+    """Scenario workflow factory.
+
+    Signature matches the contract in ``src.workflow.registry``:
+    ``build_workflow(ScenarioContext) -> BaseWorkflow``. The context exposes
+    ``retrieval_indexes``; we pick the first declared index as the primary
+    grounding source so partners can rename without editing this file.
+    """
+    indexes = getattr(context, "retrieval_indexes", ()) or ()
+    primary = indexes[0].name if indexes else "accounts"
+    return SalesResearchWorkflow(primary_index_name=primary)
