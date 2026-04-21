@@ -89,6 +89,7 @@ module foundry 'modules/foundry.bicep' = {
     modelVersion: modelVersion
     modelDeploymentName: modelDeploymentName
     modelCapacity: modelCapacity
+    enablePrivateLink: enablePrivateLink
   }
 }
 

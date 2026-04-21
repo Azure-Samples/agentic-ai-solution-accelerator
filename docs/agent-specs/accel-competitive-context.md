@@ -1,6 +1,5 @@
 # Agent: accel-competitive-context
 
-**Model:** gpt-5.2
 **Reference:** SMB Agent Hub `compete_advisor` + `cloud_footprint`
 (competitive posture + grounded evidence model for AWS/GCP/OCI signals).
 

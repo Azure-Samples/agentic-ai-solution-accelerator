@@ -41,6 +41,9 @@ param modelCapacity int = 30
 @description('Default project name inside the Foundry account.')
 param foundryProjectName string = 'accelerator-default'
 
+@description('When true, disables public network access on the Foundry account. Actual private endpoints + DNS zones require a pre-existing VNet and are bring-your-own for now; see docs/getting-started.md.')
+param enablePrivateLink bool = false
+
 var accountName = 'fdy${take(uniqueString(resourceGroup().id, projectName), 12)}'
 
 // Cognitive Services built-in roles
@@ -61,10 +64,10 @@ resource account 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
   }
   properties: {
     customSubDomainName: accountName
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: enablePrivateLink ? 'Disabled' : 'Enabled'
     disableLocalAuth: true
     networkAcls: {
-      defaultAction: 'Allow'
+      defaultAction: enablePrivateLink ? 'Deny' : 'Allow'
     }
   }
 }

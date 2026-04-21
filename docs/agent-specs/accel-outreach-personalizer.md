@@ -1,6 +1,5 @@
 # Agent: accel-outreach-personalizer
 
-**Model:** gpt-5.2
 **Reference:** none — no analog in the Agent Hub reference set used by this
 flagship (Account Planner, Portfolio Planner, Zero Trust, Cloud Footprint,
 Compete Advisor, NNR Agent). Kept as a scenario-specific side-effect

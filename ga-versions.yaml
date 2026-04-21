@@ -24,3 +24,6 @@ sdks:
   azure-search-documents:
     min: "11.5.0"
     upper_exclusive: "12.0.0"
+  azure-mgmt-cognitiveservices:
+    min: "13.5.0"
+    upper_exclusive: "14.0.0"

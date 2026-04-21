@@ -1,6 +1,5 @@
 # Agent: accel-icp-fit-analyst
 
-**Model:** gpt-5.2
 **Reference:** SMB Agent Hub `nnr_agent` + `portfolio_planner` (opportunity
 qualification + tiering). Slimmed down for the flagship; partners can
 extend with full NNR sizing.

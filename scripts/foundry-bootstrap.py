@@ -20,7 +20,7 @@ Behaviour:
 Required env:
     AZURE_AI_FOUNDRY_ENDPOINT           project endpoint from Bicep output
     AZURE_AI_FOUNDRY_ACCOUNT_NAME       parent Cognitive Services account
-    AZURE_AI_FOUNDRY_MODEL              model deployment name (default: gpt-4o-mini)
+    AZURE_AI_FOUNDRY_MODEL              model deployment name (from Bicep)
     AZURE_SUBSCRIPTION_ID               subscription for management-plane checks
     AZURE_RESOURCE_GROUP                resource group of the account
 
@@ -70,14 +70,24 @@ _MODEL_RE = re.compile(r"^\*\*Model:\*\*\s*(\S+)", re.MULTILINE)
 _INSTRUCTIONS_RE = re.compile(r"## Instructions\s*\n(.*)", re.DOTALL)
 
 
-def _parse_spec(path: pathlib.Path, default_model: str) -> tuple[str, str]:
+def _parse_spec(path: pathlib.Path) -> str:
+    """Return the ``## Instructions`` body of the spec file.
+
+    Model is deliberately NOT read from the spec — every agent uses the
+    single model deployed by Bicep, exposed as ``AZURE_AI_FOUNDRY_MODEL``.
+    The accelerator lint rejects any spec that re-introduces ``**Model:**``.
+    """
     txt = path.read_text(encoding="utf-8")
-    model_match = _MODEL_RE.search(txt)
-    model = model_match.group(1).strip() if model_match else default_model
+    if _MODEL_RE.search(txt):
+        raise ValueError(
+            f"{path.name}: spec contains a '**Model:**' field, which is no "
+            "longer allowed. The accelerator's single deployed model "
+            "(AZURE_AI_FOUNDRY_MODEL) is authoritative."
+        )
     instr_match = _INSTRUCTIONS_RE.search(txt)
     if not instr_match:
         raise ValueError(f"{path.name}: missing '## Instructions' section")
-    return model, instr_match.group(1).strip()
+    return instr_match.group(1).strip()
 
 
 def _preflight(credential: DefaultAzureCredential) -> list[str]:
@@ -86,13 +96,14 @@ def _preflight(credential: DefaultAzureCredential) -> list[str]:
     subscription_id = os.environ.get("AZURE_SUBSCRIPTION_ID")
     resource_group = os.environ.get("AZURE_RESOURCE_GROUP")
     account_name = os.environ.get("AZURE_AI_FOUNDRY_ACCOUNT_NAME")
-    deployment_name = os.environ.get("AZURE_AI_FOUNDRY_MODEL", "gpt-4o-mini")
+    deployment_name = os.environ.get("AZURE_AI_FOUNDRY_MODEL")
 
-    if not (subscription_id and resource_group and account_name):
+    if not (subscription_id and resource_group and account_name and deployment_name):
         errors.append(
-            "pre-flight skipped: set AZURE_SUBSCRIPTION_ID, AZURE_RESOURCE_GROUP, "
-            "and AZURE_AI_FOUNDRY_ACCOUNT_NAME to run the deployment/RAI checks "
-            "(or pass --skip-preflight)"
+            "pre-flight requires AZURE_SUBSCRIPTION_ID, AZURE_RESOURCE_GROUP, "
+            "AZURE_AI_FOUNDRY_ACCOUNT_NAME, and AZURE_AI_FOUNDRY_MODEL "
+            "(all emitted by Bicep). Run inside an `azd` env or pass "
+            "--skip-preflight to bypass."
         )
         return errors
 
@@ -146,7 +157,12 @@ def main() -> int:
         print("::error::AZURE_AI_FOUNDRY_ENDPOINT is not set", file=sys.stderr)
         return 1
 
-    default_model = os.environ.get("AZURE_AI_FOUNDRY_MODEL", "gpt-4o-mini")
+    default_model = os.environ.get("AZURE_AI_FOUNDRY_MODEL")
+    if not default_model:
+        print("::error::AZURE_AI_FOUNDRY_MODEL is not set; it is emitted by "
+              "Bicep and is the authoritative model deployment for all agents",
+              file=sys.stderr)
+        return 1
 
     credential = DefaultAzureCredential()
 
@@ -173,7 +189,11 @@ def main() -> int:
         if not spec_path.exists():
             failures.append(f"{name}: missing spec file {spec_path}")
             continue
-        model, instructions = _parse_spec(spec_path, default_model)
+        try:
+            instructions = _parse_spec(spec_path)
+        except ValueError as exc:
+            failures.append(str(exc))
+            continue
 
         if args.verify_only:
             if name not in existing_by_name:
@@ -187,17 +207,17 @@ def main() -> int:
                 agent = existing_by_name[name]
                 client.agents.update_agent(
                     agent_id=agent.id,
-                    model=model,
+                    model=default_model,
                     instructions=instructions,
                 )
-                print(f"updated: {name} (model={model})")
+                print(f"updated: {name} (model={default_model})")
             else:
                 client.agents.create_agent(
                     name=name,
-                    model=model,
+                    model=default_model,
                     instructions=instructions,
                 )
-                print(f"created: {name} (model={model})")
+                print(f"created: {name} (model={default_model})")
         except Exception as exc:
             failures.append(f"{name}: {exc}")
 

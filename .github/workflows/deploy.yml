@@ -1,9 +1,9 @@
 name: deploy
 
-# Deploy is gated on the accelerator lint AND evals. Both jobs are defined
-# inline (rather than as separate workflow references) so that the lint rule
-# `deploy_gated_on_lint_and_evals` can statically verify the chain in a single
-# file.
+# Deploy chain: lint -> azd-up -> evals.
+# The lint rule `deploy_gated_on_lint_and_evals` statically verifies this chain.
+# Evals run AFTER azd-up so the URL is emitted by the deploy itself; this avoids
+# the day-0 chicken-and-egg where the repo has no URL to eval against.
 
 on:
   workflow_dispatch:
@@ -25,7 +25,7 @@ jobs:
       - name: Install dev deps
         run: |
           python -m pip install --upgrade pip
-          pip install ruff pyright pyyaml
+          pip install -e ".[dev]"
       - name: Ruff
         run: ruff check src patterns scripts
       - name: Pyright
@@ -33,34 +33,12 @@ jobs:
       - name: Accelerator lint
         run: python scripts/accelerator-lint.py
 
-  evals:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - name: Install deps
-        run: pip install httpx pyyaml
-      - name: Enforce EVALS_API_URL is configured
-        # Fail early: a pilot that's green because evals never ran is worse
-        # than an obvious "please configure this" error.
-        run: |
-          if [ -z "${{ vars.EVALS_API_URL }}" ]; then
-            echo "::error::repo variable EVALS_API_URL is not set; acceptance cannot be verified."
-            exit 1
-          fi
-      - name: Quality evals
-        run: python evals/quality/run.py --api-url "${{ vars.EVALS_API_URL }}"
-      - name: Red-team evals
-        run: python evals/redteam/run.py --api-url "${{ vars.EVALS_API_URL }}"
-      - name: Enforce acceptance block from accelerator.yaml
-        run: python scripts/enforce-acceptance.py
-
   azd-up:
-    needs: [accelerator-lint, evals]
+    needs: [accelerator-lint]
     runs-on: ubuntu-latest
     environment: dev
+    outputs:
+      api_url: ${{ steps.deploy.outputs.api_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: Azure/login@v2
@@ -71,6 +49,7 @@ jobs:
       - name: Install azd
         uses: Azure/setup-azd@v2
       - name: Provision + deploy
+        id: deploy
         env:
           AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
           AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
@@ -78,3 +57,32 @@ jobs:
         run: |
           azd env new "$AZURE_ENV_NAME" --location "$AZURE_LOCATION" --subscription "$AZURE_SUBSCRIPTION_ID" --no-prompt || true
           azd up --no-prompt
+          # Emit the API URL from azd env so downstream evals can hit it.
+          API_URL="$(azd env get-value API_URL 2>/dev/null || true)"
+          if [ -z "$API_URL" ]; then
+            API_URL="$(azd env get-value SERVICE_API_URI 2>/dev/null || true)"
+          fi
+          if [ -z "$API_URL" ]; then
+            echo "::error::azd deploy completed but no API_URL/SERVICE_API_URI was emitted from the bicep outputs"
+            exit 1
+          fi
+          echo "api_url=$API_URL" >> "$GITHUB_OUTPUT"
+
+  evals:
+    needs: [azd-up]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: Quality evals
+        run: python evals/quality/run.py --api-url "${{ needs.azd-up.outputs.api_url }}"
+      - name: Red-team evals
+        run: python evals/redteam/run.py --api-url "${{ needs.azd-up.outputs.api_url }}"
+      - name: Enforce acceptance block from accelerator.yaml
+        run: python scripts/enforce-acceptance.py

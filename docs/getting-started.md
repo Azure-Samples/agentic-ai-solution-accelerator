@@ -43,7 +43,10 @@ a workflow references a name that does not appear here.
 |------|---------|---------|
 | `AZURE_ENV_NAME` | `azd` environment name (used in resource naming) | `dev` |
 | `AZURE_LOCATION` | Azure region | `eastus2` |
-| `EVALS_API_URL` | URL of the deployed API that evals run against | `https://api-dev-xxxx.containerapps.io` |
+
+`EVALS_API_URL` is no longer required as a repo variable — the API URL is
+emitted by the `azd-up` job and consumed by the downstream `evals` job via
+a step output. See the CI chain section below.
 
 ### Local `.env` (for development, not CI)
 
@@ -51,7 +54,7 @@ a workflow references a name that does not appear here.
 |------|---------|
 | `AZURE_AI_FOUNDRY_ENDPOINT` | Foundry project endpoint (Bicep output) |
 | `AZURE_AI_FOUNDRY_ACCOUNT_NAME` | Parent Cognitive Services account name (Bicep output) |
-| `AZURE_AI_FOUNDRY_MODEL` | Model deployment name, default `gpt-4o-mini` |
+| `AZURE_AI_FOUNDRY_MODEL` | Model deployment name emitted by Bicep (`infra/modules/foundry.bicep` is the source of truth — agents never declare their own model) |
 | `AZURE_SUBSCRIPTION_ID` | Subscription for management-plane pre-flight checks |
 | `AZURE_RESOURCE_GROUP` | RG holding the Foundry account |
 | `HITL_APPROVER_ENDPOINT` | Webhook URL for side-effect approvals (prod) |
@@ -59,13 +62,29 @@ a workflow references a name that does not appear here.
 
 ## CI chain
 
-`.github/workflows/deploy.yml` runs three jobs in order:
+`.github/workflows/deploy.yml` runs three jobs, chained so the first deploy
+of a freshly cloned repo is green without any manual URL plumbing:
 
-1. `accelerator-lint` — runs ruff, pyright, and `scripts/accelerator-lint.py`
-2. `evals` — runs quality + red-team evals against `EVALS_API_URL` and enforces `accelerator.yaml::acceptance`
-3. `azd-up` — `needs: [accelerator-lint, evals]`. Cannot run until both are green.
+1. `accelerator-lint` — ruff, pyright, `scripts/accelerator-lint.py`
+2. `azd-up` (`needs: [accelerator-lint]`) — runs `azd up` and publishes
+   `api_url` as a job output
+3. `evals` (`needs: [azd-up]`) — pulls `needs.azd-up.outputs.api_url`,
+   runs quality + red-team evals, enforces `accelerator.yaml::acceptance`
 
-This gate is enforced by `deploy_gated_on_lint_and_evals` in the accelerator lint.
+This chain is enforced by `deploy_gated_on_lint_and_evals` in the
+accelerator lint.
+
+## Private network access
+
+Setting the Bicep param `enablePrivateLink=true` flips
+`publicNetworkAccess` to `Disabled` on both the Cognitive Services
+(Foundry) account and Azure AI Search, and sets `networkAcls.defaultAction`
+to `Deny` on the Foundry account. Creating the actual private endpoints
+and DNS zones requires a pre-existing VNet and subnet — this is
+**bring-your-own** in the accelerator and not created by `azd up`. Add
+private-endpoint + private DNS zone resources in your own fork when
+targeting a regulated customer; the accelerator's shape (GA API versions,
+disabled public access when requested) won't fight you.
 
 ## What `azd up` provisions
 

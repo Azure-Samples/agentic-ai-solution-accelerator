@@ -327,19 +327,65 @@ def bicep_has_model_deployment(ctx: Ctx) -> list[Finding]:
                     "a pre-existing one.")]
 
 
+_REQUIRED_RAI_CATEGORIES = {"Hate", "Sexual", "Violence", "Selfharm"}
+_REQUIRED_RAI_SOURCES = {"Prompt", "Completion"}
+_ALLOWED_RAI_SEVERITIES = {"Low", "Medium"}
+
+
 @check
 def bicep_has_content_filter(ctx: Ctx) -> list[Finding]:
-    """Every model deployment must have a content filter bound."""
+    """Every model deployment must have a content filter bound, and the
+    policy must actually block medium+ severity on all 4 categories for
+    both prompt and completion. ``mode: 'Blocking'`` is required and the
+    parent account must set ``disableLocalAuth: true``.
+    """
     infra = ROOT / "infra"
     if not infra.exists():
         return []
     has_policy = False
     has_binding = False
+    has_blocking_mode = False
+    category_source_pairs: set[tuple[str, str]] = set()
+    severity_violations: list[str] = []
+    # Scan for an accounts/raiPolicies resource body across all infra bicep.
+    rai_body_re = re.compile(
+        r"resource\s+\w+\s+'Microsoft\.CognitiveServices/accounts/raiPolicies@[^']+'\s*=\s*{(?P<body>.*?)^}",
+        re.DOTALL | re.MULTILINE,
+    )
+    account_re = re.compile(
+        r"resource\s+\w+\s+'Microsoft\.CognitiveServices/accounts@[^']+'\s*=\s*{(?P<body>.*?)^}",
+        re.DOTALL | re.MULTILINE,
+    )
+    mode_re = re.compile(r"mode\s*:\s*'([^']+)'")
+    field_re = re.compile(r"(?P<key>name|source|severityThreshold)\s*:\s*'(?P<val>[A-Za-z]+)'")
+    entry_re = re.compile(r"\{(?P<inner>[^{}]*)\}", re.DOTALL)
+    local_auth_re = re.compile(r"disableLocalAuth\s*:\s*true")
+    accounts_seen = 0
+    accounts_with_local_auth_off = 0
     for p, c in ctx.iter(".bicep"):
         if "infra" not in p.parts:
             continue
-        if _BICEP_RAI_RE.search(c):
+        for m in account_re.finditer(c):
+            accounts_seen += 1
+            if local_auth_re.search(m.group("body")):
+                accounts_with_local_auth_off += 1
+        for m in rai_body_re.finditer(c):
             has_policy = True
+            body = m.group("body")
+            mode_m = mode_re.search(body)
+            if mode_m and mode_m.group(1) == "Blocking":
+                has_blocking_mode = True
+            for entry in entry_re.finditer(body):
+                fields = {m.group("key"): m.group("val")
+                          for m in field_re.finditer(entry.group("inner"))}
+                cat = fields.get("name")
+                src = fields.get("source")
+                sev = fields.get("severityThreshold")
+                if not (cat and src and sev):
+                    continue
+                category_source_pairs.add((cat, src))
+                if sev not in _ALLOWED_RAI_SEVERITIES:
+                    severity_violations.append(f"{cat}/{src}={sev}")
         if _BICEP_RAI_REF_RE.search(c):
             has_binding = True
     out: list[Finding] = []
@@ -348,11 +394,34 @@ def bicep_has_content_filter(ctx: Ctx) -> list[Finding]:
                            "no Microsoft.CognitiveServices/accounts/raiPolicies "
                            "resource found; a default content-filter policy must "
                            "be declared in IaC, not in the Foundry portal."))
+        return out
     if not has_binding:
         out.append(Finding("bicep-rai-binding", "block", "infra/",
                            "no deployment references raiPolicyName; content filter "
                            "must be bound to the model deployment to prevent "
                            "portal-level bypass."))
+    if not has_blocking_mode:
+        out.append(Finding("bicep-rai-mode", "block", "infra/",
+                           "raiPolicies resource is missing `mode: 'Blocking'`; "
+                           "an advisory-only policy does not satisfy the "
+                           "accelerator's default safety posture."))
+    required_pairs = {(c, s) for c in _REQUIRED_RAI_CATEGORIES
+                      for s in _REQUIRED_RAI_SOURCES}
+    missing_pairs = sorted(required_pairs - category_source_pairs)
+    if missing_pairs:
+        out.append(Finding("bicep-rai-coverage", "block", "infra/",
+                           "raiPolicies must cover all 4 categories "
+                           "(Hate/Sexual/Violence/Selfharm) on both Prompt and "
+                           f"Completion; missing: {missing_pairs}"))
+    if severity_violations:
+        out.append(Finding("bicep-rai-severity", "block", "infra/",
+                           "raiPolicies severityThreshold must be Low or Medium "
+                           f"for every entry; offenders: {severity_violations}"))
+    if accounts_seen and accounts_with_local_auth_off < accounts_seen:
+        out.append(Finding("bicep-account-local-auth", "block", "infra/",
+                           "every Microsoft.CognitiveServices/accounts resource "
+                           "must set `disableLocalAuth: true` to prevent key-based "
+                           "access that bypasses RBAC and RAI policy."))
     return out
 
 
@@ -415,6 +484,11 @@ def no_preview_api_versions(ctx: Ctx) -> list[Finding]:
 # ---------------------------------------------------------------------------
 @check
 def deploy_gated_on_lint_and_evals(ctx: Ctx) -> list[Finding]:
+    """Lint chain: accelerator-lint -> azd-up -> evals.
+
+    Evals run *after* azd-up so the API URL comes from the deploy itself;
+    fighting the day-0 chicken-and-egg where no URL exists to eval against.
+    """
     f = ROOT / ".github/workflows/deploy.yml"
     if not f.exists():
         return [Finding("deploy-gate", "block", ".github/workflows/deploy.yml",
@@ -429,32 +503,29 @@ def deploy_gated_on_lint_and_evals(ctx: Ctx) -> list[Finding]:
         return [Finding("deploy-gate", "block", ".github/workflows/deploy.yml",
                         f"deploy.yml is not valid YAML: {exc}")]
     jobs = data.get("jobs", {}) or {}
-    deploy_job = None
-    for name, body in jobs.items():
-        if name in {"azd-up", "deploy"}:
-            deploy_job = (name, body or {})
-            break
-    if deploy_job is None:
-        return [Finding("deploy-gate", "block", ".github/workflows/deploy.yml",
-                        "no `azd-up` or `deploy` job found.")]
-    name, body = deploy_job
-    needs = body.get("needs", [])
-    if isinstance(needs, str):
-        needs = [needs]
-    needs_set = set(needs or [])
-    required = {"accelerator-lint", "evals"}
-    missing = required - needs_set
-    if missing:
-        return [Finding("deploy-gate", "block", ".github/workflows/deploy.yml",
-                        f"job '{name}' must have `needs: [accelerator-lint, evals]`; "
-                        f"missing: {sorted(missing)}")]
-    # Check that jobs named accelerator-lint and evals exist in the same workflow.
-    missing_jobs = [n for n in ("accelerator-lint", "evals") if n not in jobs]
-    if missing_jobs:
-        return [Finding("deploy-gate", "block", ".github/workflows/deploy.yml",
-                        f"deploy.yml references jobs that do not exist in the same "
-                        f"workflow: {missing_jobs}. Define them inline or via `uses:`.")]
-    return []
+    out: list[Finding] = []
+    expectations = {
+        "accelerator-lint": set(),
+        "azd-up": {"accelerator-lint"},
+        "evals": {"azd-up"},
+    }
+    for name, required in expectations.items():
+        if name not in jobs:
+            out.append(Finding("deploy-gate", "block",
+                               ".github/workflows/deploy.yml",
+                               f"deploy.yml is missing the '{name}' job"))
+            continue
+        needs = (jobs[name] or {}).get("needs", [])
+        if isinstance(needs, str):
+            needs = [needs]
+        needs_set = set(needs or [])
+        missing = required - needs_set
+        if missing:
+            out.append(Finding("deploy-gate", "block",
+                               ".github/workflows/deploy.yml",
+                               f"job '{name}' must have `needs` including "
+                               f"{sorted(required)}; missing: {sorted(missing)}"))
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -483,7 +554,8 @@ def workflow_secrets_documented(ctx: Ctx) -> list[Finding]:
                         f"docs/getting-started.md is missing but workflows reference "
                         f"{len(names)} secrets/vars: {sorted(names)}")]
     doc_txt = doc.read_text(encoding="utf-8")
-    missing = sorted(n for n in names if n not in doc_txt)
+    missing = sorted(n for n in names
+                     if not re.search(rf"\b{re.escape(n)}\b", doc_txt))
     if missing:
         return [Finding("secrets-doc", "block", "docs/getting-started.md",
                         f"workflow secrets/vars not documented: {missing}")]
@@ -568,6 +640,33 @@ def sdks_pinned_to_ga(ctx: Ctx) -> list[Finding]:
             out.append(Finding("ga-pin-mismatch", "block", "pyproject.toml",
                                f"{sdk} upper bound mismatch: pyproject has "
                                f"{actual!r}, manifest requires <{upper}"))
+    return out
+
+
+# ---------------------------------------------------------------------------
+# Agent specs must not hardcode the model (Bicep is the source of truth)
+# ---------------------------------------------------------------------------
+_SPEC_MODEL_RE = re.compile(r"^\*\*Model:\*\*", re.MULTILINE)
+
+
+@check
+def agent_specs_no_hardcoded_model(ctx: Ctx) -> list[Finding]:
+    """Agent spec files must not declare ``**Model:**``. The single model
+    deployed by ``infra/modules/foundry.bicep`` (``AZURE_AI_FOUNDRY_MODEL``
+    env) is authoritative for every agent, so specs that pin a model name
+    will silently drift from what azd actually provisions.
+    """
+    specs_dir = ROOT / "docs/agent-specs"
+    if not specs_dir.exists():
+        return []
+    out: list[Finding] = []
+    for p in specs_dir.glob("accel-*.md"):
+        if _SPEC_MODEL_RE.search(p.read_text(encoding="utf-8", errors="ignore")):
+            out.append(Finding(
+                "agent-spec-model-ban", "block", _rel(p),
+                "agent specs must not declare **Model:**; the model comes "
+                "from AZURE_AI_FOUNDRY_MODEL (emitted by Bicep)."
+            ))
     return out
 
 

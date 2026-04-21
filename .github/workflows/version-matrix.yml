@@ -20,6 +20,7 @@ jobs:
       - name: Install with latest SDKs
         run: |
           python -m pip install --upgrade pip
+          pip install -e ".[dev]"
           pip install --upgrade \
             "agent-framework" \
             "azure-ai-projects" \
@@ -27,6 +28,7 @@ jobs:
             "azure-identity" \
             "azure-monitor-opentelemetry" \
             "azure-search-documents" \
+            "azure-mgmt-cognitiveservices" \
             "fastapi" "pydantic" "httpx" "uvicorn"
       - name: Import + lint smoke
         run: |

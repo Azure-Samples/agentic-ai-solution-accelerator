@@ -1,6 +1,5 @@
 # Agent: accel-account-planner
 
-**Model:** gpt-5.2
 **Reference:** SMB Agent Hub `account_planner` agent
 
 ## Instructions
