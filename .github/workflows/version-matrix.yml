@@ -1,5 +1,9 @@
 name: version-matrix
 
+# Weekly GA SDK freshness check. Reads `ga-versions.yaml`, queries PyPI for
+# the latest non-pre-release of each canonical SDK, and opens an issue if
+# any pinned `min` is behind the latest GA. No smoke build / dead imports.
+
 on:
   schedule:
     - cron: "0 7 * * 1" # weekly Monday 07:00 UTC
@@ -10,39 +14,36 @@ permissions:
   issues: write
 
 jobs:
-  latest-smoke:
+  ga-sdk-freshness:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install with latest SDKs
+      - name: Install pyyaml
+        run: python -m pip install --upgrade pip pyyaml
+      - name: Check PyPI for drift
+        id: check
+        continue-on-error: true
         run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
-          pip install --upgrade \
-            "agent-framework" \
-            "azure-ai-projects" \
-            "azure-ai-agents" \
-            "azure-identity" \
-            "azure-monitor-opentelemetry" \
-            "azure-search-documents" \
-            "azure-mgmt-cognitiveservices" \
-            "fastapi" "pydantic" "httpx" "uvicorn"
-      - name: Import + lint smoke
-        run: |
-          python -c "import src.main; import src.scenarios.sales_research.workflow"
-          python scripts/accelerator-lint.py
-      - name: Open tracking issue on failure
-        if: failure()
+          set +e
+          python scripts/ga-sdk-freshness.py --out drift.txt
+          echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+      - name: Open tracking issue on drift
+        if: steps.check.outputs.exit_code == '1'
         uses: actions/github-script@v7
         with:
           script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('drift.txt', 'utf8');
             github.rest.issues.create({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              title: `version-matrix: weekly smoke failed (${new Date().toISOString().slice(0,10)})`,
-              body: 'Weekly test against latest SDKs failed. Update `docs/version-matrix.md` and pins in `pyproject.toml`.',
+              title: `ga-sdk-freshness: PyPI drift (${new Date().toISOString().slice(0,10)})`,
+              body: `Weekly check found newer GA releases on PyPI. Bump \`ga-versions.yaml\` and \`pyproject.toml\` together; re-run lint.\n\n${body}`,
               labels: ['version-matrix', 'tracking']
             });
+      - name: Fail if drift
+        if: steps.check.outputs.exit_code == '1'
+        run: exit 1

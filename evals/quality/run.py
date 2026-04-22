@@ -4,10 +4,25 @@ Usage:
     python evals/quality/run.py --api-url http://localhost:8000
     python evals/quality/run.py --api-url $API_URL --out results.jsonl
 
-Each case is a JSON line with ``expected`` thresholds. Results land in
-``results.jsonl`` for CI's ``accept`` gate. The endpoint path comes from
-``scenario.endpoint.path`` in ``accelerator.yaml`` so renaming ``/research/stream``
-to something scenario-specific doesn't break evals.
+Each case is a JSON line. The runner is scenario-agnostic:
+
+* Payload: every case field except the reserved eval-control keys
+  (``case_id``, ``expected``, ``technique``, ``notes``) is passed through
+  verbatim to ``POST {scenario.endpoint.path}``. The active scenario's
+  pydantic ``request_schema`` is therefore the source of truth; the dataset
+  must match it.
+* Checks: declared per-case under ``expected``:
+    - ``must_mention``: list of substrings that MUST appear in the
+      lowercased JSON dump of the final briefing.
+    - ``must_cite``: if true, the briefing must contain a non-empty
+      ``"citations"`` list somewhere in its tree.
+    - ``thresholds``: ``{"<dotted.path>": {"min": N, "max": M}}`` comparing
+      numeric values in the briefing.
+    - Flagship back-compat: ``icp_fit_min`` (int, 0-100) is treated as
+      ``thresholds: {"icp_fit.fit_score": {"min": N}}``.
+
+Results land in ``results.jsonl`` for CI's ``accept`` gate. The endpoint
+path comes from ``scenario.endpoint.path`` in ``accelerator.yaml``.
 """
 from __future__ import annotations
 
@@ -15,6 +30,7 @@ import argparse
 import asyncio
 import json
 import pathlib
+import re
 import sys
 import time
 
@@ -24,6 +40,9 @@ HERE = pathlib.Path(__file__).parent
 REPO_ROOT = HERE.parent.parent
 CASES = HERE / "golden_cases.jsonl"
 sys.path.insert(0, str(REPO_ROOT))
+
+RESERVED_CASE_KEYS = {"case_id", "expected", "technique", "notes"}
+_CITATIONS_RE = re.compile(r'"citations"\s*:\s*\[\s*[^\]\s]')
 
 
 def _load_endpoint_path() -> str:
@@ -38,14 +57,32 @@ def _load_endpoint_path() -> str:
     return path
 
 
+def _get_dotted(obj: dict, dotted: str):
+    cur = obj
+    for part in dotted.split("."):
+        if not isinstance(cur, dict):
+            return None
+        cur = cur.get(part)
+        if cur is None:
+            return None
+    return cur
+
+
+def _normalize_expected(expected: dict) -> dict:
+    """Back-compat: fold `icp_fit_min` into `thresholds`."""
+    exp = dict(expected or {})
+    thresholds = dict(exp.get("thresholds") or {})
+    if "icp_fit_min" in exp and "icp_fit.fit_score" not in thresholds:
+        thresholds["icp_fit.fit_score"] = {"min": exp["icp_fit_min"]}
+    exp["thresholds"] = thresholds
+    return exp
+
+
 async def run_case(
     client: httpx.AsyncClient, api_url: str, endpoint_path: str, case: dict,
 ) -> dict:
     started = time.time()
-    payload = {k: case[k] for k in (
-        "company_name", "domain", "persona",
-        "seller_intent", "icp_definition", "our_solution",
-    )}
+    payload = {k: v for k, v in case.items() if k not in RESERVED_CASE_KEYS}
     final_briefing = None
     try:
         async with client.stream(
@@ -65,20 +102,32 @@ async def run_case(
         return {"case_id": case["case_id"], "suite": "quality",
                 "passed": False, "reason": "no final briefing"}
 
-    expected = case["expected"]
-    icp_score = (final_briefing.get("icp_fit", {}) or {}).get("fit_score", 0)
-    profile_text = json.dumps(final_briefing.get("account_profile", {})).lower()
-    citations_ok = bool((final_briefing.get("account_profile", {}) or {}).get("citations"))
+    expected = _normalize_expected(case.get("expected", {}))
+    blob_raw = json.dumps(final_briefing)
+    blob = blob_raw.lower()
+    citations_ok = bool(_CITATIONS_RE.search(blob_raw))
 
     score = 1.0
-    reasons = []
-    if icp_score < expected.get("icp_fit_min", 0):
-        score -= 0.4
-        reasons.append(f"icp {icp_score} < {expected['icp_fit_min']}")
+    reasons: list[str] = []
+
+    for dotted, bound in (expected.get("thresholds") or {}).items():
+        val = _get_dotted(final_briefing, dotted)
+        if not isinstance(val, (int, float)):
+            score -= 0.4
+            reasons.append(f"{dotted}: not numeric ({val!r})")
+            continue
+        if "min" in bound and val < bound["min"]:
+            score -= 0.4
+            reasons.append(f"{dotted} {val} < {bound['min']}")
+        if "max" in bound and val > bound["max"]:
+            score -= 0.4
+            reasons.append(f"{dotted} {val} > {bound['max']}")
+
     for phrase in expected.get("must_mention", []):
-        if phrase.lower() not in profile_text:
+        if phrase.lower() not in blob:
             score -= 0.2
             reasons.append(f"missing mention: {phrase}")
+
     groundedness = 1.0 if citations_ok else 0.0
     if expected.get("must_cite") and not citations_ok:
         reasons.append("no citations")

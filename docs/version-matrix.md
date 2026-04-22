@@ -1,8 +1,8 @@
 # Version matrix
 
-Known-good versions of the SDKs this accelerator depends on. A weekly CI job (`.github/workflows/version-matrix.yml`) re-runs the eval suite against the `latest` release of each package and opens an issue on regression. Deprecation policy: **N-1 minor** supported.
+Known-good GA-only versions of the SDKs this accelerator depends on. A weekly CI job (`.github/workflows/version-matrix.yml`) runs `scripts/ga-sdk-freshness.py`, which queries PyPI for the latest non-pre-release of each canonical SDK listed in `ga-versions.yaml` and opens a tracking issue if any pinned `min` is behind the latest GA. Deprecation policy: **N-1 minor** supported.
 
-Pinned in `pyproject.toml`; update this table and re-pin together.
+Pinned in `pyproject.toml`; `ga-versions.yaml` is the manifest lint enforces drift against. Update all three together: this table, `pyproject.toml`, and `ga-versions.yaml`.
 
 | Package | Pinned range | Last validated | Latest tested | Notes |
 |---|---|---|---|---|
@@ -24,6 +24,6 @@ Pinned in `pyproject.toml`; update this table and re-pin together.
 - Azure regions: the deployment is region-agnostic; AI Foundry + AI Search availability is the constraint.
 
 ## Cadence
-- Weekly CI: pinned + `--upgrade --pre` smoke; open issue on diff.
-- Monthly: maintainer review; cut a minor release of the template if fixes or new features land.
-- Quarterly: blessed-pattern promotions (see `CONTRIBUTING.md`).
+- **Weekly** (`version-matrix.yml`): `ga-sdk-freshness.py` hits PyPI, opens an issue on drift.
+- **Monthly**: maintainer review; cut a minor release of the template if fixes or new features land.
+- **Quarterly**: blessed-pattern promotions (see `CONTRIBUTING.md`).
