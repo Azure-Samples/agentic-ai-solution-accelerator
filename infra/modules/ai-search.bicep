@@ -22,17 +22,19 @@ resource search 'Microsoft.Search/searchServices@2023-11-01' = {
   }
 }
 
-// Search Index Data Reader + Search Service Contributor
-var indexDataReaderId = '1407120a-92aa-4202-b7e9-c0e197c71c8f'
+// Search Index Data Contributor + Search Service Contributor.
+// Data Contributor is required for seed-search.py to upload documents at
+// provision time. Data Reader alone fails the seed step during `azd up`.
+var indexDataContributorId = '8ebe5a00-799e-43f5-93ac-243d3dce84a7'
 var serviceContributorId = '7ca78c08-252a-4471-8644-bb5ff32d4ba0'
 
-resource searchReader 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(search.id, rbacPrincipalId, indexDataReaderId)
+resource searchDataContributor 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(search.id, rbacPrincipalId, indexDataContributorId)
   scope: search
   properties: {
     principalId: rbacPrincipalId
     principalType: 'ServicePrincipal'
-    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', indexDataReaderId)
+    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', indexDataContributorId)
   }
 }
 

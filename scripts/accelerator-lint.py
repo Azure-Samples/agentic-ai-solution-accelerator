@@ -829,6 +829,47 @@ def sdks_pinned_to_ga(ctx: Ctx) -> list[Finding]:
 
 
 # ---------------------------------------------------------------------------
+# Dockerfile must not pin SDKs independently of pyproject.toml
+# ---------------------------------------------------------------------------
+_DOCKERFILE_PIN_RE = re.compile(
+    r'["\']([a-zA-Z0-9_.\-\[\]]+)\s*(?:[><=!~].*?)["\']'
+)
+
+
+@check
+def dockerfile_matches_ga_pins(ctx: Ctx) -> list[Finding]:
+    """src/Dockerfile must NOT pin SDKs independently of pyproject.toml.
+
+    Version pins are authoritative in pyproject.toml + ga-versions.yaml. A
+    Dockerfile that re-declares canonical SDK pins inline can drift from the
+    matrix that ``sdks_pinned_to_ga`` enforces, so the deployed container
+    ends up running SDKs that CI never sees. The rule is simple: any
+    canonical SDK listed in ga-versions.yaml must not appear as an inline
+    pin in the Dockerfile. Partners should ``pip install .`` (or equivalent)
+    so the image matches pyproject.
+    """
+    dockerfile = ROOT / "src" / "Dockerfile"
+    if not dockerfile.exists():
+        return []
+    manifest = _load_ga_manifest()
+    if not manifest:
+        return []
+    canonical = {k.lower() for k in manifest.keys()}
+    text = dockerfile.read_text(encoding="utf-8", errors="ignore")
+    out: list[Finding] = []
+    for match in _DOCKERFILE_PIN_RE.finditer(text):
+        pkg = match.group(1).lower().split("[")[0]
+        if pkg in canonical:
+            out.append(Finding(
+                "dockerfile-ga-drift", "block", _rel(dockerfile),
+                f"{pkg} is pinned inline in src/Dockerfile. Remove the inline "
+                f"pin and install from pyproject.toml (`pip install .`) so the "
+                f"runtime image matches the GA matrix enforced by lint.",
+            ))
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Agent specs must not hardcode the model (Bicep is the source of truth)
 # ---------------------------------------------------------------------------
 _SPEC_MODEL_RE = re.compile(r"^\*\*Model:\*\*", re.MULTILINE)
