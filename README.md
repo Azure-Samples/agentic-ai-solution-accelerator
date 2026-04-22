@@ -33,14 +33,17 @@ Full walkthrough: **[QUICKSTART.md](QUICKSTART.md)**.
 
 ```
 agentic-ai-solution-accelerator/
-├── accelerator.yaml              engagement manifest (solution, acceptance, controls, KPIs)
-├── src/                          flagship: sales research & outreach (supervisor + 4 workers)
-│   ├── agents/                   three-layer pattern per agent (prompt, transform, validate)
+├── accelerator.yaml              engagement manifest — scenario contract + acceptance + controls + KPIs
+├── src/
+│   ├── main.py                   scenario-agnostic FastAPI; mounts the scenario endpoint from manifest
+│   ├── workflow/                 framework: BaseWorkflow Protocol + scenario registry (load_scenario)
+│   ├── retrieval/                generic SearchRetriever(index_name) against Azure AI Search
 │   ├── tools/                    HITL-gated side-effect tools (CRM write, email send)
-│   ├── retrieval/                Azure AI Search grounding
-│   ├── workflow/                 supervisor + parallel workers + HITL gate (asyncio fan-out; WorkflowBuilder migration on roadmap)
-│   └── accelerator_baseline/     partner-owned primitives: telemetry, HITL, killswitch, evals, cost
-├── infra/                        Bicep + azd (Foundry, Search, KV, ACA, App Insights, dashboards)
+│   ├── accelerator_baseline/     partner-owned primitives: telemetry, HITL, killswitch, evals, cost
+│   └── scenarios/                scenario instances loaded via manifest
+│       └── sales_research/       flagship: schema, workflow factory, retrieval schema
+│           └── agents/           supervisor + 4 workers (three-layer: prompt, transform, validate)
+├── infra/                        Bicep + azd (Foundry GA + content filter, Search, KV, ACA, App Insights)
 ├── evals/
 │   ├── quality/                  golden cases + CI gates from accelerator.yaml.acceptance
 │   └── redteam/                  XPIA + jailbreak + brief-specific RAI cases
@@ -48,18 +51,22 @@ agentic-ai-solution-accelerator/
 │   ├── single-agent/             variant: when orchestration isn't needed
 │   └── chat-with-actioning/      variant: conversational front-end with tools
 ├── docs/
+│   ├── getting-started.md        authoritative onboarding: prereqs, secrets, azd up, troubleshooting
 │   ├── discovery/                solution-brief.md + SOLUTION-BRIEF-GUIDE.md
-│   ├── references/               scenario walkthroughs (customer service, RFP response)
+│   ├── references/               reference scenarios (customer service, RFP response)
+│   ├── agent-specs/              per-agent Foundry bootstrap specs (flagship + candidates)
 │   ├── patterns/                 architecture · WAF · RAI
-│   ├── partner-playbook.md       full engagement guide
-│   ├── version-matrix.md         known-good SDK pins (weekly CI validates against latest)
-│   └── customization-guide.md    what to change, what not to
+│   └── version-matrix.md         known-good SDK pins (weekly CI validates against latest)
 ├── .github/
 │   ├── copilot-instructions.md   hard rules: Agent Framework, MI, HITL, evals, RAI
-│   ├── AGENTS.md (top-level)     mirror for Cursor/Claude Code/Codex CLI
 │   ├── chatmodes/                discover-scenario, scaffold-from-brief, add-*, switch-to-variant
 │   └── workflows/                lint, evals, deploy, version-matrix (weekly pinned-latest)
-└── scripts/accelerator-lint.py   ~30 deterministic policy checks (local + CI)
+├── AGENTS.md                     IDE-agnostic mirror of copilot-instructions (Cursor/Claude/Codex)
+└── scripts/
+    ├── accelerator-lint.py       ~30 deterministic policy checks (local + CI), AST-only
+    ├── scaffold-scenario.py      materialize a new scenario skeleton (CLI behind /scaffold-from-brief)
+    ├── foundry-bootstrap.py      reads agents from manifest; creates/updates Foundry agents
+    └── seed-search.py            reads indexes from manifest; creates + seeds each
 ```
 
 ---
@@ -81,7 +88,11 @@ agentic-ai-solution-accelerator/
 - **customer-service-actioning/** — multi-agent service assistant that looks up orders, issues refunds/credits via HITL, updates CRM. Deflection + AHT ROI.
 - **rfp-response/** — multi-specialist (pricing · legal · tech · security) aggregator that drafts proposal responses. Response time days → hours; win rate lift.
 
-Flagship itself (sales research & outreach) is fully runnable in `src/`.
+Flagship itself (sales research & outreach) is fully runnable under `src/scenarios/sales_research/` — loaded at startup via the top-level `scenario:` block in `accelerator.yaml`. Add a sibling scenario with `python scripts/scaffold-scenario.py <id>`; the framework mounts it the same way the flagship is mounted.
+
+### Candidate pattern variants (not shipped runnable yet)
+
+- **Zero Trust posture analysis** — chat-based, file-upload (CSV/Excel) assessment with multi-turn iteration. Fits a different solution shape than the flagship (conversational + artifact ingest). Tracked in `docs/agent-specs/README.md`; promote to `docs/references/zero-trust/` when a customer engagement motivates it.
 
 ---
 

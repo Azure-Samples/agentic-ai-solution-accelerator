@@ -47,9 +47,9 @@ Copilot reads the filled brief and customizes the repo:
 
 | Brief field → | Lands in |
 |---|---|
-| Problem + persona | `src/agents/supervisor/prompt.py` system prompt |
+| Problem + persona | `src/scenarios/sales_research/agents/supervisor/prompt.py` system prompt |
 | Solution shape | Keep flagship OR run `/switch-to-variant` for `patterns/single-agent` or `patterns/chat-with-actioning` |
-| Grounding sources | `src/retrieval/ai_search.py` + `infra/modules/ai-search.bicep` |
+| Grounding sources | `src/retrieval/ai_search.py` + index schema in `src/scenarios/sales_research/retrieval.py` + `infra/modules/ai-search.bicep` |
 | Side-effect tools | New files under `src/tools/` with HITL scaffolding |
 | HITL gates | `src/accelerator_baseline/hitl.py` rules |
 | Constraints | `infra/main.parameters.json` + `accelerator.yaml` |
@@ -108,7 +108,8 @@ Any red light blocks merge. Green = `azd deploy` against customer env.
 
 ## Need help?
 
-- `docs/partner-playbook.md` — full end-to-end engagement guide
+- `docs/getting-started.md` — authoritative prereqs, secrets, troubleshooting
 - `docs/discovery/SOLUTION-BRIEF-GUIDE.md` — how to run the workshop
 - `docs/version-matrix.md` — known-good SDK pins
+- `docs/agent-specs/README.md` — per-agent system instructions and Agent Hub references
 - Issues in this repo — intake for feedback and new patterns

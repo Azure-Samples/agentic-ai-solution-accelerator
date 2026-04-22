@@ -9,7 +9,7 @@
 ### 1. Repo-level (what Microsoft provides)
 
 - **GitHub issues** on this repo — bug reports, pattern questions, content gaps, scenario requests.
-- **Releases + release notes** for the `baseline` pip package, validator, azd templates, and patterns content.
+- **Releases + release notes** for the accelerator template (flagship code, scenario framework, Bicep modules, accelerator-lint, chat modes).
 - **Security vulnerabilities** — report privately per [SECURITY.md](SECURITY.md).
 - **Office hours** (if your partner org is onboarded) — periodic sync with the accelerator engineering team.
 
@@ -53,14 +53,16 @@ Good issues get turned around in weeks. Bad issues get closed as "needs repro."
 
 ---
 
-## Known limitations (Phase A preview)
+## What's actually shipped today
 
-- `baseline` CLI commands are stubs — `validate-spec` is partially working; `materialize`, `doctor`, `new-customer-repo` are not yet implemented.
-- `delivery-assets/bicep/modules/` are not shipped yet — azd templates are stubs.
-- Reference scenarios ship as READMEs — full runnable code lands in Phase D.
-- The validator currently checks Spec-schema only — pattern + WAF checks land in Phase B.
+- Flagship scenario (Sales Research & Outreach) is fully runnable under `src/scenarios/sales_research/`; loaded dynamically from `accelerator.yaml -> scenario:` at startup.
+- Scenario framework: `src/workflow/registry.py` + `src/workflow/base.py`. `scripts/scaffold-scenario.py` materializes new scenarios.
+- Infra: `infra/` deploys Foundry (GA API) + default content filter + model deployment + Search + KV + ACA + App Insights via `azd up`.
+- Evals: `evals/quality/` + `evals/redteam/` run against the deployed endpoint; thresholds in `accelerator.yaml -> acceptance`.
+- Lint: `scripts/accelerator-lint.py` — ~30 deterministic AST-only checks; CI-gated.
+- Reference scenarios: Customer Service Actioning and RFP Response ship as walkthrough READMEs under `docs/references/` (runnable code lands when a customer engagement motivates it).
 
-See [docs/getting-started.md](docs/getting-started.md) for what's actually usable today.
+See [docs/getting-started.md](docs/getting-started.md) for the exact onboarding path.
 
 ---
 
@@ -75,8 +77,8 @@ Security vulnerabilities go to MSRC via [SECURITY.md](SECURITY.md), not GitHub i
 | Situation | Where to go |
 |---|---|
 | Pattern bug or content error | GitHub issue on this repo |
-| Validator false positive / false negative | GitHub issue with repro |
+| Accelerator lint false positive / false negative | GitHub issue with repro |
 | Customer production incident | Partner's own on-call; accelerator engineering is not on the pager |
 | Security vulnerability in the accelerator | MSRC per SECURITY.md |
-| Need a new bundle / pattern / reference scenario | GitHub issue + discussion |
+| Need a new reference scenario or pattern variant | GitHub issue + discussion |
 | Disagree with a pattern recommendation | PR with rationale; accelerator engineering reviews |

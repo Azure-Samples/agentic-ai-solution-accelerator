@@ -21,15 +21,16 @@ Internal contributions (Microsoft + lighthouse partners under engagement) follow
 
 ## Adding a reference scenario
 
-1. Propose via issue first — describe business problem, bundle, topology, grounding model.
-2. Land a README under `examples/scenarios/<slug>/`.
-3. Add a corresponding Spec example under `examples/specs/`.
-4. Full runnable code lands in Phase D for curated scenarios.
+1. Propose via issue first — describe business problem, solution shape, topology, grounding model.
+2. Run `python scripts/scaffold-scenario.py <slug>` to materialize the scaffold under `src/scenarios/<slug>/`.
+3. Paste the printed `scenario:` snippet into `accelerator.yaml` (replacing the existing block on a reference branch, or use a variant file for multi-scenario demos).
+4. Land a README + walkthrough under `docs/references/<slug>/` describing the business case, KPIs, and how the scenario was customized.
+5. Keep `evals/quality/` and `evals/redteam/` green; the lint (`scripts/accelerator-lint.py`) will enforce the manifest contract.
 
 ## Adding a pattern doc
 
-Pattern docs go in `content/patterns/<pillar>/`. Keep them opinionated + short. Link to reference scenarios where they demonstrate the pattern.
+Pattern docs go in `docs/patterns/<pillar>/`. Keep them opinionated + short. Link to reference scenarios where they demonstrate the pattern.
 
 ## Release process
 
-Releases produce signed artifacts on the private feed. See release notes per version for upgrade guidance.
+Releases tag `main` when the flagship + framework + evals are green against the weekly pinned-latest CI. Release notes call out manifest changes (schema edits, new required keys) so partner forks can rebase cleanly.

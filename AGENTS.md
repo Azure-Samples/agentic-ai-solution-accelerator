@@ -24,11 +24,11 @@ you help with MUST preserve the accelerator's guardrails.
 - **MUST** pin SDK versions per `pyproject.toml`. See `docs/version-matrix.md`; a weekly CI job validates against latest.
 
 ### Agent architecture (3-layer pattern per agent)
-Every agent lives under `src/agents/<agent_name>/` with three files:
+Every agent lives under `src/scenarios/<scenario>/agents/<agent_name>/` with three files:
 - `prompt.py`   — `build_prompt(request_data) -> str`
 - `transform.py` — `transform_response(response) -> dict`
 - `validate.py`  — `validate_response(response) -> (bool, str)`
-Add a new agent with the `/add-worker-agent` chat mode; do not scaffold by hand.
+Add a new agent with the `/add-worker-agent` chat mode; do not scaffold by hand. Scaffold a new *scenario* (sibling to `sales_research/`) with `python scripts/scaffold-scenario.py <id>`.
 
 ### HITL (Human-in-the-Loop)
 - **MUST** gate every side-effect tool (writes, sends, destructive actions) through `src/accelerator_baseline/hitl.py`.
@@ -73,8 +73,9 @@ Add a new agent with the `/add-worker-agent` chat mode; do not scaffold by hand.
 - **Starting a new customer engagement** → `/discover-scenario` then `/scaffold-from-brief`.
 
 ## References
-- Partner playbook: `docs/partner-playbook.md`
+- Onboarding: `docs/getting-started.md`
 - Discovery guide: `docs/discovery/SOLUTION-BRIEF-GUIDE.md`
+- Agent specs (Foundry bootstrap + Agent Hub references): `docs/agent-specs/README.md`
 - Patterns: `docs/patterns/{architecture,rai,waf-alignment}/README.md`
 - Version matrix: `docs/version-matrix.md`
 - Scenario catalog: `docs/references/`

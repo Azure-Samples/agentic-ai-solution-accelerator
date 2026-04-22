@@ -1,36 +1,46 @@
 # Accelerator code ownership
-# Reviewed + enforced on every PR
+# Reviewed + enforced on every PR.
 
 # Default owners — SMB Agentic AI champs team
 *                                   @microsoft/smb-agentic-ai-champs
 
-# Baseline runtime — accelerator engineering team
-/baseline/                          @microsoft/accelerator-eng
-/baseline-drift/                    @microsoft/accelerator-eng
-/baseline-feedback/                 @microsoft/accelerator-eng
-/baseline-hitl/                     @microsoft/accelerator-eng
-/baseline-actions/                  @microsoft/accelerator-eng
-/baseline-cache/                    @microsoft/accelerator-eng
-/baseline-cli/                      @microsoft/accelerator-eng
+# Scenario framework (loader, base protocol, dynamic mount)
+/src/workflow/                      @microsoft/smb-agentic-ai-champs
+/src/main.py                        @microsoft/smb-agentic-ai-champs
 
-# Delivery assets + azd templates — co-owned (eng + partner delivery)
-/delivery-assets/                   @microsoft/accelerator-eng @microsoft/smb-partner-delivery
-/examples/azd-templates/            @microsoft/accelerator-eng @microsoft/smb-partner-delivery
+# Partner-owned primitives (telemetry, HITL, killswitch, evals, cost)
+/src/accelerator_baseline/          @microsoft/smb-agentic-ai-champs
 
-# Schema — requires schema steward approval
-/delivery-assets/schema/            @microsoft/accelerator-eng @microsoft/schema-stewards
+# Flagship scenario (sales research & outreach)
+/src/scenarios/sales_research/      @microsoft/smb-agentic-ai-champs
 
-# RAI content — RAI council review required
-/content/patterns/rai/              @microsoft/rai-council @microsoft/accelerator-eng
+# Infra + azd — co-owned (eng + partner delivery)
+/infra/                             @microsoft/smb-agentic-ai-champs @microsoft/smb-partner-delivery
+
+# Evals (quality + red team)
+/evals/                             @microsoft/smb-agentic-ai-champs
+
+# Accelerator lint + scaffolding + bootstrap scripts
+/scripts/                           @microsoft/smb-agentic-ai-champs
+
+# Manifest schema — reviewed by schema stewards when shape changes
+/accelerator.yaml                   @microsoft/smb-agentic-ai-champs
+/ga-versions.yaml                   @microsoft/smb-agentic-ai-champs
+
+# RAI patterns — RAI council review required
+/docs/patterns/rai/                 @microsoft/rai-council @microsoft/smb-agentic-ai-champs
 
 # Architecture + WAF patterns — eng + partner delivery
-/content/patterns/                  @microsoft/accelerator-eng @microsoft/smb-partner-delivery
+/docs/patterns/                     @microsoft/smb-agentic-ai-champs @microsoft/smb-partner-delivery
 
-# Partner playbook + enablement — partner delivery + eng
-/docs/partner-playbook.md           @microsoft/smb-partner-delivery @microsoft/accelerator-eng
-/docs/enablement/                   @microsoft/smb-partner-delivery
-/docs/templates/                    @microsoft/smb-partner-delivery
+# Discovery + onboarding docs — partner delivery + eng
+/docs/discovery/                    @microsoft/smb-partner-delivery @microsoft/smb-agentic-ai-champs
+/docs/getting-started.md            @microsoft/smb-partner-delivery @microsoft/smb-agentic-ai-champs
 
 # Copilot kit — eng owns normative rules, partner delivery reviews
-/.github/copilot-instructions.md    @microsoft/accelerator-eng @microsoft/smb-partner-delivery
-/.github/chatmodes/                 @microsoft/accelerator-eng @microsoft/smb-partner-delivery
+/.github/copilot-instructions.md    @microsoft/smb-agentic-ai-champs @microsoft/smb-partner-delivery
+/.github/chatmodes/                 @microsoft/smb-agentic-ai-champs @microsoft/smb-partner-delivery
+/AGENTS.md                          @microsoft/smb-agentic-ai-champs @microsoft/smb-partner-delivery
+
+# CI workflows — eng owns the gates
+/.github/workflows/                 @microsoft/smb-agentic-ai-champs

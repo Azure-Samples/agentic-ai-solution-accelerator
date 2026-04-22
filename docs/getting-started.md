@@ -1,10 +1,15 @@
 # Getting started
 
-> Status: **D1 preview — secrets table + prereqs only.** The full walkthrough
-> (exact 15-minute timeline, troubleshooting, HITL end-to-end) lands in D3.
-
 This is the single source of truth for onboarding a partner onto the accelerator.
 If something here disagrees with README or another doc, this file wins.
+
+## What you ship
+
+A partner clone of this template deploys a working agentic AI solution into the
+customer's Azure in ~15 minutes via `azd up`. The flagship scenario (Sales
+Research & Personalized Outreach) is runnable out of the box; swap it for your
+own scenario by editing `accelerator.yaml -> scenario:` and scaffolding under
+`src/scenarios/<id>/` with `python scripts/scaffold-scenario.py <id>`.
 
 ## Prerequisites
 
@@ -20,14 +25,16 @@ You will need:
 | Docker or compatible runtime | local container builds |
 
 Model quota: the accelerator deploys a `GlobalStandard` Azure OpenAI model
-(default `gpt-4o-mini`, 30k TPM). Confirm quota in your target region before
-running `azd up`.
+(default `gpt-4o-mini`, 30k TPM — see `infra/main.bicep` params `modelName`,
+`modelDeploymentName`, `modelCapacity`). Confirm quota in your target region
+before running `azd up`, or override the params for a different model.
 
 ## Required GitHub secrets and variables
 
 Every secret / variable referenced in `.github/workflows/*.yml` is listed
-below. The accelerator lint (`scripts/accelerator-lint.py`) fails the build if
-a workflow references a name that does not appear here.
+below. The accelerator lint (`scripts/accelerator-lint.py` →
+`workflow_secrets_documented`) fails the build if a workflow references a name
+that does not appear here.
 
 ### Secrets (repo → Settings → Secrets and variables → Actions → Secrets)
 
@@ -43,10 +50,13 @@ a workflow references a name that does not appear here.
 |------|---------|---------|
 | `AZURE_ENV_NAME` | `azd` environment name (used in resource naming) | `dev` |
 | `AZURE_LOCATION` | Azure region | `eastus2` |
+| `EVALS_API_URL` | API base URL used by the PR-triggered `evals` workflow (`.github/workflows/evals.yml`). Only required if you run evals standalone against an already-deployed environment. | `https://<ca-name>.<region>.azurecontainerapps.io` |
 
-`EVALS_API_URL` is no longer required as a repo variable — the API URL is
-emitted by the `azd-up` job and consumed by the downstream `evals` job via
-a step output. See the CI chain section below.
+The `deploy.yml` workflow does NOT need `EVALS_API_URL` — it runs `azd up` first
+and passes the API URL to the downstream evals job via a job output
+(`needs.azd-up.outputs.api_url`). Only configure `EVALS_API_URL` if you want
+PR-time evals to run against an existing deployment rather than waiting for a
+full deploy chain.
 
 ### Local `.env` (for development, not CI)
 
@@ -59,6 +69,59 @@ a step output. See the CI chain section below.
 | `AZURE_RESOURCE_GROUP` | RG holding the Foundry account |
 | `HITL_APPROVER_ENDPOINT` | Webhook URL for side-effect approvals (prod) |
 | `HITL_DEV_MODE` | Set to `1` to auto-approve in dev — never in prod |
+
+## The 15-minute path
+
+```bash
+# 1. Clone the template
+gh repo create <customer>-agents --template Azure/agentic-ai-solution-accelerator --private
+cd <customer>-agents
+code .
+
+# 2. Authenticate to the customer subscription
+az login --tenant <customer-tenant-id>
+azd auth login
+
+# 3. Provision + deploy
+azd env new <customer>-dev
+azd up           # ~10-15 min: Foundry + Search + KV + ACA + App Insights
+```
+
+`azd up` returns the API URL. Hit `/healthz` to confirm the scenario loaded;
+hit the scenario's endpoint (default `/research/stream`) with a sample payload
+to run the flagship end-to-end.
+
+## HITL setup
+
+Every side-effect tool (CRM write, email send, ticket create) routes through
+`src/accelerator_baseline/hitl.py`. Policies declared in
+`accelerator.yaml -> solution.hitl` determine which actions block on approval.
+
+Two modes:
+
+- **Dev / demo** — set `HITL_DEV_MODE=1` in `.env` to auto-approve every
+  checkpoint. Never ship this into a production env; the accelerator lint
+  (`hitl_dev_mode_not_in_prod`) will block any infra template that bakes it in.
+- **Prod / pilot** — set `HITL_APPROVER_ENDPOINT` to a webhook URL that the
+  runtime `POST`s to when an action needs approval. The webhook is responsible
+  for holding the checkpoint and returning an approve/reject decision. Simple
+  shapes: a Slack/Teams bot, a Logic App, or a custom dashboard.
+
+Failures to reach the approver are treated as rejections (fail-closed).
+
+## Scenario customization
+
+1. Read `docs/discovery/SOLUTION-BRIEF-GUIDE.md` and fill
+   `docs/discovery/solution-brief.md` — or run `/discover-scenario` in Copilot
+   Chat to generate it from a workshop.
+2. Run `python scripts/scaffold-scenario.py <id>` to materialize a new
+   scenario skeleton under `src/scenarios/<id>/` plus an agent-spec stub.
+3. Paste the printed `scenario:` YAML block over the block in
+   `accelerator.yaml`. The accelerator lint (`scenario_manifest_valid`)
+   verifies every declared import resolves and every required key is present.
+4. Customize the prompts, transforms, validators, retrieval schema, seed
+   data, and eval golden cases to the brief.
+5. `python scripts/accelerator-lint.py` locally before PR; CI re-runs it.
 
 ## CI chain
 
@@ -73,6 +136,10 @@ of a freshly cloned repo is green without any manual URL plumbing:
 
 This chain is enforced by `deploy_gated_on_lint_and_evals` in the
 accelerator lint.
+
+The separate `.github/workflows/evals.yml` runs on every PR against the
+already-deployed `EVALS_API_URL` (if configured). Use this for fast feedback
+between full `azd up` cycles.
 
 ## Private network access
 
@@ -90,18 +157,34 @@ disabled public access when requested) won't fight you.
 
 - Cognitive Services account (`kind=AIServices`, GA)
 - Default content filter (`accelerator-default-policy`) blocking Medium+ on Hate/Sexual/Violence/Selfharm
-- Model deployment (`gpt-4o-mini`, `GlobalStandard`, 30 TPM) bound to the content filter
+- Model deployment (default `gpt-4o-mini`, `GlobalStandard`, 30 TPM) bound to the content filter
 - Foundry project (`accelerator-default`)
 - Azure AI Search, Key Vault (RBAC), Container App, Log Analytics + App Insights
 - User-assigned managed identity with Cognitive Services OpenAI User + Azure AI Developer roles
 
-## Troubleshooting
+## Troubleshooting — top 5
 
-Expanded in D3. Common D1-era issues:
+1. **`preflight: model deployment 'gpt-4o-mini' not found`** — the Foundry
+   bootstrap (`scripts/foundry-bootstrap.py`) runs after `azd up` and verifies
+   the deployment exists. If you changed `modelDeploymentName` or the region
+   lacks quota, re-run `azd up` after fixing `infra/main.parameters.json` or
+   requesting a quota increase for `GlobalStandard <model>`.
+2. **`preflight: has no RAI (content filter) policy bound`** — Bicep attaches
+   the default policy; if it drifted (portal edit, partial deploy), re-run
+   `azd up` so the ARM deployment reapplies. The lint rule
+   `content_filter_attached` catches this at template-edit time.
+3. **`scenario_manifest_valid: module:attr does not resolve`** — the
+   `scenario:` block in `accelerator.yaml` points at an import path the lint
+   can't find. Verify the file exists under `src/<package path>/<module>.py`
+   and the attribute is defined at module scope (the lint walks the AST; no
+   import is attempted, so side-effect errors in the module don't hide the
+   real issue).
+4. **`secrets-doc` lint failure** — a workflow added a `secrets.NEW_NAME` or
+   `vars.NEW_NAME` reference, but no entry was added to the tables above.
+   Add it before merging.
+5. **`azd up` completes but no API_URL emitted** — the bicep outputs
+   (`API_URL` or `SERVICE_API_URI`) are empty. Confirm the Container App
+   deployment succeeded in the Azure portal; the most common cause is the
+   image build failing silently in an earlier `azd up` run. `azd deploy`
+   rebuilds and redeploys the app without re-provisioning infra.
 
-- `preflight: model deployment 'gpt-4o-mini' not found` → re-run `azd up` or
-  increase `GlobalStandard gpt-4o-mini` quota in your region.
-- `preflight: has no RAI (content filter) policy bound` → re-run `azd up` so
-  Bicep reapplies the default policy.
-- `secrets-doc` lint failure → add any new workflow secret/var to the tables
-  above before merging.

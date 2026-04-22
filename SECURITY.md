@@ -9,18 +9,20 @@ Do **NOT** file public issues on this repo for security vulnerabilities.
 
 ## Scope of accepted reports
 
-- T1 core package (`azure-agentic-baseline`)
-- T2 profile-required packages (`baseline-drift`, `baseline-feedback`, `baseline-hitl`, `baseline-actions`)
-- `baseline-cli`
-- Shipped Bicep modules + azd templates for blessed bundles
-- Schema files + validator
+In-scope:
+- Flagship scenario code (`src/scenarios/sales_research/`)
+- Scenario framework (`src/main.py`, `src/workflow/`, `src/retrieval/`, `src/tools/`, `src/accelerator_baseline/`)
+- Shipped Bicep modules + azd templates (`infra/`)
+- Accelerator lint (`scripts/accelerator-lint.py`), scaffold CLI (`scripts/scaffold-scenario.py`), bootstrap scripts (`scripts/foundry-bootstrap.py`, `scripts/seed-search.py`)
+- Schema files (`accelerator.yaml` contract) and the manifest loader (`src/workflow/registry.py`)
 - Copilot instructions + chat modes (for prompt-injection-enabling issues)
+- Eval runners (`evals/quality/`, `evals/redteam/`)
 
 **Out of scope:**
-- Partner-authored business logic in customer repos
-- T3 reference (`baseline-cache`, `examples/`)
+- Partner-authored business logic in customer forks
+- Custom scenarios scaffolded by partners (they own those forks)
 - Customer's own Azure subscription policies or landing zone
-- Bugs in Foundry, Entra, Azure infra outside this repo
+- Bugs in Foundry, Entra, Azure AI Search, or other Azure services outside this repo
 
 ## Supported versions
 
@@ -29,4 +31,4 @@ Do **NOT** file public issues on this repo for security vulnerabilities.
 
 ## Release signing
 
-Release artifacts are signed via sigstore/cosign. Verification instructions ship with each release.
+Release tags are GPG-signed by a maintainer. Verify with `git tag -v <tag>` before rebasing a partner fork onto a new release.
