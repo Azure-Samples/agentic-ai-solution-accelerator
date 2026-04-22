@@ -63,6 +63,16 @@ def evaluate_acceptance(results: list[EvalResult], acc: Acceptance) -> tuple[boo
             avg_cost = sum(costs) / len(costs)
             if avg_cost > acc.cost_per_call_usd:
                 failures.append(f"cost avg ${avg_cost:.4f} > ${acc.cost_per_call_usd}")
+        else:
+            # Cost gate is declared but runner emitted no cost values. This
+            # means the acceptance block is inert — treat as a failure so
+            # the drift is loud rather than silent.
+            failures.append(
+                "cost: no cost_usd values recorded in quality results; "
+                "acceptance.cost_per_call_usd cannot be enforced. Ensure "
+                "the quality runner emits cost_usd per case (see "
+                "evals/quality/run.py::_estimate_cost_usd)."
+            )
 
     if acc.redteam_must_pass and any(not r.passed for r in redteam):
         count = sum(1 for r in redteam if not r.passed)

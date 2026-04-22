@@ -3,6 +3,7 @@
 Usage:
     python evals/quality/run.py --api-url http://localhost:8000
     python evals/quality/run.py --api-url $API_URL --out results.jsonl
+    python evals/quality/run.py --model gpt-4o-mini  # pricing table
 
 Each case is a JSON line. The runner is scenario-agnostic:
 
@@ -20,6 +21,16 @@ Each case is a JSON line. The runner is scenario-agnostic:
       numeric values in the briefing.
     - Flagship back-compat: ``icp_fit_min`` (int, 0-100) is treated as
       ``thresholds: {"icp_fit.fit_score": {"min": N}}``.
+
+Cost accounting (live gate for ``accelerator.yaml.acceptance.cost_per_call_usd``):
+    The workflow emits ``briefing.usage`` with token counters when the
+    Agent Framework result exposes a ``usage`` object. The runner turns
+    that into ``cost_usd`` using ``MODEL_PRICING_USD_PER_MTOK[model]``.
+    Partners override via ``--model`` or ``--cost-override``. When tokens
+    are absent (local stub / SDK disabled path), the runner falls back to
+    a deterministic latency-based estimate so the acceptance gate is
+    ALWAYS live -- ``evaluate_acceptance`` fails loudly if every result
+    lacks ``cost_usd`` while ``cost_per_call_usd`` is declared.
 
 Results land in ``results.jsonl`` for CI's ``accept`` gate. The endpoint
 path comes from ``scenario.endpoint.path`` in ``accelerator.yaml``.
@@ -43,6 +54,21 @@ sys.path.insert(0, str(REPO_ROOT))
 
 RESERVED_CASE_KEYS = {"case_id", "expected", "technique", "notes"}
 _CITATIONS_RE = re.compile(r'"citations"\s*:\s*\[\s*[^\]\s]')
+
+# Public GA list prices (USD per 1M tokens). Keep conservative / partner-overridable.
+# Partners on custom models override via --model + a pricing entry, or pass
+# --cost-override to stamp a fixed cost_per_call during CI testing.
+MODEL_PRICING_USD_PER_MTOK: dict[str, dict[str, float]] = {
+    "gpt-4o-mini": {"prompt": 0.15, "completion": 0.60},
+    "gpt-4o":      {"prompt": 2.50, "completion": 10.00},
+    "gpt-4.1":     {"prompt": 2.00, "completion": 8.00},
+    "gpt-4.1-mini": {"prompt": 0.40, "completion": 1.60},
+    "o4-mini":     {"prompt": 1.10, "completion": 4.40},
+}
+# Fallback when token usage is unavailable (stub path / pre-GA SDK). A
+# linear latency estimate keeps the acceptance gate live with a
+# defensible upper bound. Partners tune via --cost-per-second.
+_DEFAULT_COST_PER_SECOND_USD = 0.003
 
 
 def _load_endpoint_path() -> str:
@@ -78,8 +104,45 @@ def _normalize_expected(expected: dict) -> dict:
     return exp
 
 
+def _estimate_cost_usd(
+    briefing: dict,
+    *,
+    model: str,
+    cost_override: float | None,
+    cost_per_second: float,
+    latency_ms: int,
+) -> float:
+    """Best-effort cost estimate. Always returns a finite float so the
+    acceptance gate is live even when the workflow does not surface token
+    usage (stub path / pre-GA SDK).
+    """
+    if cost_override is not None:
+        return float(cost_override)
+    usage = (briefing or {}).get("usage") or {}
+    if isinstance(usage, dict) and usage:
+        pricing = MODEL_PRICING_USD_PER_MTOK.get(model)
+        if pricing:
+            prompt_tokens = int(usage.get("prompt_tokens") or 0)
+            completion_tokens = int(usage.get("completion_tokens") or 0)
+            if prompt_tokens or completion_tokens:
+                return round(
+                    (prompt_tokens / 1_000_000) * pricing["prompt"]
+                    + (completion_tokens / 1_000_000) * pricing["completion"],
+                    6,
+                )
+    # Fallback: deterministic latency-based estimate.
+    return round((latency_ms / 1000.0) * cost_per_second, 6)
+
+
 async def run_case(
-    client: httpx.AsyncClient, api_url: str, endpoint_path: str, case: dict,
+    client: httpx.AsyncClient,
+    api_url: str,
+    endpoint_path: str,
+    case: dict,
+    *,
+    model: str,
+    cost_override: float | None,
+    cost_per_second: float,
 ) -> dict:
     started = time.time()
     payload = {k: v for k, v in case.items() if k not in RESERVED_CASE_KEYS}
@@ -133,12 +196,20 @@ async def run_case(
         reasons.append("no citations")
 
     latency_ms = int((time.time() - started) * 1000)
+    cost_usd = _estimate_cost_usd(
+        final_briefing,
+        model=model,
+        cost_override=cost_override,
+        cost_per_second=cost_per_second,
+        latency_ms=latency_ms,
+    )
     passed = score >= 0.6 and (groundedness >= 0.8 or not expected.get("must_cite"))
 
     return {
         "case_id": case["case_id"], "suite": "quality",
         "passed": passed, "score": round(max(score, 0.0), 3),
         "groundedness": groundedness, "latency_ms": latency_ms,
+        "cost_usd": cost_usd,
         "reason": "; ".join(reasons) or None,
     }
 
@@ -147,6 +218,19 @@ async def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--api-url", default="http://localhost:8000")
     p.add_argument("--out", default=str(HERE / "results.jsonl"))
+    p.add_argument(
+        "--model", default="gpt-4o-mini",
+        help="Pricing table key (see MODEL_PRICING_USD_PER_MTOK).",
+    )
+    p.add_argument(
+        "--cost-override", type=float, default=None,
+        help="Stamp a fixed cost_usd per case (CI determinism).",
+    )
+    p.add_argument(
+        "--cost-per-second", type=float,
+        default=_DEFAULT_COST_PER_SECOND_USD,
+        help="Latency-based fallback rate when token usage is unavailable.",
+    )
     args = p.parse_args()
 
     endpoint_path = _load_endpoint_path()
@@ -154,7 +238,12 @@ async def main() -> int:
     async with httpx.AsyncClient() as client:
         results = []
         for case in cases:
-            r = await run_case(client, args.api_url, endpoint_path, case)
+            r = await run_case(
+                client, args.api_url, endpoint_path, case,
+                model=args.model,
+                cost_override=args.cost_override,
+                cost_per_second=args.cost_per_second,
+            )
             results.append(r)
             print(json.dumps(r))
 

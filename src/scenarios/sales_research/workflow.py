@@ -77,6 +77,9 @@ class SalesResearchWorkflow:
         assert_enabled("workflow")
         emit_event(Event(name="request.received",
                          args_redacted={"company": request["company_name"]}))
+        # Per-stream token counters. Aggregated across every _invoke_agent
+        # call and surfaced in the final event so evals can gate on cost.
+        self._usage_totals: dict[str, int] = {}
 
         # 1. Supervisor plans (scopes which workers to run for this request).
         yield {"type": "status", "stage": "supervisor.planning"}
@@ -147,11 +150,20 @@ class SalesResearchWorkflow:
             yield {"type": "tool_result", "tool": tool_name, "result": result}
 
         emit_event(Event(name="response.returned", ok=True))
+        if self._usage_totals:
+            final.setdefault("usage", dict(self._usage_totals))
         yield {"type": "final", "briefing": final}
 
     # ---- internals --------------------------------------------------------
     async def _invoke_agent(self, agent_name: str, prompt: str) -> str:
-        """Retrieve a Foundry agent and run one turn. Stubbed if SDK absent."""
+        """Retrieve a Foundry agent and run one turn. Stubbed if SDK absent.
+
+        Side-effect: accumulates token usage into ``self._usage_totals`` when
+        the Agent Framework result exposes a ``usage`` object (standard
+        OpenAI-shape: ``prompt_tokens``, ``completion_tokens``,
+        ``total_tokens``). Emitted in the ``final`` workflow event so evals
+        can gate on cost.
+        """
         if AzureAIClient is None:
             emit_event(Event(name="worker.completed",
                              args_redacted={"agent": agent_name, "stub": True}))
@@ -159,6 +171,13 @@ class SalesResearchWorkflow:
         client = AzureAIClient(agent_name=agent_name, use_latest_version=True)
         agent = client.as_agent()
         result = await agent.run(prompt)
+        usage = getattr(result, "usage", None)
+        if usage is not None:
+            for key in ("prompt_tokens", "completion_tokens", "total_tokens"):
+                val = getattr(usage, key, None)
+                if isinstance(val, (int, float)):
+                    self._usage_totals[key] = self._usage_totals.get(key, 0) + int(val)
+            self._usage_totals["agent_calls"] = self._usage_totals.get("agent_calls", 0) + 1
         return result.text
 
     async def _run_worker(self, module: Any, request: dict[str, Any]) -> dict[str, Any]:
