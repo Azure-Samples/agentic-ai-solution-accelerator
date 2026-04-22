@@ -3,10 +3,15 @@ from __future__ import annotations
 from typing import Any
 
 REQUIRED = ("fit_score", "fit_reasons", "fit_risks",
-            "recommended_segment", "recommended_action")
+            "recommended_segment", "recommended_action",
+            "tier_recommendation", "signal_evidence",
+            "nnr_indicators", "data_gaps")
 FORBIDDEN = ("company_overview", "competitors", "outreach_subject")
 VALID_SEGMENTS = {"enterprise", "mid-market", "smb", "unknown"}
 VALID_ACTIONS = {"pursue", "nurture", "disqualify"}
+VALID_TIERS = {"tier-1", "tier-2", "tier-3", "watchlist"}
+VALID_NNR_LEVELS = {"strong", "moderate", "weak", "unknown"}
+NNR_DIMENSIONS = ("size_signal", "growth_signal", "wallet_expansion_signal")
 
 
 def validate_response(response: dict[str, Any]) -> tuple[bool, str]:
@@ -22,4 +27,20 @@ def validate_response(response: dict[str, Any]) -> tuple[bool, str]:
         return False, f"invalid segment: {response['recommended_segment']}"
     if response["recommended_action"] not in VALID_ACTIONS:
         return False, f"invalid action: {response['recommended_action']}"
+    if response["tier_recommendation"] not in VALID_TIERS:
+        return False, f"invalid tier: {response['tier_recommendation']}"
+    nnr = response["nnr_indicators"]
+    if not isinstance(nnr, dict):
+        return False, "nnr_indicators must be an object"
+    for dim in NNR_DIMENSIONS:
+        level = nnr.get(dim)
+        if level not in VALID_NNR_LEVELS:
+            return False, f"nnr_indicators.{dim} invalid: {level!r}"
+    if not isinstance(response["signal_evidence"], list):
+        return False, "signal_evidence must be a list"
+    for ev in response["signal_evidence"]:
+        if not (isinstance(ev, dict) and "signal" in ev and "source" in ev):
+            return False, "each signal_evidence entry must be {signal, source}"
+    if not isinstance(response["data_gaps"], list):
+        return False, "data_gaps must be a list"
     return True, ""

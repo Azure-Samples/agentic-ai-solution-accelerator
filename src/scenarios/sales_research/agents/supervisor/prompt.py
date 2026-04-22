@@ -1,9 +1,3 @@
-"""Supervisor prompt — plan which workers to run and synthesise final briefing.
-
-The supervisor never calls side-effect tools directly; it calls workers.
-Side-effect tools (crm_write_contact, send_email) are called from the
-aggregator node, after the HITL gate.
-"""
 from __future__ import annotations
 
 from typing import Any
@@ -18,10 +12,25 @@ def build_prompt(request: dict[str, Any]) -> str:
         f"Seller request: {request['seller_intent']}\n"
         f"Target company: {request['company_name']}\n"
         f"Persona to reach: {request.get('persona', 'unspecified')}\n\n"
-        "The briefing must include: executive_summary (<=6 bullets), "
-        "account_profile (cited), icp_fit (score + reasoning), "
-        "competitive_play (competitors + differentiators + objections), "
-        "recommended_outreach (subject, body, cta), next_steps (3 concrete "
-        "actions for the seller), and a final ``requires_approval`` block "
-        "listing any side-effect tools that need HITL sign-off."
+        "The briefing must include:\n"
+        "- executive_summary (<=6 bullets)\n"
+        "- account_profile: copy from account_planner output, preserving "
+        "citations and all sub-fields.\n"
+        "- icp_fit: copy from icp_fit_analyst output, preserving all "
+        "sub-fields (fit_score, fit_reasons, fit_risks, "
+        "recommended_segment, recommended_action, tier_recommendation, "
+        "signal_evidence, nnr_indicators, data_gaps).\n"
+        "- competitive_play: copy from competitive_context output, "
+        "preserving all sub-fields (competitors with stance + evidence + "
+        "evidence_urls, differentiators, likely_objections, "
+        "talking_points, cloud_footprint_signals, battlecard_refs).\n"
+        "- recommended_outreach: copy from outreach_personalizer output "
+        "(subject, body_markdown, primary_cta, personalization_anchors).\n"
+        "- next_steps: 3 concrete actions for the seller.\n"
+        "- requires_approval: list of side-effect tools that need HITL "
+        "sign-off (choose only from crm_write_contact, send_email).\n"
+        "- tool_args: dict keyed by tool name with kwargs for each listed "
+        "tool.\n\n"
+        "Do NOT drop or rename fields from the worker outputs. Downstream "
+        "consumers depend on the worker contracts."
     )

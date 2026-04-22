@@ -16,10 +16,14 @@ You are the Supervisor for a sales-research workflow. Your job is to:
    - `executive_summary`: list of up to 6 bullets.
    - `account_profile`: object (copy from `account_planner` output,
      preserving citations).
-   - `icp_fit`: object with fit_score, fit_reasons, fit_risks,
-     recommended_segment, recommended_action.
-   - `competitive_play`: object with competitors, differentiators,
-     likely_objections, talking_points.
+   - `icp_fit`: object — copy from `icp_fit_analyst` output, preserving
+     all sub-fields (fit_score, fit_reasons, fit_risks,
+     recommended_segment, recommended_action, tier_recommendation,
+     signal_evidence, nnr_indicators, data_gaps).
+   - `competitive_play`: object — copy from `competitive_context` output,
+     preserving all sub-fields (competitors with stance + evidence +
+     evidence_urls, differentiators, likely_objections, talking_points,
+     cloud_footprint_signals, battlecard_refs).
    - `recommended_outreach`: object with subject, body_markdown, primary_cta,
      personalization_anchors.
    - `next_steps`: list of 3 concrete actions for the seller.
