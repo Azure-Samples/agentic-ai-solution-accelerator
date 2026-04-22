@@ -48,7 +48,7 @@ Copilot reads the filled brief and customizes the repo:
 | Brief field → | Lands in |
 |---|---|
 | Problem + persona | `src/scenarios/sales_research/agents/supervisor/prompt.py` system prompt |
-| Solution shape | Keep flagship OR run `/switch-to-variant` for `patterns/single-agent` or `patterns/chat-with-actioning` |
+| Solution shape | Keep flagship OR run `/switch-to-variant` for a walkthrough of re-authoring under `patterns/single-agent` or `patterns/chat-with-actioning` (candidate patterns, not drop-ins) |
 | Grounding sources | `src/retrieval/ai_search.py` + index schema in `src/scenarios/sales_research/retrieval.py` + `infra/modules/ai-search.bicep` |
 | Side-effect tools | New files under `src/tools/` with HITL scaffolding |
 | HITL gates | `src/accelerator_baseline/hitl.py` rules |
@@ -102,8 +102,10 @@ Any red light blocks merge. Green = `azd deploy` against customer env.
 
 ## Need a different shape?
 
-- **Simpler** than supervisor-routing? Run `/switch-to-variant` → pick `single-agent`.
-- **Conversational** front-end? Run `/switch-to-variant` → pick `chat-with-actioning`.
+The variants below are **candidate patterns** (documented in `patterns/<variant>/README.md`), not drop-in packages. Run `/switch-to-variant` for a walkthrough of re-authoring the scenario under `src/scenarios/<new-id>/`:
+
+- **Simpler** than supervisor-routing? `/switch-to-variant` → pick `single-agent`.
+- **Conversational** front-end? `/switch-to-variant` → pick `chat-with-actioning`.
 - **Different business scenario?** See `docs/references/` for Customer Service and RFP Response walkthroughs.
 
 ## Need help?

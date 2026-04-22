@@ -69,7 +69,7 @@ Add a new agent with the `/add-worker-agent` chat mode; do not scaffold by hand.
 ## When adding things
 - **New tool** → `/add-tool` chat mode → creates `src/tools/<tool>.py` with HITL scaffolding + unit test.
 - **New worker agent** → `/add-worker-agent` chat mode → creates the 3-layer module + wires into supervisor.
-- **Switching pattern** → `/switch-to-variant` chat mode → restructures from flagship supervisor to `patterns/single-agent/` or `patterns/chat-with-actioning/`.
+- **Switching pattern** → `/switch-to-variant` chat mode → walks through re-authoring the scenario under `src/scenarios/<new-id>/` toward a `single-agent` or `chat-with-actioning` shape (candidate patterns in `patterns/<variant>/README.md`; not drop-in packages).
 - **Starting a new customer engagement** → `/discover-scenario` then `/scaffold-from-brief`.
 
 ## References

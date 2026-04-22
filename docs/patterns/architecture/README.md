@@ -1,105 +1,97 @@
-# Architecture Patterns
+# Architecture patterns
 
-Topology + orchestration patterns supported in v1. Partners pick one; the Spec's `topology` + `bundle` declare which.
-
-## Hard constraints
-- **Max 2 agents** in a2a topology (Spec `topology.a2a_cap <= 2`). Raising is not in v1.
-- **HITL required** for every side-effect tool (bundle `actioning-*`).
-- **Grounding sources** declared in Spec with id + type + acl_model + classification. No implicit sources.
+What the accelerator ships today, and the shapes a partner can reasonably customise into.
 
 ---
 
-## Pattern A — Single-agent retrieval
-**When:** doc Q&A, policy lookup, customer-support triage, knowledge concierge. No side-effect tools.
-**Bundle:** `retrieval-prod` or `retrieval-prod-pl`.
+## Flagship topology (what `azd up` deploys)
+
+**Pattern — supervisor routing, 2 workers, retrieval-backed, HITL for side-effects.**
 
 ```
- user → [ agent: retriever/triage ]  → response
-                 │
-                 └── grounds on: AI Search index, SharePoint, REST
-```
-
-Simple to operate. Smallest blast radius. Start here if in doubt.
-
----
-
-## Pattern B — 2-agent a2a retrieval
-**When:** one agent orchestrates (understanding intent, routing, summarizing); one agent specializes (retrieving, reasoning over domain data). Keeps prompts focused + evals tractable.
-**Bundle:** `retrieval-prod` or `retrieval-prod-pl`.
-
-```
- user → [ orchestrator ] ──call──▶ [ specialist retriever ]
-              ▲                             │
-              └──────── response ◀──────────┘
-                              grounds on: ...
-```
-
-Adds one a2a edge. Splits eval surface per agent. Use when a single agent's prompt becomes unmanageable.
-
----
-
-## Pattern C — Single-agent actioning with HITL
-**When:** the agent executes a side-effect (create ticket, send email, write to system of record). Must be human-approved at a defined point.
-**Bundle:** `actioning-prod` or `actioning-prod-pl`.
-
-```
- user → [ agent ]
+  user → POST /research/stream
             │
-            ├── grounds on: ...
-            │
-            └── proposes action ──▶ [ HITL queue ] ──approved──▶ [ baseline-actions wrapper ] ──▶ target system
-                                                     rejected
-                                                         └──▶ audit + feedback
+            ▼
+   ┌─────────────────────┐
+   │ Supervisor agent    │  (accel-sales-research-supervisor)
+   └─────────────────────┘
+            │   plans + routes
+            ├───────────────────────────────────────────┐
+            ▼                                           ▼
+   ┌─────────────────────┐                 ┌───────────────────────┐
+   │ Account Planner     │                 │ ICP Fit Analyst       │
+   │ Competitive Context │                 │ Outreach Personaliser │
+   └─────────────────────┘                 └───────────────────────┘
+            │                                           │
+            └──────────────── grounded via ─────────────┘
+                                 │
+                                 ▼
+                   ┌────────────────────────────┐
+                   │ Azure AI Search (accounts) │   <-- seeded at postprovision
+                   │ Web search (allow-listed)  │
+                   └────────────────────────────┘
 ```
 
-HITL point declared in Spec as `agent_id.before_action` (default) or `.after_action` / `.on_uncertainty`.
+Code pointers:
+
+- Workflow: `src/scenarios/sales_research/workflow.py`
+- Agents (prompt / transform / validate trio): `src/scenarios/sales_research/agents/<agent>/`
+- Retrieval: `src/retrieval/ai_search.py` + scenario index schema in `src/scenarios/sales_research/retrieval.py`
+- Endpoint binding: `src/main.py` reads `accelerator.yaml` and mounts `/research/stream` via `src.workflow.registry.load_scenario`
+- Tools (side-effect, HITL-gated): `src/tools/`
 
 ---
 
-## Pattern D — 2-agent a2a with HITL
-**When:** orchestrator + specialist + actioning. E.g., triage agent classifies incident → action agent proposes remediation → HITL approves → executor runs it.
-**Bundle:** `actioning-prod` or `actioning-prod-pl`.
+## Invariants the lint enforces
 
-```
- user → [ orchestrator ] ──call──▶ [ action specialist ]
-              ▲                             │
-              │                             └── proposes ──▶ [ HITL ] ──▶ baseline-actions ──▶ target
-              └─────── response ◀──────────────────────────┘
-```
+`scripts/accelerator-lint.py` is the authoritative contract. Partners must not violate:
+
+| Invariant | Rule |
+|---|---|
+| Agent instructions live in Foundry portal, not code | `agent_specs_no_hardcoded_model`, spec + prompt modules reference by Foundry agent name |
+| `accelerator.yaml` resolves to importable modules | `manifest_imports_resolve` |
+| Every side-effect tool has a HITL checkpoint | `tool_registers_hitl` |
+| Retrieval index schema matches Bicep | `search_index_schema_matches_bicep` |
+| Content filter in Bicep (not portal) | `content_filter_iac_only` |
+| No key-based secrets in code | `no_inline_credentials`, `kv_references_only` |
+| SDK matrix cannot drift from GA | `sdks_pinned_to_ga`, `dockerfile_matches_ga_pins` |
+| Container image ships the manifest | `dockerfile_copies_manifest` |
+
+Run `python scripts/accelerator-lint.py` locally; CI runs the same thing.
 
 ---
 
-## HITL placement guidance
-- **`before_action` (default, safest):** every side-effect is human-reviewed before execution. Use for high-impact actions, regulated domains, or when eval confidence is new.
-- **`after_action`:** action executes; human reviews within SLA (e.g., reversible actions only, telemetry-first rollout).
-- **`on_uncertainty`:** action executes below confidence threshold goes to HITL; above threshold goes direct. Requires mature confidence scoring + eval validation. Don't start here.
+## Variations a partner can choose
+
+These are **candidate patterns**, documented — not drop-in packages. Switching requires re-authoring the scenario under `src/scenarios/<new-id>/`. See `.github/chatmodes/switch-to-variant.chatmode.md` for guidance.
+
+| Variant | Where it lives today | When to reach for it |
+|---|---|---|
+| **Supervisor routing** | Flagship (`src/scenarios/sales_research/`) | Research / multi-facet briefing. Default. |
+| **Single-agent retrieval** | Candidate: `patterns/single-agent/README.md` | Doc Q&A, policy lookup — one agent + retrieval, no side-effects. |
+| **Chat-with-actioning** | Candidate: `patterns/chat-with-actioning/README.md` | Conversational UX over multi-turn tool use; HITL still gates every side-effect. |
+
+Raising past 3–5 coordinated workers is out of scope for v1 — evaluation surface and HITL coordination get unmanageable. Split into separate engagements.
 
 ---
 
-## Anti-patterns (validator rejects or strongly discourages)
+## Anti-patterns the lint or reviewers reject
 
 | Anti-pattern | Why |
 |---|---|
-| > 2 agents in v1 | Explodes eval surface + HITL coordination. Split into separate engagements. |
-| Side-effect tool in `retrieval-*` bundle | Validator fails: missing `baseline-actions` + `baseline-hitl`. |
-| Agent instructions in Python | Instructions live in Foundry portal. Code references by ID. |
-| Grounding source without `acl_model` | Validator fails. Customer must decide ACL model up-front. |
-| Custom direct model SDK calls | Bypass cost/kill/telemetry primitives. Always go via `baseline.foundry_client`. |
-| Inline credentials in tool `source` | Use `connection_name` → Foundry connection → KV-backed secret. |
+| Agent instructions in Python source | Instructions live in Foundry portal — code references by ID only. |
+| Side-effect tool without HITL checkpoint | HITL is a hard invariant for every `side_effect_tools` entry in `accelerator.yaml`. |
+| Inline SDK pins in `src/Dockerfile` | Source of truth is `pyproject.toml` + `ga-versions.yaml`; lint blocks. |
+| Direct model SDK calls bypassing telemetry | Go through `agent_framework` clients so OTel + cost tracking stay live. |
+| Grounding source without declared ACL posture | Declare it in `accelerator.yaml` or the scenario retrieval schema. |
 
 ---
 
-## Choosing a pattern — decision flow
+## Out of scope for v1
 
-1. Any side-effect tool required? → **Pattern C or D** (actioning bundle).
-2. Is one agent's prompt + tool set getting large or ambiguous? → **Pattern B or D** (2-agent).
-3. Everything else → **Pattern A** (single-agent retrieval).
-
-## Mapping patterns to reference scenarios
-
-| Pattern | Reference scenario |
-|---|---|
-| A | [knowledge-concierge](../../../examples/scenarios/knowledge-concierge) |
-| B | [supplier-risk-triage](../../../examples/scenarios/supplier-risk-triage) |
-| C | (add in Phase D) |
-| D | [itops-incident-triage](../../../examples/scenarios/itops-incident-triage) |
+- Sovereign cloud deployments
+- Multi-tenant control plane
+- Cryptographic attestation of partner-customised repos (community support model)
+- Terraform first-class (BYO-IaC is fine; match the Bicep contracts)
+- .NET / Java runtime parity (roadmap item)
+- More than 5 coordinated agents

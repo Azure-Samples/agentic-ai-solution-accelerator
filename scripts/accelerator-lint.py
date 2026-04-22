@@ -836,16 +836,42 @@ _DEAD_PATHS: tuple[str, ...] = (
     "sales_research_workflow",
     "partner-playbook.md",
     "customization-guide.md",
+    # Retired pre-D2 design idioms that still haunt doc drafts. Any of these
+    # surfacing in a partner surface makes the template look half-finished.
+    "examples/scenarios/",
+    "content/patterns/",
+    "docs/runbooks/",
+    "docs/cost-sizing-workbook.xlsx",
+    "rai/snapshots/",
+    "baseline-hitl",
+    "baseline-drift",
+    "baseline-feedback",
+    "baseline-actions",
+    "baseline-cache",
+    "baseline.content_sanitization",
+    "baseline.foundry_client",
+    "baseline.kill_switch",
+    "baseline.sse_streaming",
+    "baseline.cost_tracker",
 )
 _DEAD_PATH_GLOB_EXTS = {".md", ".yml", ".yaml", ".py", ".json"}
 _DEAD_PATH_EXCLUDED_FILES = {
     # this file defines the dead-path list; literals must appear here
     "scripts/accelerator-lint.py",
 }
-_DEAD_PATH_EXCLUDED_DIRS = {
-    ".git", "__pycache__", "node_modules", ".venv", "venv", ".azure",
-    "patterns",  # candidate pattern docs may cite historical shapes
-}
+# Prefix-style exclusions: skip files whose posix-relative path starts with
+# any of these. Path segment matching would incorrectly skip ``docs/patterns``
+# (a first-class partner surface) when we only want to skip the top-level
+# ``patterns/`` candidate directory.
+_DEAD_PATH_EXCLUDED_PREFIXES: tuple[str, ...] = (
+    "patterns/",   # candidate pattern docs may cite historical shapes
+    ".git/",
+    ".azure/",
+    ".venv/",
+    "venv/",
+    "node_modules/",
+    "__pycache__/",
+)
 
 
 @check
@@ -869,7 +895,7 @@ def no_dead_paths(ctx: Ctx) -> list[Finding]:
         rel_posix = path.relative_to(ROOT).as_posix()
         if rel_posix in _DEAD_PATH_EXCLUDED_FILES:
             continue
-        if any(part in _DEAD_PATH_EXCLUDED_DIRS for part in path.parts):
+        if any(rel_posix.startswith(p) for p in _DEAD_PATH_EXCLUDED_PREFIXES):
             continue
         try:
             text = path.read_text(encoding="utf-8", errors="ignore")

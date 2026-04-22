@@ -85,8 +85,7 @@ Do not hand-scaffold. Use `/add-worker-agent` to create a new agent and wire it 
 4. Update `src/scenarios/<scenario>/agents/supervisor/prompt.py` with the new worker's capability and routing cue.
 
 ### Switching solution shape
-- Partner wants single-agent: run `/switch-to-variant single-agent`. Moves the supervisor+workers into archive and materializes `patterns/single-agent/src/`.
-- Partner wants conversational chat: `/switch-to-variant chat-with-actioning`.
+- The `single-agent` and `chat-with-actioning` variants are **candidate patterns**, documented in `patterns/<variant>/README.md` — they are not yet materialized as drop-in packages. Run `/switch-to-variant single-agent` (or `chat-with-actioning`) to get a step-by-step walkthrough of re-authoring the scenario under `src/scenarios/<new-id>/` for the target shape; flagship HITL / telemetry / retrieval / content-filter invariants stay regardless of variant.
 
 ### Starting a new customer
 - Run `/discover-scenario` to fill `docs/discovery/solution-brief.md`.

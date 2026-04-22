@@ -1,10 +1,11 @@
-# WAF Alignment — Per-Pillar Decisions for Azure Agentic AI
+# WAF alignment
 
-How each WAF pillar + the AI workload extension applies to solutions built on this accelerator. Decisions are opinionated for v1; partners customize within these rails.
+How each Well-Architected pillar (plus the AI workload extension) shows up in this accelerator.
 
 Legend:
-- 🟢 **In the box** — baseline / patterns / validator give you this.
-- 🟡 **Partner customization** — pattern-guided; partner tunes per customer.
+
+- 🟢 **In the box** — shipped: Bicep, lint, eval, or telemetry enforces it.
+- 🟡 **Partner customisation** — pattern-guided; partner tunes per customer.
 - 🔴 **Customer responsibility** — accelerator cannot own this.
 
 ---
@@ -13,97 +14,76 @@ Legend:
 
 | Decision | Posture | How |
 |---|---|---|
-| Circuit breaker on model + tool calls | 🟢 | `baseline.foundry_client` wraps with breaker + retry. |
-| SSE streaming for long calls | 🟢 | `baseline.sse_streaming`. |
-| Kill switch | 🟢 | `baseline.kill_switch` — trips on cost / error-rate / red-team regression. |
-| Tool failure policy | 🟢 | Declared per tool in Spec; validator enforces retry-count bounds. |
-| Eval regression gate in CI | 🟢 | Fails deploy if eval suite regresses > threshold. |
-| Region pairing | 🟡 | Template stubs; partner picks customer-specific pair. |
-| HA beyond single-region | 🟡 | Pattern-guided; partner configures per SLA. |
-| DR RTO/RPO | 🔴 | Customer IR maturity. |
-
----
+| SSE streaming for long calls | 🟢 | `src/main.py` streams via `StreamingResponse`. |
+| Per-agent timeout + retry | 🟢 | `agent_framework` client configuration. |
+| Eval regression gate in CI | 🟢 | `.github/workflows/evals.yml` runs `evals/quality/` + `evals/redteam/` and enforces `accelerator.yaml.acceptance`. |
+| Manifest required for boot | 🟢 | Lint rule `dockerfile_copies_manifest` blocks drift. |
+| HA beyond single region | 🟡 | `infra/main.bicep` is region-agnostic; partner wires pairing per SLA. |
+| DR RTO/RPO | 🔴 | Customer incident-response posture. |
 
 ## Security
 
 | Decision | Posture | How |
 |---|---|---|
-| Managed identity for all Azure access | 🟢 | Bicep profiles wire MI; no SAS, no SP secrets. |
-| KV-backed secrets | 🟢 | Foundry connections reference KV; no inline creds allowed (validator). |
-| Private link for confidential+ data | 🟢 | `*-pl` profiles. |
-| Content filter locked at strict default | 🟢 | Bicep sets filter; validator detects relax attempts. |
-| XPIA / prompt-injection sanitization | 🟢 | `baseline.content_sanitization` on tool outputs. |
-| pip-audit in CI | 🟢 | Workflow template. |
-| Portal-drift detection | 🟢 | `baseline-drift` T2, required in prod profiles. |
-| Data classification enforcement | 🟡 | Spec declares; validator enforces tool catalog + profile coupling. |
-| Egress restriction / customer DLP integration | 🔴 | Customer network team. |
-| Customer Entra tenancy model | 🔴 | Customer identity team. |
-
----
+| Managed identity for all Azure access | 🟢 | `infra/modules/identity.bicep` + app uses `DefaultAzureCredential()`. |
+| KV-backed secrets, no inline creds | 🟢 | Lint rules `no_inline_credentials` + `kv_references_only`. |
+| Content filter locked at strict default via IaC | 🟢 | `infra/modules/foundry.bicep` (`accelerator-default-policy`); lint rule `content_filter_iac_only` blocks portal drift. |
+| XPIA / prompt-injection surface scoped | 🟢 | Retrieval layer only returns declared fields; red-team suite probes leakage. |
+| Private link for confidential data | 🟡 | `enablePrivateLink` param in `infra/main.bicep`; partner flips per customer. |
+| SDK CVE posture | 🟢 | `pip-audit` stub in `.github/workflows/`; `ga-versions.yaml` pinned, weekly freshness. |
+| Data classification enforcement | 🟡 | Declared in `accelerator.yaml` solution block; partner maps to tool catalog. |
+| Customer Entra tenancy + DLP | 🔴 | Customer identity + network team. |
 
 ## Cost Optimization
 
 | Decision | Posture | How |
 |---|---|---|
-| Per-request + per-session cost tracking | 🟢 | `baseline.cost_tracker`; emits to App Insights. |
-| Cost ceiling + kill switch | 🟢 | Spec `cost_ceiling.monthly_usd` + `kill_switch_threshold_pct`; materialized into alerts. |
-| Mandatory cost tags | 🟢 | Bicep profiles; `cost-tag-compliance.yml` CI check. |
-| Teardown for sandbox | 🟢 | `dev-sandbox` profile auto-tags for teardown. |
-| Model tier selection | 🟡 | Pattern-guided; Spec declares; override by profile. |
-| AI Search tier vs QPS | 🟡 | `docs/cost-sizing-workbook.xlsx` (Phase D). |
+| Per-call cost tracking in telemetry | 🟢 | `src/accelerator_baseline/telemetry.py` emits typed events; `cost_per_call_usd` in `accelerator.yaml.acceptance` is a CI gate. |
+| Acceptance thresholds fail CI on regression | 🟢 | `src/accelerator_baseline/evals.py` + `.github/workflows/evals.yml`. |
+| Mandatory Azure tags | 🟢 | `infra/main.bicep` applies `azd-env-name` + `accelerator-version` tags. |
+| Model tier selection | 🟡 | `modelName` + `modelCapacity` params in `infra/main.bicep`; partner picks per quota. |
 | FinOps maturity + chargeback | 🔴 | Customer finance. |
-
----
 
 ## Operational Excellence
 
 | Decision | Posture | How |
 |---|---|---|
-| Spec-driven solution definition | 🟢 | Single source of truth. |
-| Eval-as-deploy-gate | 🟢 | CI fails deploy if eval regresses. |
-| Telemetry via baseline schema | 🟢 | `baseline.telemetry`; materialized dashboards. |
-| Runbook templates for common incidents | 🟢 | `docs/runbooks/` (Phase D). |
-| Foundry portal drift telemetry | 🟢 | `baseline-drift`. |
-| Feedback capture + eval dataset refresh | 🟢 | `baseline-feedback` T2. |
-| Customer ops handoff (day-2 ownership matrix) | 🟡 | Template; partner completes per engagement. |
-| Customer IR process | 🔴 | Customer ops. |
-
----
+| Single-manifest solution definition | 🟢 | `accelerator.yaml` is the only source of truth; `scripts/accelerator-lint.py` validates. |
+| Eval-as-deploy-gate | 🟢 | `.github/workflows/evals.yml` must pass before `azd deploy`. |
+| Application Insights wired by default | 🟢 | `infra/modules/monitor.bicep` + `azure-monitor-opentelemetry` in `pyproject.toml`. |
+| Weekly SDK freshness signal | 🟢 | `.github/workflows/version-matrix.yml` + `scripts/ga-sdk-freshness.py`. |
+| Runbooks for incidents | 🟡 | Pattern-guided; partner owns runbook authoring per engagement. |
+| Customer day-2 ops ownership | 🔴 | Customer ops. |
 
 ## Performance Efficiency
 
 | Decision | Posture | How |
 |---|---|---|
-| Streaming responses | 🟢 | SSE by default. |
-| Cold-start mitigation | 🟢 | Container Apps min-replicas pattern in Bicep profiles. |
-| APIM in front of agent endpoint | 🟢 | Optional module; pattern guidance in `content/patterns/`. |
-| Cache for repeated retrievals | 🟡 | `baseline-cache` T3 **reference only**. KPI SLOs must NOT depend on cache hit rate. |
-| Parallel tool-call orchestration | 🟡 | Pattern-guided; limited by 2-agent cap. |
+| Streaming responses by default | 🟢 | SSE. |
+| Cold-start mitigation | 🟢 | Container Apps min-replicas in `infra/modules/containerapp.bicep`. |
+| P95 latency gate | 🟢 | `p95_latency_ms` in `accelerator.yaml.acceptance` is a CI gate. |
+| Parallel worker execution | 🟡 | Workflow factory controls fan-out; partner tunes per scenario. |
 | Customer capacity planning | 🔴 | Customer infra team + Azure support. |
-
----
 
 ## AI workload / RAI
 
 | Decision | Posture | How |
 |---|---|---|
-| RAI Impact Assessment required | 🟢 | Spec `rai.impact_assessment_ref` with expiry; refresh cadence 180d. |
-| Groundedness threshold (default 0.7) | 🟢 | Baseline wires eval + threshold gate. |
-| HITL for every side-effect | 🟢 | Hard invariant: actioning bundle → `baseline-hitl` required. |
-| Red-team eval suite in CI | 🟢 | Default suite ships; `evals.redteam.pass_threshold` in Spec. |
-| Content filter locked strict | 🟢 | Bicep + validator. |
-| Grounding source ACL respect | 🟢 | Spec `acl_model` declared per source. |
-| Eval dataset refresh | 🟡 | Pattern-guided; partner owns cadence. |
-| Residual prompt injection on novel attacks | 🔴 | Industry-wide unsolved. Mitigation: defense-in-depth (sanitization + HITL + kill switch + red-team). |
-| Model choice / evaluation for the specific domain | 🟡 | Spec declares; partner validates via evals. |
+| Content filter strict by default | 🟢 | Bicep; `content_filter_iac_only` lint. |
+| Groundedness threshold as CI gate | 🟢 | `groundedness_threshold` in `accelerator.yaml.acceptance`. |
+| HITL on every declared side-effect | 🟢 | Tools in `src/tools/` must register a HITL checkpoint; lint rule `tool_registers_hitl`. |
+| Red-team eval suite in CI | 🟢 | `evals/redteam/run.py` + `redteam_must_pass` acceptance gate. |
+| Grounding source attribution in response | 🟢 | Workers emit `citations` arrays; `must_cite` eval check. |
+| Model choice for domain | 🟡 | `modelName` param; partner validates via evals. |
+| Residual prompt injection on novel attacks | 🔴 | Industry-wide unsolved — defence in depth (content filter + grounding restrictions + HITL + red-team + kill switch). |
 
 ---
 
 ## Explicitly out of scope for v1
+
 - Sovereign cloud.
 - Multi-tenant control plane.
-- Signed bundles / cryptographic attestation of customer repo content (community support model — no runtime gating).
-- Terraform first-class support (BYO-IaC is fine — match the contracts).
-- .NET / Java baseline (v1.5).
-- \> 2-agent orchestration.
-- Free-form a2a (bring-your-own orchestration frameworks).
+- Signed bundles / cryptographic attestation of partner-customised repos.
+- Terraform first-class (BYO-IaC is fine — match the Bicep contracts).
+- .NET / Java runtime parity (roadmap).
+- More than 5 coordinated agents.
