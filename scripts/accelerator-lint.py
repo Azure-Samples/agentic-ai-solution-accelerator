@@ -997,6 +997,41 @@ def dockerfile_copies_manifest(ctx: Ctx) -> list[Finding]:
 
 
 # ---------------------------------------------------------------------------
+# PR evals workflow must install the project in editable mode
+# ---------------------------------------------------------------------------
+_PR_EVALS_WORKFLOW = ROOT / ".github/workflows/evals.yml"
+_PR_EVALS_INSTALL_RE = re.compile(
+    r"pip\s+install\s+-e\s+\"?\.\[dev\]\"?",
+)
+
+
+@check
+def pr_evals_installs_project(ctx: Ctx) -> list[Finding]:
+    """The PR evals workflow must install the project via ``pip install -e
+    ".[dev]"``. Installing only a handful of leaf deps (``httpx``, ``pyyaml``)
+    leaves the scenario-registry import chain missing ``pydantic`` et al. and
+    the PR gate fails mysteriously on a clean runner instead of actually
+    running the evals.
+    """
+    if not _PR_EVALS_WORKFLOW.exists():
+        return [Finding(
+            "pr-evals-workflow-missing", "block",
+            _rel(_PR_EVALS_WORKFLOW),
+            "PR evals workflow is missing; evals cannot gate merges.",
+        )]
+    txt = _PR_EVALS_WORKFLOW.read_text(encoding="utf-8", errors="ignore")
+    if not _PR_EVALS_INSTALL_RE.search(txt):
+        return [Finding(
+            "pr-evals-install-project", "block",
+            _rel(_PR_EVALS_WORKFLOW),
+            'PR evals workflow must install the project via `pip install -e ".[dev]"`. '
+            "Partial leaf-dep installs break the scenario-registry import chain on "
+            "a clean runner.",
+        )]
+    return []
+
+
+# ---------------------------------------------------------------------------
 # Agent specs must not hardcode the model (Bicep is the source of truth)
 # ---------------------------------------------------------------------------
 _SPEC_MODEL_RE = re.compile(r"^\*\*Model:\*\*", re.MULTILINE)

@@ -18,7 +18,9 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install deps
-        run: pip install httpx pyyaml
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
       - name: Enforce EVALS_API_URL is configured
         # Fail early: a private pilot that's green because evals never ran is
         # worse than an obvious "please configure this" error.
