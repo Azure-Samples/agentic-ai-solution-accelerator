@@ -32,7 +32,7 @@ jobs:
             "fastapi" "pydantic" "httpx" "uvicorn"
       - name: Import + lint smoke
         run: |
-          python -c "import src.main; import src.workflow.sales_research_workflow"
+          python -c "import src.main; import src.scenarios.sales_research.workflow"
           python scripts/accelerator-lint.py
       - name: Open tracking issue on failure
         if: failure()

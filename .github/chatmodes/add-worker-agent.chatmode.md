@@ -21,7 +21,7 @@ Use this when the brief or a follow-on requirement introduces a capability no cu
 
 ## Files to create
 ```
-src/agents/<agent_name>/
+src/scenarios/<scenario>/agents/<agent_name>/
 ├── __init__.py
 ├── prompt.py       build_prompt(request_data: dict) -> str
 ├── transform.py    transform_response(response: str) -> dict
@@ -78,8 +78,8 @@ def validate_response(response: dict) -> tuple[bool, str]:
 ```
 
 ## Wire into supervisor
-1. In `src/agents/supervisor/prompt.py`, add a routing cue for the new worker.
-2. In `src/workflow/sales_research_workflow.py`, add the worker to the executor graph and register the Foundry agent name in the workflow's agent map.
+1. In `src/scenarios/<scenario>/agents/supervisor/prompt.py`, add a routing cue for the new worker.
+2. In `src/scenarios/<scenario>/workflow.py`, add the worker to the executor graph; register the Foundry agent name in `accelerator.yaml -> scenario.agents[]`.
 3. In `src/accelerator_baseline/telemetry.py`, add `worker.<agent_name>.completed` if missing.
 
 ## Evals

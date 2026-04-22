@@ -27,7 +27,7 @@ Foundry agent with retrieval and one or two read-only tools is sufficient.
 That chat mode:
 
 1. Copies `patterns/single-agent/src/agent.py` over `src/main.py`.
-2. Strips `src/agents/{icp_fit_analyst,competitive_context,outreach_personalizer,supervisor}`
+2. Strips flagship workers (`src/scenarios/sales_research/agents/{icp_fit_analyst,competitive_context,outreach_personalizer,supervisor}`)
    leaving only `account_researcher` (rename if needed).
 3. Updates `accelerator.yaml.solution.pattern` to `single-agent`.
 4. Re-runs `python scripts/accelerator-lint.py`.

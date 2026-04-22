@@ -24,7 +24,7 @@ When you help the partner, you MUST preserve every rule below. When a request co
 - NEVER instantiate `openai.OpenAI(...)` or `AzureOpenAI(...)` directly. Use Agent Framework.
 
 ### Agent structure (3-layer pattern)
-Every agent lives under `src/agents/<agent_name>/` with exactly three files:
+Every agent lives under `src/scenarios/<scenario>/agents/<agent_name>/` with exactly three files:
 - `prompt.py` — `build_prompt(request_data: dict) -> str`
 - `transform.py` — `transform_response(response: str) -> dict`
 - `validate.py` — `validate_response(response: dict) -> tuple[bool, str]`
@@ -80,9 +80,9 @@ Do not hand-scaffold. Use `/add-worker-agent` to create a new agent and wire it 
 
 ### Adding a specialist worker agent
 1. Run `/add-worker-agent`.
-2. Create `src/agents/<agent_name>/{prompt.py, transform.py, validate.py}`.
-3. Wire into the supervisor in `src/workflow/sales_research_workflow.py`.
-4. Update `src/agents/supervisor/prompt.py` with the new worker's capability and routing cue.
+2. Create `src/scenarios/<scenario>/agents/<agent_name>/{prompt.py, transform.py, validate.py}`.
+3. Register the agent in `accelerator.yaml` under `scenario.agents[]` and wire it into `src/scenarios/<scenario>/workflow.py`.
+4. Update `src/scenarios/<scenario>/agents/supervisor/prompt.py` with the new worker's capability and routing cue.
 
 ### Switching solution shape
 - Partner wants single-agent: run `/switch-to-variant single-agent`. Moves the supervisor+workers into archive and materializes `patterns/single-agent/src/`.

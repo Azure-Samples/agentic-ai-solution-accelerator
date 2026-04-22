@@ -829,6 +829,63 @@ def sdks_pinned_to_ga(ctx: Ctx) -> list[Finding]:
 
 
 # ---------------------------------------------------------------------------
+# No stale path references (kills drift after scenario framework move)
+# ---------------------------------------------------------------------------
+_DEAD_PATHS: tuple[str, ...] = (
+    "src/agents/",
+    "sales_research_workflow",
+    "partner-playbook.md",
+    "customization-guide.md",
+)
+_DEAD_PATH_GLOB_EXTS = {".md", ".yml", ".yaml", ".py", ".json"}
+_DEAD_PATH_EXCLUDED_FILES = {
+    # this file defines the dead-path list; literals must appear here
+    "scripts/accelerator-lint.py",
+}
+_DEAD_PATH_EXCLUDED_DIRS = {
+    ".git", "__pycache__", "node_modules", ".venv", "venv", ".azure",
+    "patterns",  # candidate pattern docs may cite historical shapes
+}
+
+
+@check
+def no_dead_paths(ctx: Ctx) -> list[Finding]:
+    """Repo must not reference path shapes that were retired by the scenario
+    framework (D2) or dropped during the D3 docs sweep.
+
+    After D2 every agent lives under ``src/scenarios/<scenario>/agents/``
+    and every workflow under ``src/scenarios/<scenario>/workflow.py``.
+    The old ``src/agents/`` tree and the ``sales_research_workflow`` module
+    name are dead. ``docs/partner-playbook.md`` and
+    ``docs/customization-guide.md`` were deleted in D3. A Copilot-led
+    partner following a stale reference lands in a dead path, which is
+    embarrassing for a Microsoft-branded template. This rule fails if any
+    of those strings appear in any reviewed file.
+    """
+    out: list[Finding] = []
+    for path in ROOT.rglob("*"):
+        if not path.is_file() or path.suffix not in _DEAD_PATH_GLOB_EXTS:
+            continue
+        rel_posix = path.relative_to(ROOT).as_posix()
+        if rel_posix in _DEAD_PATH_EXCLUDED_FILES:
+            continue
+        if any(part in _DEAD_PATH_EXCLUDED_DIRS for part in path.parts):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        for needle in _DEAD_PATHS:
+            if needle in text:
+                out.append(Finding(
+                    "dead-path-ref", "block", _rel(path),
+                    f"references retired path {needle!r}; update to the "
+                    f"post-D2 scenario layout or drop the reference.",
+                ))
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Dockerfile must not pin SDKs independently of pyproject.toml
 # ---------------------------------------------------------------------------
 _DOCKERFILE_PIN_RE = re.compile(

@@ -24,7 +24,7 @@ ticket, write CRM record) mid-conversation.
 
 That chat mode:
 1. Replaces `src/main.py` with this pattern's `chat.py`.
-2. Adds `src/agents/chat_assistant/` (3-layer shape).
+2. Adds `src/scenarios/<scenario>/agents/chat_assistant/` (3-layer shape).
 3. Keeps the `hitl.checkpoint` gate on every side-effect tool.
 4. Updates `accelerator.yaml.solution.pattern`.
 

@@ -60,7 +60,7 @@
 
 ## Data + control flow
 1. Partner or customer invokes the API (`src/main.py`).
-2. `sales_research_workflow` executes the supervisor with the request.
+2. `src/scenarios/sales_research/workflow.py` executes the supervisor with the request.
 3. Supervisor classifies intent and dispatches to workers (parallel).
 4. Workers ground via `retrieval/ai_search.py` and tools; return structured outputs.
 5. Aggregator composes the final brief + outreach draft.
