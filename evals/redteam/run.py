@@ -7,11 +7,13 @@ The runner is scenario-agnostic:
   ``inject_into``, ``notes``) is passed through verbatim to
   ``POST {scenario.endpoint.path}``. Partners add their own red-team
   cases matching the scenario's request schema.
-* Injection: if the case provides ``injected`` and ``inject_into`` (a
+* Injection: if the case provides ``injected`` AND ``inject_into`` (a
   list of payload field names), the injected string is appended to each
-  named string field. If ``inject_into`` is omitted the injected string
-  is appended to every string-valued payload field (preserves legacy
-  flagship-style cases).
+  named string field. **``inject_into`` SHOULD be explicit** — if it is
+  omitted the runner still appends to every string field (legacy
+  behaviour) but emits a visible warning on stderr, because scenarios
+  with enum- or literal-like string fields will fail pydantic validation
+  under the implicit fallback.
 * Pass: the final briefing MUST NOT contain the lowercased
   ``must_not_contain`` substring.
 
@@ -50,7 +52,7 @@ def _load_endpoint_path() -> str:
     return path
 
 
-def _build_payload(case: dict) -> dict:
+def _build_payload(case: dict, *, strict_inject_into: bool) -> dict:
     base = {k: v for k, v in case.items() if k not in RESERVED_CASE_KEYS}
     injected = case.get("injected")
     if not injected:
@@ -59,6 +61,15 @@ def _build_payload(case: dict) -> dict:
     if inject_into:
         targets = [t for t in inject_into if t in base and isinstance(base[t], str)]
     else:
+        msg = (
+            f"redteam case {case.get('case_id')!r}: 'inject_into' is missing; "
+            f"falling back to injecting into every string field. This can "
+            f"break scenarios with enum / literal-like string fields. "
+            f"Declare 'inject_into' explicitly."
+        )
+        if strict_inject_into:
+            raise ValueError(msg)
+        print(f"warning: {msg}", file=sys.stderr)
         targets = [k for k, v in base.items() if isinstance(v, str)]
     for t in targets:
         base[t] = f"{base[t]} {injected}"
@@ -67,8 +78,13 @@ def _build_payload(case: dict) -> dict:
 
 async def run_case(
     client: httpx.AsyncClient, api_url: str, endpoint_path: str, case: dict,
+    *, strict_inject_into: bool,
 ) -> dict:
-    payload = _build_payload(case)
+    try:
+        payload = _build_payload(case, strict_inject_into=strict_inject_into)
+    except ValueError as exc:
+        return {"case_id": case["case_id"], "suite": "redteam",
+                "passed": False, "reason": f"case-build: {exc}"}
     final_briefing = None
     try:
         async with client.stream(
@@ -102,6 +118,10 @@ async def main() -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--api-url", default="http://localhost:8000")
     p.add_argument("--out", default=str(HERE / "results.jsonl"))
+    p.add_argument(
+        "--strict-inject-into", action="store_true",
+        help="Fail cases that provide 'injected' but omit 'inject_into'.",
+    )
     args = p.parse_args()
 
     endpoint_path = _load_endpoint_path()
@@ -109,7 +129,10 @@ async def main() -> int:
     results = []
     async with httpx.AsyncClient() as client:
         for case in cases:
-            r = await run_case(client, args.api_url, endpoint_path, case)
+            r = await run_case(
+                client, args.api_url, endpoint_path, case,
+                strict_inject_into=args.strict_inject_into,
+            )
             results.append(r)
             print(json.dumps(r))
 

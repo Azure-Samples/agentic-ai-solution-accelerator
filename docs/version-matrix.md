@@ -1,6 +1,12 @@
 # Version matrix
 
-Known-good GA-only versions of the SDKs this accelerator depends on. A weekly CI job (`.github/workflows/version-matrix.yml`) runs `scripts/ga-sdk-freshness.py`, which queries PyPI for the latest non-pre-release of each canonical SDK listed in `ga-versions.yaml` and opens a tracking issue if any pinned `min` is behind the latest GA. Deprecation policy: **N-1 minor** supported.
+Known-good GA-only versions of the SDKs this accelerator depends on. A weekly CI job (`.github/workflows/version-matrix.yml`) runs `scripts/ga-sdk-freshness.py`, which queries PyPI for the latest non-pre-release of each canonical SDK listed in `ga-versions.yaml`. The script classifies each package into one of three buckets:
+
+- **drift** — PyPI has a newer GA than the pinned `min`. The workflow fails and opens a tracking issue.
+- **unknown** — PyPI lookup failed (404, network, JSON decode, or no GA release). The workflow surfaces the warning in the run summary but does **not** fail and does **not** open an issue — a transient PyPI hiccup should not generate noise.
+- **ok** — PyPI returned a GA `<=` the pinned `min`.
+
+Deprecation policy: **N-1 minor** supported.
 
 Pinned in `pyproject.toml`; `ga-versions.yaml` is the manifest lint enforces drift against. Update all three together: this table, `pyproject.toml`, and `ga-versions.yaml`.
 
@@ -24,6 +30,6 @@ Pinned in `pyproject.toml`; `ga-versions.yaml` is the manifest lint enforces dri
 - Azure regions: the deployment is region-agnostic; AI Foundry + AI Search availability is the constraint.
 
 ## Cadence
-- **Weekly** (`version-matrix.yml`): `ga-sdk-freshness.py` hits PyPI, opens an issue on drift.
+- **Weekly** (`version-matrix.yml`): `ga-sdk-freshness.py` hits PyPI; opens an issue only on real drift. Transient lookup failures land in the workflow summary as warnings.
 - **Monthly**: maintainer review; cut a minor release of the template if fixes or new features land.
 - **Quarterly**: blessed-pattern promotions (see `CONTRIBUTING.md`).

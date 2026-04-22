@@ -28,8 +28,17 @@ jobs:
         continue-on-error: true
         run: |
           set +e
-          python scripts/ga-sdk-freshness.py --out drift.txt
+          python scripts/ga-sdk-freshness.py --out drift.txt 2> unknown.txt
           echo "exit_code=$?" >> "$GITHUB_OUTPUT"
+      - name: Surface transient PyPI lookup failures (non-fatal)
+        if: always()
+        run: |
+          if [ -s unknown.txt ]; then
+            echo "### PyPI lookup warnings (transient; not drift)" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            cat unknown.txt >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Open tracking issue on drift
         if: steps.check.outputs.exit_code == '1'
         uses: actions/github-script@v7
