@@ -13,9 +13,6 @@
 schema_version: "1.0"
 accelerator_version: "1.0.0"   # pins to the template version partner cloned
 
-schema_version: "1.0"
-accelerator_version: "1.0.0"   # pins to the template version partner cloned
-
 # -----------------------------------------------------------------------------
 # scenario:  HOW the accelerator plugs a concrete workflow into the framework.
 # The partner changes this (or runs `scripts/scaffold-scenario.py`) to swap

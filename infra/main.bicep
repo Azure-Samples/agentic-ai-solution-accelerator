@@ -1,6 +1,10 @@
-// Main Bicep entrypoint for the Sales Research & Outreach flagship.
+// Main Bicep entrypoint for the agentic AI accelerator.
 // Provisions Foundry project, AI Search, Container App (MI auth), Key Vault,
-// App Insights, Log Analytics, and (optionally) private endpoints.
+// App Insights, Log Analytics, and (optionally) private endpoints. The
+// scenario plugged into the framework is declared in `accelerator.yaml`;
+// Bicep stays scenario-agnostic and tags resources with the scenario id
+// supplied by `infra/main.parameters.json` so fleet reporting can roll up
+// per-engagement without code changes.
 //
 // Enforcement notes:
 // - No connection strings baked in — workloads authenticate via managed identity.
@@ -33,9 +37,12 @@ param modelDeploymentName string = 'gpt-4o-mini'
 @description('Foundry model deployment capacity (TPM in thousands for GlobalStandard).')
 param modelCapacity int = 30
 
+@description('Scenario id from accelerator.yaml.scenario.id. Flows into the `workload` resource tag so fleet reporting can attribute cost/usage per engagement without Bicep churn when partners swap scenarios.')
+param scenarioId string = 'sales-research'
+
 param tags object = {
   'azd-env-name': envName
-  workload: 'sales-research-accelerator'
+  workload: '${scenarioId}-accelerator'
 }
 
 module identity 'modules/identity.bicep' = {

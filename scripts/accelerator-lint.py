@@ -1038,6 +1038,78 @@ _SPEC_MODEL_RE = re.compile(r"^\*\*Model:\*\*", re.MULTILINE)
 
 
 @check
+def shared_assets_not_scenario_specific(ctx: Ctx) -> list[Finding]:
+    """`infra/**` is the framework surface — it must stay scenario-neutral so
+    swapping scenarios via `accelerator.yaml` doesn't require Bicep churn.
+
+    Rule: no file under ``infra/`` may contain the literal scenario id or
+    endpoint path declared in ``accelerator.yaml.scenario`` **except**:
+      * ``infra/main.parameters.json`` — this is exactly the manifest->bicep
+        binding layer where the scenario id belongs as a default.
+      * Bicep ``param`` default assignments (lines that contain ``param ``
+        before the literal), which are explicit defaults a partner overrides
+        via parameters.json / azd env vars.
+
+    Catches the flagship-era bugs where ``workload: 'sales-research-
+    accelerator'`` and ``name == 'POST /research/stream'`` were baked into
+    shared infra. Fix: parameterize via a new bicep ``param`` (see
+    ``scenarioId`` in ``infra/main.bicep``) and thread through
+    ``main.parameters.json``.
+    """
+    manifest_path = ROOT / "accelerator.yaml"
+    if not manifest_path.exists():
+        return []
+    manifest_text = manifest_path.read_text(encoding="utf-8", errors="ignore")
+
+    scenario_id_match = re.search(r"^\s*id:\s*([A-Za-z0-9_-]+)", manifest_text, re.M)
+    endpoint_match = re.search(r"^\s*path:\s*(/\S+)", manifest_text, re.M)
+    if not scenario_id_match:
+        return []
+    scenario_id = scenario_id_match.group(1)
+    endpoint_path = endpoint_match.group(1) if endpoint_match else None
+
+    infra_root = ROOT / "infra"
+    if not infra_root.exists():
+        return []
+
+    allowlist_rel = {"infra/main.parameters.json"}
+
+    out: list[Finding] = []
+    for p, text in ctx.iter():
+        try:
+            rel = p.relative_to(ROOT).as_posix()
+        except ValueError:
+            continue
+        if not rel.startswith("infra/"):
+            continue
+        if rel in allowlist_rel:
+            continue
+        for idx, line in enumerate(text.splitlines(), start=1):
+            stripped = line.strip()
+            is_param_default = "param " in line and "=" in line
+            if scenario_id in line and not is_param_default:
+                out.append(Finding(
+                    "shared-assets-scenario-specific", "block", _rel(p),
+                    f"line {idx}: hardcoded scenario id '{scenario_id}' in "
+                    "shared infra. Parameterize via bicep `param` + "
+                    "infra/main.parameters.json so partners can swap "
+                    "scenarios without editing infra/."
+                ))
+            if endpoint_path and endpoint_path in line and not is_param_default:
+                # Ignore doc-style comment references that explain the pattern.
+                if stripped.startswith(("//", "#", "/*", "*")):
+                    continue
+                out.append(Finding(
+                    "shared-assets-scenario-specific", "block", _rel(p),
+                    f"line {idx}: hardcoded scenario endpoint '{endpoint_path}' "
+                    "in shared infra. Use scenario-agnostic filters (e.g. "
+                    "cloud_RoleName) or move the panel into the scenario "
+                    "package."
+                ))
+    return out
+
+
+@check
 def agent_specs_no_hardcoded_model(ctx: Ctx) -> list[Finding]:
     """Agent spec files must not declare ``**Model:**``. The single model
     deployed by ``infra/modules/foundry.bicep`` (``AZURE_AI_FOUNDRY_MODEL``

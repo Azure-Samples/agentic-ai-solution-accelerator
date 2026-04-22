@@ -43,19 +43,19 @@ The brief is the **single source of truth** for the engagement. Every downstream
 /scaffold-from-brief
 ```
 
-Copilot reads the filled brief and customizes the repo:
+Copilot reads the filled brief and customizes the repo. The **Lands in** column shows paths for the flagship scenario (`sales-research`); if you scaffold a new scenario via `python scripts/scaffold-scenario.py <your-scenario>`, substitute `<your-scenario>` for `sales_research` in the `src/scenarios/<...>/` paths — everything outside `src/scenarios/` is scenario-agnostic and stays put.
 
-| Brief field → | Lands in |
+| Brief field → | Lands in (flagship paths shown; `src/scenarios/<id>/` for custom scenarios) |
 |---|---|
 | Problem + persona | `src/scenarios/sales_research/agents/supervisor/prompt.py` system prompt |
 | Solution shape | Keep flagship OR run `/switch-to-variant` for a walkthrough of re-authoring under `patterns/single-agent` or `patterns/chat-with-actioning` (candidate patterns, not drop-ins) |
-| Grounding sources | `src/retrieval/ai_search.py` + index schema in `src/scenarios/sales_research/retrieval.py` + `infra/modules/ai-search.bicep` |
+| Grounding sources | `src/retrieval/ai_search.py` (scenario-agnostic client) + scenario-specific index schema at `src/scenarios/sales_research/retrieval.py` + `infra/modules/ai-search.bicep` |
 | Side-effect tools | New files under `src/tools/` with HITL scaffolding |
 | HITL gates | `src/accelerator_baseline/hitl.py` rules |
 | Constraints | `infra/main.parameters.json` + `accelerator.yaml` |
 | Success criteria | `evals/quality/golden_cases.jsonl` + CI gates |
 | RAI risks | `evals/redteam/` custom adversarial cases |
-| ROI KPIs | `src/accelerator_baseline/telemetry.py` events + `infra/dashboards/roi-kpis.json` |
+| ROI KPIs | `src/accelerator_baseline/telemetry.py` events + `infra/dashboards/roi-kpis.json` (panels are scenario-agnostic; rename the dashboard per engagement) |
 
 Commit the scaffolded changes. CI lint now runs; it will flag anything missing.
 

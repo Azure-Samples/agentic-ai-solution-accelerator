@@ -1,10 +1,10 @@
 {
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-  "_comment": "App Insights workbook JSON template. Partners customize panels by KPI.",
-  "dashboardName": "Sales Research ROI",
+  "_comment": "App Insights workbook JSON template. Scenario-agnostic by default: panels key off accelerator-wide telemetry events (response.returned, tool.hitl_*, cost.call, eval.result) and filter by cloud_RoleName so a partner can swap the scenario in accelerator.yaml without touching this file. Partners rename the dashboard per engagement and add scenario-specific panels as needed.",
+  "dashboardName": "Agentic AI Accelerator ROI",
   "panels": [
     {
-      "title": "Briefings produced per day",
+      "title": "Successful responses per day",
       "kql": "customEvents | where name == 'response.returned' | where customDimensions.ok == 'true' | summarize count() by bin(timestamp, 1d)"
     },
     {
@@ -12,11 +12,12 @@
       "kql": "customEvents | where name in ('tool.hitl_approved','tool.hitl_rejected') | summarize approvals=countif(name=='tool.hitl_approved'), rejections=countif(name=='tool.hitl_rejected') by bin(timestamp, 1d)"
     },
     {
-      "title": "P95 latency per briefing (s)",
-      "kql": "requests | where name == 'POST /research/stream' | summarize percentile(duration/1000, 95) by bin(timestamp, 1h)"
+      "title": "P95 request latency (s)",
+      "_note": "Scenario-agnostic: filters by the accelerator's Container App role instead of a hardcoded route. Partners who want a per-endpoint breakdown add `summarize ... by name` once the scenario's endpoint path is known.",
+      "kql": "requests | where cloud_RoleName endswith 'api' | summarize percentile(duration/1000, 95) by bin(timestamp, 1h)"
     },
     {
-      "title": "$ per briefing (estimated)",
+      "title": "$ per call (estimated)",
       "kql": "customEvents | where name == 'cost.call' | extend cost = todouble(customMeasurements.value) | summarize avg(cost) by bin(timestamp, 1d)"
     },
     {

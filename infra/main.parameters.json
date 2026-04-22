@@ -8,6 +8,7 @@
     "modelName": { "value": "${AZURE_AI_FOUNDRY_MODEL_NAME=gpt-4o-mini}" },
     "modelVersion": { "value": "${AZURE_AI_FOUNDRY_MODEL_VERSION=2024-07-18}" },
     "modelDeploymentName": { "value": "${AZURE_AI_FOUNDRY_MODEL=gpt-4o-mini}" },
-    "modelCapacity": { "value": "${AZURE_AI_FOUNDRY_MODEL_CAPACITY=30}" }
+    "modelCapacity": { "value": "${AZURE_AI_FOUNDRY_MODEL_CAPACITY=30}" },
+    "scenarioId": { "value": "${ACCELERATOR_SCENARIO_ID=sales-research}" }
   }
 }
