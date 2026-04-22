@@ -1,9 +1,16 @@
 name: deploy
 
-# Deploy chain: lint -> azd-up -> evals.
+# Deploy chain: lint -> azd-up -> post-deploy evals.
+#
+# Gating posture:
+#   * PR-time `.github/workflows/evals.yml` is the merge gate. It runs quality
+#     + redteam evals against a standing staging URL (`vars.EVALS_API_URL`)
+#     and must pass before a PR can merge into `main`.
+#   * This workflow is the post-deploy regression safety net. Evals run
+#     AFTER `azd up` so the URL is emitted by the deploy itself; this avoids
+#     the day-0 chicken-and-egg where the repo has no URL to eval against.
+#     A regression here fails the deploy job and surfaces the delta.
 # The lint rule `deploy_gated_on_lint_and_evals` statically verifies this chain.
-# Evals run AFTER azd-up so the URL is emitted by the deploy itself; this avoids
-# the day-0 chicken-and-egg where the repo has no URL to eval against.
 
 on:
   workflow_dispatch:

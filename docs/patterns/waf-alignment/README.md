@@ -27,6 +27,7 @@ Legend:
 |---|---|---|
 | Managed identity for all Azure access | 🟢 | `infra/modules/identity.bicep` + app uses `DefaultAzureCredential()`. |
 | KV-backed secrets, no inline creds | 🟢 | Lint rules `no_inline_credentials` + `kv_references_only`. |
+| GA-only ARM api-versions (with explicit exemptions) | 🟢 | Lint rule `no_preview_api_versions` rejects any `*-preview` api in `infra/**`; narrow, documented exemptions live in `infra/.ga-exceptions.yaml` (currently one: Foundry `accounts/projects` — Azure has not yet shipped GA; revisits monthly). The enforcement surfaces (model deployments, RAI policy, RBAC) are all on GA. |
 | Content filter locked at strict default via IaC | 🟢 | `infra/modules/foundry.bicep` (`accelerator-default-policy`); lint rule `content_filter_iac_only` blocks portal drift. |
 | XPIA / prompt-injection surface scoped | 🟢 | Retrieval layer only returns declared fields; red-team suite probes leakage. |
 | Private link for confidential data | 🟡 | `enablePrivateLink` param in `infra/main.bicep`; partner flips per customer. |
@@ -49,7 +50,8 @@ Legend:
 | Decision | Posture | How |
 |---|---|---|
 | Single-manifest solution definition | 🟢 | `accelerator.yaml` is the only source of truth; `scripts/accelerator-lint.py` validates. |
-| Eval-as-deploy-gate | 🟢 | `.github/workflows/evals.yml` must pass before `azd deploy`. |
+| Eval-as-merge-gate | 🟢 | PR-time `.github/workflows/evals.yml` runs `evals/quality/` + `evals/redteam/` against a standing staging URL (`vars.EVALS_API_URL`) and must pass before merge. |
+| Post-deploy regression safety net | 🟢 | `.github/workflows/deploy.yml` re-runs the same eval suites after `azd up` emits a fresh API URL on pushes to `main`; a regression there fails the deploy job and surfaces the delta. |
 | Application Insights wired by default | 🟢 | `infra/modules/monitor.bicep` + `azure-monitor-opentelemetry` in `pyproject.toml`. |
 | Weekly SDK freshness signal | 🟢 | `.github/workflows/version-matrix.yml` + `scripts/ga-sdk-freshness.py`. |
 | Runbooks for incidents | 🟡 | Pattern-guided; partner owns runbook authoring per engagement. |

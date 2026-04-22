@@ -29,6 +29,10 @@ Pinned in `pyproject.toml`; `ga-versions.yaml` is the manifest lint enforces dri
 - Foundry model deployments: default `gpt-4o-mini` (flagship; parameterized via `modelName` / `modelDeploymentName` in `infra/main.bicep`). Partners override per engagement; the weekly freshness script validates canonical GA SDKs against PyPI regardless of model choice.
 - Azure regions: the deployment is region-agnostic; AI Foundry + AI Search availability is the constraint.
 
+## ARM api-versions
+- The lint rule `no_preview_api_versions` rejects any `*-preview` api-version in `infra/**`. Narrow, documented exemptions live in `infra/.ga-exceptions.yaml`. Each exemption must carry a `reason` and a `revisit_by` month.
+- **Current exemption set** (1 entry): `Microsoft.CognitiveServices/accounts/projects@2025-04-01-preview` — Azure has not yet shipped a non-preview api-version for the Foundry project sub-resource. All other Foundry primitives (model deployments, RAI policy, RBAC) are on GA `2024-10-01`. Revisit: 2026-10.
+
 ## Cadence
 - **Weekly** (`version-matrix.yml`): `ga-sdk-freshness.py` hits PyPI; opens an issue only on real drift. Transient lookup failures land in the workflow summary as warnings.
 - **Monthly**: maintainer review; cut a minor release of the template if fixes or new features land.

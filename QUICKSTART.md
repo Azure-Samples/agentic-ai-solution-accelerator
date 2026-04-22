@@ -12,7 +12,7 @@ cd <customer>-agents
 code .
 ```
 
-VS Code opens with Copilot already configured via `.github/copilot-instructions.md`. Copilot now knows the hard rules: Agent Framework + Foundry only, DefaultAzureCredential only, HITL required for side effects, evals gate deploys, content filters via IaC.
+VS Code opens with Copilot already configured via `.github/copilot-instructions.md`. Copilot now knows the hard rules: Agent Framework + Foundry only, DefaultAzureCredential only, HITL required for side effects, PR evals gate merges (and a post-deploy regression suite guards `main`), content filters via IaC.
 
 ---
 
