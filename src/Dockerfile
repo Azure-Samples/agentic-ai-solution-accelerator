@@ -8,6 +8,11 @@ WORKDIR /app
 # exactly the SDK matrix that CI enforces; drift is impossible.
 COPY pyproject.toml README.md ./
 COPY src ./src
+# accelerator.yaml is the engagement manifest. src.workflow.registry resolves
+# ROOT as the image workdir (/app) and loads accelerator.yaml at startup, so
+# the runtime image MUST ship it. scripts/accelerator-lint.py::dockerfile_copies_manifest
+# enforces this invariant.
+COPY accelerator.yaml ./
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir .
 

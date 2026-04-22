@@ -888,9 +888,19 @@ def no_dead_paths(ctx: Ctx) -> list[Finding]:
 # ---------------------------------------------------------------------------
 # Dockerfile must not pin SDKs independently of pyproject.toml
 # ---------------------------------------------------------------------------
-_DOCKERFILE_PIN_RE = re.compile(
-    r'["\']([a-zA-Z0-9_.\-\[\]]+)\s*(?:[><=!~].*?)["\']'
-)
+def _iter_pinned_packages(text: str):
+    """Yield ``(pkg, line_no)`` pairs for every package+version-operator
+    pair in ``text``. Matches both quoted (``"pkg==x.y"``) and unquoted
+    (``RUN pip install pkg==x.y``) forms by scanning line-by-line for the
+    shape ``<name><op><version>``. ``<name>`` must start with a letter to
+    avoid matching python version selectors like ``python3.11``.
+    """
+    pin_re = re.compile(
+        r"(?<![\w.-])([A-Za-z][A-Za-z0-9_.\-\[\]]*)\s*(?:==|>=|<=|~=|!=|>|<)\s*[0-9][\w.\-]*"
+    )
+    for idx, line in enumerate(text.splitlines(), start=1):
+        for m in pin_re.finditer(line):
+            yield m.group(1).lower().split("[")[0], idx
 
 
 @check
@@ -898,12 +908,12 @@ def dockerfile_matches_ga_pins(ctx: Ctx) -> list[Finding]:
     """src/Dockerfile must NOT pin SDKs independently of pyproject.toml.
 
     Version pins are authoritative in pyproject.toml + ga-versions.yaml. A
-    Dockerfile that re-declares canonical SDK pins inline can drift from the
-    matrix that ``sdks_pinned_to_ga`` enforces, so the deployed container
-    ends up running SDKs that CI never sees. The rule is simple: any
-    canonical SDK listed in ga-versions.yaml must not appear as an inline
-    pin in the Dockerfile. Partners should ``pip install .`` (or equivalent)
-    so the image matches pyproject.
+    Dockerfile that re-declares canonical SDK pins inline (quoted OR
+    unquoted) can drift from the matrix that ``sdks_pinned_to_ga``
+    enforces, so the deployed container ends up running SDKs that CI never
+    sees. The rule is simple: any canonical SDK listed in ga-versions.yaml
+    must not appear as an inline pin in the Dockerfile. Partners should
+    ``pip install .`` (or equivalent) so the image matches pyproject.
     """
     dockerfile = ROOT / "src" / "Dockerfile"
     if not dockerfile.exists():
@@ -914,16 +924,50 @@ def dockerfile_matches_ga_pins(ctx: Ctx) -> list[Finding]:
     canonical = {k.lower() for k in manifest.keys()}
     text = dockerfile.read_text(encoding="utf-8", errors="ignore")
     out: list[Finding] = []
-    for match in _DOCKERFILE_PIN_RE.finditer(text):
-        pkg = match.group(1).lower().split("[")[0]
+    for pkg, line_no in _iter_pinned_packages(text):
         if pkg in canonical:
             out.append(Finding(
                 "dockerfile-ga-drift", "block", _rel(dockerfile),
-                f"{pkg} is pinned inline in src/Dockerfile. Remove the inline "
-                f"pin and install from pyproject.toml (`pip install .`) so the "
-                f"runtime image matches the GA matrix enforced by lint.",
+                f"line {line_no}: {pkg} is pinned inline in src/Dockerfile. "
+                f"Remove the inline pin and install from pyproject.toml "
+                f"(`pip install .`) so the runtime image matches the GA "
+                f"matrix enforced by lint.",
             ))
     return out
+
+
+# ---------------------------------------------------------------------------
+# Dockerfile must copy the accelerator manifest (scenario loader needs it)
+# ---------------------------------------------------------------------------
+_DOCKERFILE_MANIFEST_RE = re.compile(
+    r"^\s*COPY\s+[^\n]*\baccelerator\.yaml\b", re.MULTILINE
+)
+
+
+@check
+def dockerfile_copies_manifest(ctx: Ctx) -> list[Finding]:
+    """src/Dockerfile must COPY accelerator.yaml into the image.
+
+    ``src.workflow.registry`` resolves ``ROOT`` from ``src/__file__`` and
+    reads ``accelerator.yaml`` at process startup (``src.main`` calls
+    ``load_scenario()`` eagerly before mounting any route). If the image
+    ships without the manifest, the container crashes on boot and ``azd
+    up`` does not produce a working deployment — the single loudest
+    promise the accelerator makes. This rule fails if no ``COPY`` line
+    in the Dockerfile references ``accelerator.yaml``.
+    """
+    dockerfile = ROOT / "src" / "Dockerfile"
+    if not dockerfile.exists():
+        return []
+    text = dockerfile.read_text(encoding="utf-8", errors="ignore")
+    if _DOCKERFILE_MANIFEST_RE.search(text):
+        return []
+    return [Finding(
+        "dockerfile-missing-manifest", "block", _rel(dockerfile),
+        "Dockerfile does not COPY accelerator.yaml. The container cannot "
+        "boot without the manifest — src.workflow.registry loads it at "
+        "startup. Add `COPY accelerator.yaml ./` before `pip install .`.",
+    )]
 
 
 # ---------------------------------------------------------------------------
