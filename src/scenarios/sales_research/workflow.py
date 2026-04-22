@@ -1,56 +1,44 @@
-"""Sales Research & Outreach workflow — Supervisor + parallel workers.
+"""Sales Research & Outreach workflow — Supervisor DAG over four workers.
 
-Graph::
+Graph (declared once as ``WORKERS`` below; the DAG scheduler infers stages
+from ``depends_on`` and streams partials as each worker completes)::
 
     [request]
-        |
         v
-    supervisor (plan) -----------+
-        |                        |
-        v                        |
-    +--------+----------+--------+
-    |        |          |        |
-    v        v          v        v
-  account  icp_fit   competitive  outreach  (parallel)
-  planner  analyst   context      personalizer
-    |        |          |         |
-    +--------+-----+----+---------+
-                   v
-               aggregator
-                   |
-           requires_approval?
-               +----+-----+
-               v          v
-           HITL gate    done
-               |
-               v
-          side-effect tools
+    account_planner (grounded)
+        v
+    +-----+------+
+    v            v
+    icp_fit   competitive
+    analyst   context
+    +-----+------+
+        v
+    outreach_personalizer
+        v
+    supervisor aggregator  ->  HITL gate  ->  side-effect tools
 
-The aggregator composes the Supervisor's final briefing and then (if the
-supervisor flagged any side-effect tools in ``requires_approval``) drives the
-HITL checkpoint and invokes the tool. Foundry holds the system instructions
-of each agent; this code never materialises agent instructions.
+The scenario facade is intentionally thin: a fresh ``WorkerState`` per
+request (so concurrent callers never share mutable state), plus an
+aggregator + side-effect driver around the DAG. Adding, swapping, or
+parallelising a worker is a data change to ``WORKERS``; the scaffolder in
+``scripts/scaffold-agent.py`` rewrites this dict directly.
 """
 from __future__ import annotations
 
-import asyncio
 from typing import Any, AsyncIterator
 
 from azure.identity import DefaultAzureCredential
 
-# The Agent Framework SDK supplies these. We import lazily inside the
-# executor to keep test startup cheap.
 try:
     from agent_framework.azure import AzureAIClient  # type: ignore
-    from agent_framework import WorkflowBuilder  # type: ignore  # noqa: F401
 except Exception:  # pragma: no cover - SDK may not be installed in lint envs
     AzureAIClient = None  # type: ignore
-    WorkflowBuilder = None  # type: ignore
 
 from src.accelerator_baseline.killswitch import assert_enabled
 from src.accelerator_baseline.telemetry import Event, emit_event
 from src.tools import SIDE_EFFECT_TOOLS
 from src.workflow.base import BaseWorkflow
+from src.workflow.supervisor import SupervisorDAG, WorkerSpec, WorkerState
 
 from .agents import (
     account_planner,
@@ -61,81 +49,115 @@ from .agents import (
 )
 
 
-class SalesResearchWorkflow:
-    """Facade over the Agent Framework WorkflowBuilder.
+# ---------------------------------------------------------------------------
+# Worker input builders — module-level ``def`` so ``scripts/scaffold-agent.py``
+# can append new named functions and register them in ``WORKERS`` via a single
+# AST rewrite. Do NOT inline as lambdas.
+# ---------------------------------------------------------------------------
+def _grounding_query_account_planner(state: WorkerState) -> str:
+    return state.request["company_name"]
 
-    In this scaffold, the workflow is executed as a plain asyncio fan-out. A
-    partner swapping to Agent Framework WorkflowBuilder only changes this
-    class; the agents and tools are unchanged.
+
+def _build_input_account_planner(state: WorkerState) -> dict[str, Any]:
+    return {
+        "company_name": state.request["company_name"],
+        "domain": state.request.get("domain", ""),
+        "context_hints": state.request.get("context_hints", []),
+        "grounding_chunks": state.grounding_chunks.get("account_planner", []),
+    }
+
+
+def _build_input_icp_fit_analyst(state: WorkerState) -> dict[str, Any]:
+    return {
+        "account_profile": state.outputs["account_planner"],
+        "icp_definition": state.request["icp_definition"],
+    }
+
+
+def _build_input_competitive_context(state: WorkerState) -> dict[str, Any]:
+    return {
+        "account_profile": state.outputs["account_planner"],
+        "our_solution": state.request["our_solution"],
+    }
+
+
+def _build_input_outreach_personalizer(state: WorkerState) -> dict[str, Any]:
+    return {
+        "account_profile": state.outputs["account_planner"],
+        "fit_summary": state.outputs["icp_fit_analyst"],
+        "competitive_context": state.outputs["competitive_context"],
+        "persona": state.request.get("persona", "Decision maker"),
+    }
+
+
+WORKERS: dict[str, WorkerSpec] = {
+    "account_planner": WorkerSpec(
+        id="account_planner",
+        module=account_planner,
+        build_input=_build_input_account_planner,
+        grounding_query=_grounding_query_account_planner,
+    ),
+    "icp_fit_analyst": WorkerSpec(
+        id="icp_fit_analyst",
+        module=icp_fit_analyst,
+        build_input=_build_input_icp_fit_analyst,
+        depends_on=frozenset({"account_planner"}),
+    ),
+    "competitive_context": WorkerSpec(
+        id="competitive_context",
+        module=competitive_context,
+        build_input=_build_input_competitive_context,
+        depends_on=frozenset({"account_planner"}),
+    ),
+    "outreach_personalizer": WorkerSpec(
+        id="outreach_personalizer",
+        module=outreach_personalizer,
+        build_input=_build_input_outreach_personalizer,
+        depends_on=frozenset(
+            {"account_planner", "icp_fit_analyst", "competitive_context"}
+        ),
+    ),
+}
+
+
+class SalesResearchWorkflow:
+    """Thin scenario facade over :class:`SupervisorDAG`.
+
+    The DAG is constructed (and validated) once at workflow build time so
+    a malformed ``WORKERS`` dict fails at FastAPI startup rather than on
+    first request.
     """
 
     def __init__(self, *, primary_index_name: str = "accounts") -> None:
         self._credential = DefaultAzureCredential()
         self._primary_index_name = primary_index_name
+        self._dag = SupervisorDAG(
+            WORKERS,
+            invoke_agent=self._invoke_agent,
+            retrieve=self._retrieve_grounding,
+        )
 
     async def stream(self, request: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
         assert_enabled("workflow")
-        emit_event(Event(name="request.received",
-                         args_redacted={"company": request["company_name"]}))
-        # Per-stream token counters. Aggregated across every _invoke_agent
-        # call and surfaced in the final event so evals can gate on cost.
-        self._usage_totals: dict[str, int] = {}
-
-        # 1. Supervisor plans (scopes which workers to run for this request).
-        yield {"type": "status", "stage": "supervisor.planning"}
-        plan = await self._invoke_agent(
-            supervisor.AGENT_NAME, supervisor.build_prompt(request)
+        emit_event(
+            Event(
+                name="request.received",
+                args_redacted={"company": request["company_name"]},
+            )
         )
 
-        # 2. Account Planner runs FIRST - downstream workers need the real
-        #    account profile. Retrieval grounding is attached here so the
-        #    agent can cite from the configured index.
-        yield {"type": "status", "stage": "account_planner"}
-        grounding_chunks = await self._retrieve_grounding(request["company_name"])
-        account_profile = await self._run_worker(
-            account_planner,
-            {"company_name": request["company_name"],
-             "domain": request.get("domain", ""),
-             "context_hints": request.get("context_hints", []),
-             "grounding_chunks": grounding_chunks},
-        )
-        yield {"type": "partial", "account_profile": account_profile}
+        state = WorkerState(request=request)
 
-        # 3. ICP-Fit and Competitive-Context run in parallel.
-        yield {"type": "status", "stage": "workers.parallel"}
-        icp, comp = await asyncio.gather(
-            self._run_worker(
-                icp_fit_analyst,
-                {"account_profile": account_profile,
-                 "icp_definition": request["icp_definition"]},
-            ),
-            self._run_worker(
-                competitive_context,
-                {"account_profile": account_profile,
-                 "our_solution": request["our_solution"]},
-            ),
-        )
+        async for evt in self._dag.run(state):
+            yield evt
 
-        # 4. Outreach Personalizer depends on all three earlier outputs.
-        yield {"type": "status", "stage": "outreach_personalizer"}
-        outreach = await self._run_worker(
-            outreach_personalizer,
-            {"account_profile": account_profile,
-             "fit_summary": icp,
-             "competitive_context": comp,
-             "persona": request.get("persona", "Decision maker")},
-        )
-        yield {"type": "partial", "icp": icp, "competitive": comp,
-               "outreach": outreach}
-
-        # 5. Aggregator: re-invoke supervisor with all worker outputs.
         yield {"type": "status", "stage": "aggregating"}
-        final = await self._aggregate(
-            request, account_profile, icp, comp, outreach, plan
-        )
+        final = await self._aggregate(request, state.outputs)
 
-        # 6. Optional side-effect tools. HITL enforced inside tool modules.
-        approvals_needed = final.get("requires_approval", [])
+        if state.usage_totals:
+            final.setdefault("usage", dict(state.usage_totals))
+
+        approvals_needed = final.get("requires_approval", []) or []
         tool_args_map = final.get("tool_args", {}) or {}
         for tool_name in approvals_needed:
             if tool_name not in SIDE_EFFECT_TOOLS:
@@ -143,30 +165,33 @@ class SalesResearchWorkflow:
             fn, _schema = SIDE_EFFECT_TOOLS[tool_name]
             args = tool_args_map.get(tool_name, {})
             if not args:
-                yield {"type": "tool_skipped", "tool": tool_name,
-                       "reason": "no tool_args produced by supervisor"}
+                yield {
+                    "type": "tool_skipped",
+                    "tool": tool_name,
+                    "reason": "no tool_args produced by supervisor",
+                }
                 continue
             result = await fn(**args)
             yield {"type": "tool_result", "tool": tool_name, "result": result}
 
         emit_event(Event(name="response.returned", ok=True))
-        if self._usage_totals:
-            final.setdefault("usage", dict(self._usage_totals))
         yield {"type": "final", "briefing": final}
 
     # ---- internals --------------------------------------------------------
-    async def _invoke_agent(self, agent_name: str, prompt: str) -> str:
-        """Retrieve a Foundry agent and run one turn. Stubbed if SDK absent.
-
-        Side-effect: accumulates token usage into ``self._usage_totals`` when
-        the Agent Framework result exposes a ``usage`` object (standard
-        OpenAI-shape: ``prompt_tokens``, ``completion_tokens``,
-        ``total_tokens``). Emitted in the ``final`` workflow event so evals
-        can gate on cost.
+    async def _invoke_agent(
+        self, agent_name: str, prompt: str, state: WorkerState
+    ) -> str:
+        """Retrieve a Foundry agent and run one turn. Accumulates token usage
+        into ``state.usage_totals`` — never on ``self`` — so concurrent
+        requests do not corrupt each other's cost totals.
         """
         if AzureAIClient is None:
-            emit_event(Event(name="worker.completed",
-                             args_redacted={"agent": agent_name, "stub": True}))
+            emit_event(
+                Event(
+                    name="worker.completed",
+                    args_redacted={"agent": agent_name, "stub": True},
+                )
+            )
             return "{}"
         client = AzureAIClient(agent_name=agent_name, use_latest_version=True)
         agent = client.as_agent()
@@ -176,28 +201,19 @@ class SalesResearchWorkflow:
             for key in ("prompt_tokens", "completion_tokens", "total_tokens"):
                 val = getattr(usage, key, None)
                 if isinstance(val, (int, float)):
-                    self._usage_totals[key] = self._usage_totals.get(key, 0) + int(val)
-            self._usage_totals["agent_calls"] = self._usage_totals.get("agent_calls", 0) + 1
+                    state.usage_totals[key] = (
+                        state.usage_totals.get(key, 0) + int(val)
+                    )
+            state.usage_totals["agent_calls"] = (
+                state.usage_totals.get("agent_calls", 0) + 1
+            )
         return result.text
-
-    async def _run_worker(self, module: Any, request: dict[str, Any]) -> dict[str, Any]:
-        raw = await self._invoke_agent(module.AGENT_NAME, module.build_prompt(request))
-        data = module.transform_response(raw or "{}")
-        ok, err = module.validate_response(data)
-        if not ok:
-            emit_event(Event(name="worker.completed", ok=False, error=err,
-                             external_system=module.AGENT_NAME))
-            raise ValueError(f"{module.AGENT_NAME}: {err}")
-        emit_event(Event(name="worker.completed", ok=True,
-                         external_system=module.AGENT_NAME))
-        return data
 
     async def _retrieve_grounding(self, query: str) -> list[dict[str, Any]]:
         """Pull top-K grounded chunks from the scenario's primary AI Search index.
 
-        Fails open to an empty list when retrieval isn't configured (so the
-        unit-test stub path still works); the agent's validator enforces
-        that any factual claim has a citation.
+        Fails open (empty list) when retrieval isn't configured so the unit-
+        test stub path still works; agent validators enforce citations.
         """
         try:
             from src.retrieval.ai_search import SearchRetriever
@@ -210,8 +226,12 @@ class SalesResearchWorkflow:
         try:
             chunks = await retriever.search(query, top=5)
             return [
-                {"id": c.id, "content": c.content, "source": c.source,
-                 "score": c.score}
+                {
+                    "id": c.id,
+                    "content": c.content,
+                    "source": c.source,
+                    "score": c.score,
+                }
                 for c in chunks
             ]
         except Exception as exc:
@@ -223,16 +243,23 @@ class SalesResearchWorkflow:
             except Exception:
                 pass
 
-    async def _aggregate(self, request, account_profile, icp, comp, outreach,
-                         plan) -> dict[str, Any]:
+    async def _aggregate(
+        self, request: dict[str, Any], outputs: dict[str, Any]
+    ) -> dict[str, Any]:
         synthesis_prompt = supervisor.build_prompt(request) + (
             f"\n\nWORKER OUTPUTS:\n"
-            f"account_profile = {account_profile}\n"
-            f"icp_fit = {icp}\n"
-            f"competitive = {comp}\n"
-            f"outreach = {outreach}\n"
+            f"account_profile = {outputs.get('account_planner')}\n"
+            f"icp_fit = {outputs.get('icp_fit_analyst')}\n"
+            f"competitive = {outputs.get('competitive_context')}\n"
+            f"outreach = {outputs.get('outreach_personalizer')}\n"
         )
-        raw = await self._invoke_agent(supervisor.AGENT_NAME, synthesis_prompt)
+        # Aggregator runs outside the DAG and does not accumulate token usage
+        # into any particular worker's budget; a transient WorkerState is
+        # threaded through ``_invoke_agent`` only so the usage counters roll
+        # up into the final briefing's ``usage`` field.
+        raw = await self._invoke_agent(
+            supervisor.AGENT_NAME, synthesis_prompt, WorkerState(request=request)
+        )
         data = supervisor.transform_response(raw or "{}")
         ok, err = supervisor.validate_response(data)
         if not ok:
@@ -251,3 +278,4 @@ def build_workflow(context: Any) -> BaseWorkflow:
     indexes = getattr(context, "retrieval_indexes", ()) or ()
     primary = indexes[0].name if indexes else "accounts"
     return SalesResearchWorkflow(primary_index_name=primary)
+

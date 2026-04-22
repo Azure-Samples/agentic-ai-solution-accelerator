@@ -43,6 +43,7 @@ KPI_EVENTS: set[str] = {
     "request.received",
     "supervisor.routed",
     "worker.completed",
+    "worker.skipped",
     "tool.executed",
     "tool.hitl_approved",
     "tool.hitl_rejected",
