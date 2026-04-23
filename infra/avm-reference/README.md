@@ -34,9 +34,10 @@ WAF-aligned shape for that one resource. They do not bring:
 - PE subnet / private-DNS zone bindings — wire those yourself in Tier 3,
   or via your CCoE's hub plumbing.
 - Diagnostic settings — the current exemplars match the hand-rolled
-  modules' Tier 1/2 behavior (no explicit diagnostic wiring). Tier 3
-  (`alz-overlay`) adds `diagnosticSettings:` targeting a hub-central
-  Log Analytics workspace.
+  modules' Tier 1/2 behavior (no explicit diagnostic wiring).
+  Hub-central Log Analytics wiring via `diagnosticSettings:` belongs
+  in Tier 3 (`infra/alz-overlay/`); that wiring is **planned (H9)**
+  and not yet on disk.
 - Foundry parity (no AVM module — see exception below).
 
 **⚠ container-app caveat.** The `app/managed-environment` AVM module

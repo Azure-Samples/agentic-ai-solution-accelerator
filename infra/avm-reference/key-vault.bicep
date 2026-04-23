@@ -51,6 +51,11 @@ module kv 'br/public:avm/res/key-vault/vault:0.9.0' = {
     enableVaultForDeployment: false
     enableVaultForTemplateDeployment: false
     enableVaultForDiskEncryption: false
+    // AVM vault:0.9.0 defaults `enableTelemetry` to `true`, which
+    // deploys an extra `Microsoft.Resources/deployments` telemetry
+    // resource. The hand-rolled module deploys nothing of the sort;
+    // disable it to match.
+    enableTelemetry: false
     // --- flags the hand-rolled module also enables ---
     enablePurgeProtection: true
     enableSoftDelete: true
