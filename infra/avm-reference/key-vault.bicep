@@ -41,6 +41,17 @@ module kv 'br/public:avm/res/key-vault/vault:0.9.0' = {
     name: name
     location: location
     tags: tags
+    // --- explicit overrides to match hand-rolled behavior ---
+    // AVM vault:0.9.0 defaults `sku` to 'premium'; the hand-rolled
+    // module uses 'standard'. Drop-in parity => pin to 'standard'.
+    sku: 'standard'
+    // AVM vault:0.9.0 defaults these three flags to `true`; the
+    // hand-rolled module leaves them unset (ARM default `false`).
+    // Override to keep swap behavior-identical.
+    enableVaultForDeployment: false
+    enableVaultForTemplateDeployment: false
+    enableVaultForDiskEncryption: false
+    // --- flags the hand-rolled module also enables ---
     enablePurgeProtection: true
     enableSoftDelete: true
     enableRbacAuthorization: true

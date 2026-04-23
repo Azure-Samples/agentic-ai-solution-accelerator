@@ -1763,21 +1763,29 @@ def landing_zone_mode_consistent(ctx: Ctx) -> list[Finding]:
                     ))
                     continue
                 # Assert an AVM reference exists in an actual `module`
-                # declaration in the corresponding module file — not just
-                # anywhere (comment, dead code, unrelated AVM helper).
-                # Step 1: find any `module <name> 'br/public:avm/...' = ...`
-                # declaration line.
-                # Step 2: reject dead-code `= if (false)` decls — they
-                # never deploy and satisfy the rule only vacuously.
-                # Non-literal conditionals (`= if (deployFoo)`) are
-                # accepted: they are legitimate AVM module invocations.
+                # declaration in the corresponding module file — not
+                # just anywhere (comment, dead code, unrelated AVM
+                # helper). Restricted to `br/public:avm/res/` to reject
+                # utility / type imports that happen to share the
+                # prefix. Dead-code forms (`= if (false)`) are rejected
+                # even when the `if` sits on a continuation line.
+                # Non-literal conditionals (`if (deployFoo)`, `if (true)`)
+                # are accepted as legitimate AVM invocations.
                 filenames = _AVM_SERVICE_MODULES[svc]
+                # Match module decl header up to the opening `{`, across
+                # lines. `re.DOTALL` so `.` spans newlines. Non-greedy
+                # so we don't swallow sibling decls.
                 module_re = re.compile(
-                    r"^\s*module\s+\w+\s+['\"]br/public:avm/[^'\"]+['\"]\s*=[^\n]*$",
-                    re.MULTILINE,
+                    r"^\s*module\s+\w+\s+['\"]br/public:avm/res/"
+                    r"[^'\"]+['\"]\s*=\s*.*?\{",
+                    re.MULTILINE | re.DOTALL,
                 )
+                # Literal `if (false)` — case-sensitive, flexible on
+                # internal whitespace, matches even when `if` sits on a
+                # continuation line after the `=`.
                 dead_code_re = re.compile(
-                    r"=\s*if\s*\(\s*false\s*\)"
+                    r"=\s*if\s*\(\s*false\s*\)",
+                    re.DOTALL,
                 )
                 found = False
                 for fname in filenames:

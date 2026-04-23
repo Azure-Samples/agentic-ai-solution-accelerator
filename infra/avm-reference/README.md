@@ -33,8 +33,10 @@ exemplar — it shows the pattern most cleanly.
 WAF-aligned shape for that one resource. They do not bring:
 - PE subnet / private-DNS zone bindings — wire those yourself in Tier 3,
   or via your CCoE's hub plumbing.
-- Diagnostic-setting coverage to a hub-central LAW (exemplars emit to
-  their own workspace; Tier 3 overrides).
+- Diagnostic settings — the current exemplars match the hand-rolled
+  modules' Tier 1/2 behavior (no explicit diagnostic wiring). Tier 3
+  (`alz-overlay`) adds `diagnosticSettings:` targeting a hub-central
+  Log Analytics workspace.
 - Foundry parity (no AVM module — see exception below).
 
 **⚠ container-app caveat.** The `app/managed-environment` AVM module
