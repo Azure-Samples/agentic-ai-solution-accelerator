@@ -137,6 +137,58 @@ def _parse_spec(path: pathlib.Path) -> str:
     return instr_match.group(1).strip()
 
 
+def _warn_orphan_deployments(
+    credential: DefaultAzureCredential, expected: set[str]
+) -> None:
+    """Print actionable warnings for Foundry deployments on the account
+    that are NOT in the expected set. ARM incremental mode does not
+    delete resources removed from the Bicep template, so shrinking the
+    ``models:`` block in accelerator.yaml leaves orphans behind that
+    consume quota. This runs post-provision to give the partner a
+    concrete ``az ... delete`` command per orphan.
+
+    Silent no-op when management-plane env is unavailable (e.g. local
+    testing without AZURE_SUBSCRIPTION_ID) or the mgmt SDK isn't
+    installed. Never fails the bootstrap — orphan detection is
+    advisory, not a gate.
+    """
+    subscription_id = os.environ.get("AZURE_SUBSCRIPTION_ID")
+    resource_group = os.environ.get("AZURE_RESOURCE_GROUP")
+    account_name = os.environ.get("AZURE_AI_FOUNDRY_ACCOUNT_NAME")
+    if not (subscription_id and resource_group and account_name and _HAS_MGMT):
+        return
+    try:
+        mgmt = CognitiveServicesManagementClient(credential, subscription_id)
+        deployments = list(mgmt.deployments.list(resource_group, account_name))
+    except Exception as exc:
+        print(
+            f"::warning::could not enumerate deployments for orphan "
+            f"check on '{account_name}': {exc}",
+            file=sys.stderr,
+        )
+        return
+
+    actual = {d.name for d in deployments if getattr(d, "name", None)}
+    orphans = sorted(actual - expected)
+    if not orphans:
+        return
+
+    print(
+        f"::warning::found {len(orphans)} orphan model deployment(s) on "
+        f"'{account_name}' that are NOT referenced by accelerator.yaml "
+        "`models:`. ARM incremental mode does not auto-delete them; they "
+        "consume quota. To remove:",
+        file=sys.stderr,
+    )
+    for name in orphans:
+        print(
+            f"  az cognitiveservices account deployment delete "
+            f"-g {resource_group} -n {account_name} "
+            f"--deployment-name {name}",
+            file=sys.stderr,
+        )
+
+
 def _preflight(credential: DefaultAzureCredential,
                deployment_names: list[str]) -> list[str]:
     """Management-plane checks for every deployment in the model map.
@@ -316,6 +368,10 @@ def main() -> int:
         for f in failures:
             print(f"::error::{f}", file=sys.stderr)
         return 1
+
+    # Orphan detection — advisory, never fails the bootstrap.
+    expected_deployments = set(model_map.values())
+    _warn_orphan_deployments(credential, expected_deployments)
 
     print(f"bootstrap ok: {len(agents_manifest)} agents verified in {endpoint}")
     return 0

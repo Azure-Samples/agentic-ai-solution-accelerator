@@ -28,9 +28,15 @@ accelerator_version: "1.0.0"   # pins to the template version partner cloned
 #   - capacity:        TPM in thousands (GlobalStandard SKU)
 #   - default:         exactly one entry MUST set `default: true`
 #
-# Omitting this whole block is supported for back-compat: Bicep then
-# provisions only the single default deployment configured via env vars
-# (AZURE_AI_FOUNDRY_MODEL_NAME/VERSION/MODEL/CAPACITY).
+# Omitting this whole block is a convergent fixed-point: the
+# preprovision sync (scripts/sync-models-from-manifest.py) resets every
+# managed env var (AZURE_AI_FOUNDRY_MODEL_NAME/VERSION/MODEL/CAPACITY
+# and EXTRA_DEPLOYMENTS_JSON=[]) back to the template defaults, and
+# Bicep then provisions only the single default deployment. Raw
+# `azd env set AZURE_AI_FOUNDRY_MODEL_NAME=...` overrides are NOT
+# supported — preprovision would clobber them on every `azd up`. If
+# you want a non-template default, keep the block with a single
+# `default: true` entry.
 # -----------------------------------------------------------------------------
 models:
   - slug: default

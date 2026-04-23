@@ -40,3 +40,7 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+infra/modules/*.json
+!infra/main.parameters.json
+

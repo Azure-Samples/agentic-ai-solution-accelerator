@@ -25,20 +25,26 @@ If ``accelerator.yaml`` declares a ``models:`` block:
 
   ``foundry.bicep`` parses this with ``json()`` into an array of
   ``{slug, deployment_name, model, version, capacity}`` objects and
-  creates one deployment per entry, bound to the shared RAI policy.
+  creates one deployment per entry (``@batchSize(1)``), bound to the
+  shared RAI policy.
 
-If ``models:`` is absent — back-compat mode:
+If ``models:`` is absent — normalised fixed-point state:
 
-* Only AZURE_AI_FOUNDRY_EXTRA_DEPLOYMENTS_JSON is written (to "[]"), so
-  removing a manifest's ``models:`` block cleanly tears down any extras
-  on the next ``azd up``. The four single-deployment vars stay
-  partner-managed (what they set via ``azd env set`` or .env). This
-  matches the pre-G10 behaviour bit-for-bit.
+* All five managed env vars are rewritten to the template defaults
+  that ``infra/main.parameters.json`` declares (gpt-4o-mini / 2024-07-18
+  / capacity 30 / extras=[]). This makes "remove the block" a
+  convergent operation — state doesn't drift from whatever the last
+  sync wrote. Partners who want to override the default deployment
+  MUST use the ``models:`` block (single-entry is fine); overriding via
+  raw env vars is no longer supported because preprovision would
+  clobber them on the next ``azd up``.
 
-Called for its side-effects on ``azd env``; emits one-line summary on
-stdout. Exits non-zero only on shape errors; the lint rule
-``models_block_shape`` catches these earlier so this script rarely fails
-in practice.
+Orphan deployments (slug removed from the block after a prior
+``azd up`` provisioned it) are NOT auto-deleted by Bicep (incremental
+ARM mode). ``scripts/foundry-bootstrap.py`` detects them at
+postprovision time and emits an actionable warning with the exact
+``az cognitiveservices account deployment delete`` command the partner
+can run.
 """
 from __future__ import annotations
 
@@ -54,6 +60,16 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "accelerator.yaml"
 
 _REQUIRED_FIELDS = ("slug", "deployment_name", "model", "version", "capacity")
+
+# Template defaults — MUST mirror the defaults in infra/main.parameters.json
+# so that "no models block" and "freshly provisioned with no env vars set"
+# produce identical Bicep inputs.
+_TEMPLATE_DEFAULTS = {
+    "AZURE_AI_FOUNDRY_MODEL_NAME": "gpt-4o-mini",
+    "AZURE_AI_FOUNDRY_MODEL_VERSION": "2024-07-18",
+    "AZURE_AI_FOUNDRY_MODEL": "gpt-4o-mini",
+    "AZURE_AI_FOUNDRY_MODEL_CAPACITY": "30",
+}
 
 
 def _azd_env_set(key: str, value: str) -> None:
@@ -77,12 +93,15 @@ def main() -> int:
     models = manifest.get("models")
 
     if not models:
-        # Back-compat: clear extras; leave the default-deployment vars
-        # partner-managed (matching pre-G10 behaviour).
+        # Normalised fixed-point: write template defaults so state is
+        # convergent across add-block / remove-block cycles.
+        for key, value in _TEMPLATE_DEFAULTS.items():
+            _azd_env_set(key, value)
         _azd_env_set("AZURE_AI_FOUNDRY_EXTRA_DEPLOYMENTS_JSON", "[]")
         print(
-            "sync-models: no `models:` block in accelerator.yaml; "
-            "cleared extras, kept partner-managed default deployment."
+            "sync-models: no `models:` block; reset to template defaults "
+            f"({_TEMPLATE_DEFAULTS['AZURE_AI_FOUNDRY_MODEL']}, extras=[]). "
+            "Add a `models:` block to accelerator.yaml to customise."
         )
         return 0
 

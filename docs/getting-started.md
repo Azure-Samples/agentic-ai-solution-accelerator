@@ -176,13 +176,22 @@ How it flows:
    `models:` block and writes azd env vars: the default entry drives the
    existing `AZURE_AI_FOUNDRY_MODEL_NAME/VERSION/MODEL/CAPACITY` params, and
    non-default entries are packed into `AZURE_AI_FOUNDRY_EXTRA_DEPLOYMENTS_JSON`.
+   The sync is convergent — removing the block from the manifest resets
+   all managed env vars back to the template defaults so state doesn't
+   drift across add/remove cycles.
 2. **Bicep** (`infra/modules/foundry.bicep`) provisions the default deployment
-   as before, then loops over the JSON array to create each extra deployment
-   bound to the same shared RAI (content filter) policy. Output
+   as before, then loops over the JSON array (`@batchSize(1)` — one at a
+   time to avoid Foundry capacity-queue rejections) to create each extra
+   deployment bound to the same shared RAI (content filter) policy. Output
    `AZURE_AI_FOUNDRY_MODEL_MAP` is a `slug -> deployment_name` object.
 3. **postprovision** (`scripts/foundry-bootstrap.py`) resolves each Foundry
    agent's `scenario.agents[].model` slug via the map (or `default` when
-   omitted) and creates/updates the agent with that deployment name.
+   omitted) and creates/updates the agent with that deployment name. It also
+   scans the Foundry account for **orphan deployments** — deployments that
+   exist but are no longer in the manifest (ARM incremental mode doesn't
+   delete them automatically) — and prints the concrete
+   `az cognitiveservices account deployment delete` command per orphan so
+   the partner can reclaim quota.
 
 Lint enforcement (both BLOCKING):
 
@@ -192,9 +201,13 @@ Lint enforcement (both BLOCKING):
 - `agent_model_refs_exist` — every `scenario.agents[].model` references a declared
   slug; omitting the field falls through to slug `default`.
 
-Omitting the whole `models:` block is supported (back-compat): Bicep then
-provisions only the single default deployment from env vars, matching the
-pre-G10 behaviour bit-for-bit.
+Omitting the whole `models:` block is supported: sync-models-from-manifest
+then resets all managed env vars to the template defaults (gpt-4o-mini /
+2024-07-18 / capacity 30), which is a convergent fixed-point (same state
+whether the block was ever there or not). Partners who want to override
+the default deployment MUST use the `models:` block with a single default
+entry — overriding via raw env vars is unsupported because preprovision
+would clobber them on every `azd up`.
 
 ## CI chain
 

@@ -113,10 +113,13 @@ resource modelDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-
 }
 
 // Extra deployments driven by accelerator.yaml `models:` block.
-// Serialized behind the default deployment so Foundry's provisioning
-// queue doesn't reject concurrent creates on cold capacity.
+// `@batchSize(1)` serialises creates inside the loop so Foundry's
+// provisioning queue doesn't reject concurrent creates on cold
+// capacity. The explicit dependsOn also serialises the whole loop
+// behind the default deployment.
 var extraModelDeployments = json(extraModelDeploymentsJson)
 
+@batchSize(1)
 resource extraModelDeps 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = [for dep in extraModelDeployments: {
   parent: account
   name: dep.deployment_name

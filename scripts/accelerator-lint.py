@@ -1449,7 +1449,8 @@ def models_block_shape(ctx: Ctx) -> list[Finding]:
       - exactly one entry has ``default: true`` AND uses ``slug: default``
       - no non-default entry uses ``slug: default`` (slug ``default`` is reserved)
 
-    Absent block is OK (back-compat with pre-G10 partners).
+    Absent block is OK (convergent fixed-point — preprovision resets
+    all managed env vars to template defaults).
     """
     manifest_path = ROOT / "accelerator.yaml"
     if not manifest_path.exists():
@@ -1537,8 +1538,8 @@ def agent_model_refs_exist(ctx: Ctx) -> list[Finding]:
     Agents without a ``model:`` field fall through to the reserved slug
     ``default`` — which is only valid when a ``models:`` block exists
     with a ``default: true`` entry, OR when the block is omitted entirely
-    (back-compat: Bicep still provisions the single default deployment
-    from env vars).
+    (convergent fixed-point: preprovision resets env vars to template
+    defaults and Bicep provisions only the default deployment).
     """
     manifest_path = ROOT / "accelerator.yaml"
     if not manifest_path.exists():
@@ -1572,8 +1573,8 @@ def agent_model_refs_exist(ctx: Ctx) -> list[Finding]:
             continue
         slug = a.get("model")
         if slug is None:
-            # Implicit 'default'. OK if models block absent (back-compat)
-            # OR a default entry exists.
+            # Implicit 'default'. OK if models block absent (convergent
+            # fixed-point) OR a default entry exists.
             if models is not None and not has_default:
                 out.append(Finding(
                     "agent-model-refs-exist", "block", "accelerator.yaml",
@@ -1601,6 +1602,65 @@ def agent_model_refs_exist(ctx: Ctx) -> list[Finding]:
                 "agent-model-refs-exist", "block", "accelerator.yaml",
                 f"scenario.agents[{i}].model={slug!r} does not match any "
                 f"declared `models[].slug`. Declared: {sorted(declared_slugs)}",
+            ))
+    return out
+
+
+@check
+def template_defaults_match_parameters(ctx: Ctx) -> list[Finding]:
+    """The ``_TEMPLATE_DEFAULTS`` constant in
+    ``scripts/sync-models-from-manifest.py`` must stay in lockstep with
+    the ``${VAR=default}`` values declared in ``infra/main.parameters.json``.
+    Drift would cause the absent-``models:``-block path to converge to
+    the wrong state (bootstrap sees different values than Bicep gets).
+    """
+    params_path = ROOT / "infra" / "main.parameters.json"
+    script_path = ROOT / "scripts" / "sync-models-from-manifest.py"
+    if not (params_path.exists() and script_path.exists()):
+        return []
+
+    try:
+        params_text = params_path.read_text(encoding="utf-8")
+        script_text = script_path.read_text(encoding="utf-8")
+    except Exception:
+        return []
+
+    managed = (
+        "AZURE_AI_FOUNDRY_MODEL_NAME",
+        "AZURE_AI_FOUNDRY_MODEL_VERSION",
+        "AZURE_AI_FOUNDRY_MODEL",
+        "AZURE_AI_FOUNDRY_MODEL_CAPACITY",
+    )
+    out: list[Finding] = []
+    for var in managed:
+        # ${VAR=default} in parameters.json
+        m = re.search(
+            r"\$\{" + re.escape(var) + r"=([^}]*)\}", params_text
+        )
+        if not m:
+            continue
+        expected = m.group(1)
+        # "VAR": "default" in _TEMPLATE_DEFAULTS dict literal
+        m2 = re.search(
+            r'"' + re.escape(var) + r'"\s*:\s*"([^"]*)"', script_text
+        )
+        if not m2:
+            out.append(Finding(
+                "template-defaults-match", "block",
+                "scripts/sync-models-from-manifest.py",
+                f"_TEMPLATE_DEFAULTS is missing key {var!r}; "
+                f"infra/main.parameters.json declares default={expected!r}",
+            ))
+            continue
+        actual = m2.group(1)
+        if actual != expected:
+            out.append(Finding(
+                "template-defaults-match", "block",
+                "scripts/sync-models-from-manifest.py",
+                f"_TEMPLATE_DEFAULTS[{var!r}]={actual!r} drifts from "
+                f"infra/main.parameters.json default={expected!r}. "
+                "Keep these in lockstep or the absent-block fixed-point "
+                "will converge to the wrong state.",
             ))
     return out
 
