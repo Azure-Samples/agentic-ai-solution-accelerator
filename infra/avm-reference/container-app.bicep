@@ -2,37 +2,31 @@
 // STUDY-ONLY AVM exemplar — Container Apps Managed Environment + App
 // (Tier 2 `landing_zone.mode: avm`).
 //
-// This file is NOT wired into infra/main.bicep. It shows the canonical
-// Azure Verified Modules shape the partner drops into `infra/modules/`
-// when replacing the hand-rolled `infra/modules/container-app.bicep`.
+// This file is NOT wired into infra/main.bicep. It is a **drop-in
+// replacement** for infra/modules/container-app.bicep — same param
+// signature, same outputs — so a partner can `cp
+// infra/avm-reference/container-app.bicep infra/modules/container-app.bicep`
+// during vibecoding without touching main.bicep.
 //
 // Two AVM modules compose the workload:
-//   - br/public:avm/res/app/managed-environment   (Container Apps env)
-//   - br/public:avm/res/app/container-app         (Container App)
+//   - br/public:avm/res/app/managed-environment:0.13.0
+//   - br/public:avm/res/app/container-app:0.22.0
 //
 // ⚠️  IMPORTANT — ORPHAN WARNING  ⚠️
 // The `app/managed-environment` AVM module is currently marked
-// **orphaned** in the AVM registry (only security + bug fixes). The
+// **orphaned** in the AVM registry (security + bug fixes only). The
 // `app/container-app` module is actively owned. Before adopting this
-// exemplar:
+// exemplar in a regulated / Microsoft-branded engagement:
 //   1. Check https://aka.ms/AVM/OrphanedModules for current status.
-//   2. If the orphan state concerns you for a regulated engagement,
-//      stay on the hand-rolled ../modules/container-app.bicep until
-//      the module is re-adopted, and document that choice in the
-//      engagement's landing-zone decision log.
-//
-// Architectural notes:
-// - Container Apps external-vs-internal ingress is controlled at the
-//   **managed environment level** via `internal: true`, NOT at the
-//   app level. Tier 3 (`landing_zone.mode: alz-integrated`) flips
-//   this by setting `externalIngress: false` in main.parameters.alz.json.
-// - vNet integration (required when `internal: true`) needs
-//   `infrastructureSubnetResourceId` pointing at a /23 delegated
-//   subnet in the workload vNet.
+//   2. If the orphan state concerns you, stay on the hand-rolled
+//      ../modules/container-app.bicep until the module is re-adopted,
+//      and document that choice in the engagement's landing-zone
+//      decision log.
 // ============================================================================
 
 targetScope = 'resourceGroup'
 
+// --- drop-in signature (matches infra/modules/container-app.bicep) -----------
 param name string
 param location string
 param tags object
@@ -41,24 +35,7 @@ param appInsightsConnectionString string
 param foundryEndpoint string
 param modelDeploymentName string
 param searchEndpoint string
-
-// Public (Tier 1/2 default) vs internal-only (Tier 3). When false,
-// `infrastructureSubnetResourceId` MUST be provided.
 param externalIngress bool = true
-
-// Required when externalIngress = false (Tier 3). Partner supplies
-// the /23 subnet resource ID from the workload vNet (Tier 2: local
-// vNet; Tier 3: spoke vNet created by infra/alz-overlay/).
-param infrastructureSubnetResourceId string = ''
-
-// Log Analytics for diagnostic settings on both env and app (routed via
-// `diagnosticSettings` below).
-param logAnalyticsWorkspaceId string
-
-// Managed-environment app-logs route to Azure Monitor; diagnostic
-// settings (below) land those logs in the provided Log Analytics
-// workspace. See AVM README for alternative `destination: 'log-analytics'`
-// shape (requires customerId + sharedKey).
 
 module managedEnv 'br/public:avm/res/app/managed-environment:0.13.0' = {
   name: 'cae-${name}'
@@ -66,13 +43,19 @@ module managedEnv 'br/public:avm/res/app/managed-environment:0.13.0' = {
     name: '${name}-env'
     location: location
     tags: tags
+    // Managed-env app-logs route to Azure Monitor. See AVM README for
+    // the alternative `destination: 'log-analytics'` shape (requires
+    // customerId + sharedKey).
     appLogsConfiguration: {
       destination: 'azure-monitor'
     }
+    // `internal: true` keeps the env off the public internet. Tier 3
+    // workloads require this AND a vNet-integrated infrastructure
+    // subnet. The hand-rolled module does not currently support
+    // internal mode; the AVM exemplar does, but the partner must
+    // thread an `infrastructureSubnetResourceId` through main.bicep
+    // when adopting.
     internal: !externalIngress
-    infrastructureSubnetResourceId: empty(infrastructureSubnetResourceId)
-      ? null
-      : infrastructureSubnetResourceId
     workloadProfiles: [
       {
         name: 'Consumption'
@@ -95,27 +78,24 @@ module app 'br/public:avm/res/app/container-app:0.22.0' = {
         identityId
       ]
     }
-    // Ingress + scale are configured via AVM's `ingressConfiguration`
-    // + `scaleSettings` objects in container-app 0.22.x. Partner fills
-    // these in per AVM README when adopting this exemplar. Defaults
-    // here leave public ingress enabled on the container app; internal
-    // vs external is still governed by `internal` on the env above.
+    // Ingress config — app-level controls matter even when the env is
+    // internal. `ingressExternal: false` + `env.internal: true` together
+    // yield a fully-internal Container App. External env + external app
+    // is the Tier 1/2 default; external env + internal app supports
+    // "behind App Gateway" shapes.
+    activeRevisionsMode: 'Single'
+    ingressExternal: externalIngress
+    ingressTargetPort: 8000
+    ingressAllowInsecure: false
+    ingressTransport: 'auto'
     scaleSettings: {
       minReplicas: 1
       maxReplicas: 3
     }
-    diagnosticSettings: [
-      {
-        workspaceResourceId: logAnalyticsWorkspaceId
-        metricCategories: [
-          { category: 'AllMetrics' }
-        ]
-      }
-    ]
     containers: [
       {
         name: 'api'
-        image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest' // replaced by azd deploy
+        image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest' // replaced by `azd deploy`
         resources: {
           cpu: json('1.0')
           memory: '2Gi'
@@ -131,4 +111,5 @@ module app 'br/public:avm/res/app/container-app:0.22.0' = {
   }
 }
 
+// Signature parity: hand-rolled module exports `fqdn`.
 output fqdn string = 'https://${app.outputs.fqdn}'

@@ -19,15 +19,23 @@ partner through copying them in.
 
 | Resource | Hand-rolled (Tier 1) | AVM reference (Tier 2) | Status |
 |---|---|---|---|
-| Key Vault | `../modules/key-vault.bicep` | `key-vault.bicep` | Shipped |
-| AI Search | `../modules/ai-search.bicep` | `ai-search.bicep` | Shipped |
-| Container App | `../modules/container-app.bicep` | `container-app.bicep` | Shipped (⚠ managed-env orphan) |
-| Monitor / Log Analytics | `../modules/monitor.bicep` | `monitor.bicep` | Shipped |
+| Key Vault | `../modules/key-vault.bicep` | `key-vault.bicep` | Drop-in exemplar |
+| AI Search | `../modules/ai-search.bicep` | `ai-search.bicep` | Drop-in exemplar |
+| Container App | `../modules/container-app.bicep` | `container-app.bicep` | Drop-in exemplar (⚠ managed-env orphan) |
+| Monitor / Log Analytics | `../modules/monitor.bicep` | `monitor.bicep` | Drop-in exemplar |
 
-Start with the Key Vault exemplar — it shows the pattern most cleanly
-(module reference, parameters, PE block, role assignments) and is the
-easiest to diff against the hand-rolled version. Then read the others
-in the order above.
+Each exemplar mirrors the corresponding hand-rolled module's param
+signature + outputs, so a partner can replace the file with `cp` and
+`azd up` without editing `infra/main.bicep`. Start with the Key Vault
+exemplar — it shows the pattern most cleanly.
+
+**What "drop-in" does NOT mean.** The exemplars give you AVM's
+WAF-aligned shape for that one resource. They do not bring:
+- PE subnet / private-DNS zone bindings — wire those yourself in Tier 3,
+  or via your CCoE's hub plumbing.
+- Diagnostic-setting coverage to a hub-central LAW (exemplars emit to
+  their own workspace; Tier 3 overrides).
+- Foundry parity (no AVM module — see exception below).
 
 **⚠ container-app caveat.** The `app/managed-environment` AVM module
 is currently marked **orphaned** in the registry (security + bug fixes

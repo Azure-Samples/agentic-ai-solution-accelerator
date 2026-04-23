@@ -1762,15 +1762,22 @@ def landing_zone_mode_consistent(ctx: Ctx) -> list[Finding]:
                         f"tokens: {list(_AVM_SERVICE_TOKENS)}.",
                     ))
                     continue
-                # Assert an AVM reference exists in the corresponding module file.
+                # Assert an AVM reference exists in an actual `module`
+                # declaration in the corresponding module file — not just
+                # anywhere (comment, dead code, unrelated AVM helper).
+                # Pattern matches: module <name> 'br/public:avm/...' = {
                 filenames = _AVM_SERVICE_MODULES[svc]
+                module_re = re.compile(
+                    r"^\s*module\s+\w+\s+['\"]br/public:avm/",
+                    re.MULTILINE,
+                )
                 found = False
                 for fname in filenames:
                     bicep = modules_dir / fname
                     if not bicep.exists():
                         continue
                     try:
-                        if "br/public:avm/" in bicep.read_text(encoding="utf-8"):
+                        if module_re.search(bicep.read_text(encoding="utf-8")):
                             found = True
                             break
                     except Exception:
@@ -1781,9 +1788,10 @@ def landing_zone_mode_consistent(ctx: Ctx) -> list[Finding]:
                         "accelerator.yaml",
                         f"landing_zone.avm_services declares {svc!r} but "
                         f"infra/modules/{'/'.join(filenames)} does not "
-                        "reference an AVM module (br/public:avm/). Copy the "
-                        f"exemplar from infra/avm-reference/ for {svc!r} "
-                        "into infra/modules/, or remove it from avm_services.",
+                        "contain a `module ... 'br/public:avm/...'` "
+                        "declaration. Copy the exemplar from "
+                        f"infra/avm-reference/ for {svc!r} into "
+                        "infra/modules/, or remove it from avm_services.",
                     ))
 
     elif mode == "alz-integrated":

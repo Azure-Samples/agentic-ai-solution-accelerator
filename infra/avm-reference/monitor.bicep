@@ -2,33 +2,26 @@
 // STUDY-ONLY AVM exemplar — Log Analytics + Application Insights
 // (Tier 2 `landing_zone.mode: avm`).
 //
-// This file is NOT wired into infra/main.bicep. It shows the canonical
-// Azure Verified Modules shape the partner drops into `infra/modules/`
-// when replacing the hand-rolled `infra/modules/monitor.bicep`.
+// This file is NOT wired into infra/main.bicep. It is a **drop-in
+// replacement** for infra/modules/monitor.bicep — same param
+// signature, same outputs — so a partner can `cp
+// infra/avm-reference/monitor.bicep infra/modules/monitor.bicep`
+// during vibecoding without touching main.bicep.
 //
 // Two AVM modules compose the observability plane:
-//   - br/public:avm/res/operational-insights/workspace   (Log Analytics)
-//   - br/public:avm/res/insights/component               (App Insights)
+//   - br/public:avm/res/operational-insights/workspace:0.15.0  (LAW)
+//   - br/public:avm/res/insights/component:0.7.0               (App Insights)
 //
-// Both are active / well-maintained. Version pins: check version.json
-// in the registry before copying. `ga-sdk-freshness` flags drift.
-//
-// Compare against ../modules/monitor.bicep — the AVM versions set
-// WAF-aligned defaults (retention, daily quota, workspace-based
-// ingestion) that the hand-rolled module expresses only partially.
+// Both are actively maintained. `ga-sdk-freshness` flags version drift.
 // ============================================================================
 
 targetScope = 'resourceGroup'
 
+// --- drop-in signature (matches infra/modules/monitor.bicep) -----------------
 param logAnalyticsName string
 param appInsightsName string
 param location string
 param tags object
-
-// Tier 3 overrides this to bind App Insights to the hub's central
-// workspace instead of the local one. Tier 2 leaves it empty and
-// uses the local workspace created below.
-param hubLogAnalyticsWorkspaceId string = ''
 
 module law 'br/public:avm/res/operational-insights/workspace:0.15.0' = {
   name: 'law-${logAnalyticsName}'
@@ -41,22 +34,19 @@ module law 'br/public:avm/res/operational-insights/workspace:0.15.0' = {
   }
 }
 
-// App Insights binds to the hub workspace when Tier 3 passes one in;
-// otherwise it binds to the local workspace just created.
 module ai 'br/public:avm/res/insights/component:0.7.0' = {
   name: 'ai-${appInsightsName}'
   params: {
     name: appInsightsName
     location: location
     tags: tags
-    workspaceResourceId: empty(hubLogAnalyticsWorkspaceId)
-      ? law.outputs.resourceId
-      : hubLogAnalyticsWorkspaceId
+    workspaceResourceId: law.outputs.resourceId
     kind: 'web'
     applicationType: 'web'
     disableLocalAuth: true
   }
 }
 
+// Signature parity: hand-rolled module exports these two outputs.
 output logAnalyticsId string = law.outputs.resourceId
 output appInsightsConnectionString string = ai.outputs.connectionString
