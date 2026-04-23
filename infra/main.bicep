@@ -57,7 +57,7 @@ var foundryDnsZoneIds = filter(
 // (unreachable, not blocked). Fail-fast here with a self-describing
 // deployment name so the error surfaces in the deployment log instead
 // of presenting as a confusing runtime connection failure later.
-var _tier3InputsMissing = enablePrivateLink && (empty(peSubnetId) || empty(privateDnsZoneIds.keyvault) || empty(privateDnsZoneIds.search) || empty(foundryDnsZoneIds))
+var _tier3InputsMissing = enablePrivateLink && (empty(peSubnetId) || empty(privateDnsZoneIds.keyvault) || empty(privateDnsZoneIds.search) || empty(privateDnsZoneIds.cognitiveservices) || empty(privateDnsZoneIds.openai) || empty(privateDnsZoneIds.servicesai))
 
 resource tier3InputGuard 'Microsoft.Resources/deployments@2022-09-01' = if (_tier3InputsMissing) {
   #disable-next-line no-deployments-resources BCP332
