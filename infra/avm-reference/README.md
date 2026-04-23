@@ -31,14 +31,21 @@ exemplar — it shows the pattern most cleanly.
 
 **What "drop-in" does NOT mean.** The exemplars give you AVM's
 WAF-aligned shape for that one resource. They do not bring:
-- PE subnet / private-DNS zone bindings — wire those yourself in Tier 3,
-  or via your CCoE's hub plumbing.
+- Tier 3 plumbing for Container App (PE on managed-env + vNet
+  integration) — the Container App exemplar has no PE params
+  because that wiring requires a /23 infrastructure subnet owned by
+  the overlay, not the module. See `infra/alz-overlay/README.md`
+  "Container App reachability".
 - Diagnostic settings — the current exemplars match the hand-rolled
   modules' Tier 1/2 behavior (no explicit diagnostic wiring).
-  Hub-central Log Analytics wiring via `diagnosticSettings:` belongs
-  in Tier 3 (`infra/alz-overlay/`); that wiring is **planned (H9)**
-  and not yet on disk.
+  Hub-central Log Analytics wiring via `diagnosticSettings:` is
+  partner-authored.
 - Foundry parity (no AVM module — see exception below).
+
+The Key Vault and AI Search exemplars **do** mirror the hand-rolled
+modules' `peSubnetId` / `privateDnsZoneId` parameters, so a Tier 3
+swap-in creates the PE + DNS zone group via AVM's `privateEndpoints:`
+array shape without losing drop-in parity.
 
 **⚠ container-app caveat.** The `app/managed-environment` AVM module
 is currently marked **orphaned** in the registry (security + bug fixes

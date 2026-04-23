@@ -44,8 +44,16 @@ param extraModelDeploymentsJson string = '[]'
 @description('Default project name inside the Foundry account.')
 param foundryProjectName string = 'accelerator-default'
 
-@description('When true, disables public network access on the Foundry account. Actual private endpoints + DNS zones require a pre-existing VNet and are bring-your-own for now; see docs/getting-started.md.')
+@description('When true, disables public network access on the Foundry account. Actual private endpoints + DNS zones require a pre-existing VNet and are wired via peSubnetId + privateDnsZoneId (Tier 3); see docs/patterns/azure-ai-landing-zone/README.md.')
 param enablePrivateLink bool = false
+
+@description('Tier 3 only. Resource ID of the spoke subnet that hosts the Foundry PE.')
+param peSubnetId string = ''
+
+@description('Tier 3 only. Resource ID of the hub private DNS zone `privatelink.cognitiveservices.azure.com`.')
+param privateDnsZoneId string = ''
+
+var deployPrivateEndpoint = !empty(peSubnetId) && !empty(privateDnsZoneId)
 
 var accountName = 'fdy${take(uniqueString(resourceGroup().id, projectName), 12)}'
 
@@ -197,6 +205,44 @@ resource aiDeveloperAssignment 'Microsoft.Authorization/roleAssignments@2022-04-
     principalId: rbacPrincipalId
     principalType: 'ServicePrincipal'
     roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', aiDeveloperRoleId)
+  }
+}
+
+// Tier 3: private endpoint + DNS zone group. See key-vault.bicep for pattern.
+// Foundry `AIServices`-kind Cognitive Services accounts register the PE
+// under the `account` group ID and resolve through the
+// `privatelink.cognitiveservices.azure.com` zone. OpenAI-specific
+// inference PEs use a separate group ID / zone; not wired here.
+resource foundryPrivateEndpoint 'Microsoft.Network/privateEndpoints@2024-05-01' = if (deployPrivateEndpoint) {
+  name: '${account.name}-pe'
+  location: location
+  tags: tags
+  properties: {
+    subnet: { id: peSubnetId }
+    privateLinkServiceConnections: [
+      {
+        name: '${account.name}-plsc'
+        properties: {
+          privateLinkServiceId: account.id
+          groupIds: [ 'account' ]
+        }
+      }
+    ]
+  }
+}
+
+resource foundryPrivateEndpointDnsGroup 'Microsoft.Network/privateEndpoints/privateDnsZoneGroups@2024-05-01' = if (deployPrivateEndpoint) {
+  parent: foundryPrivateEndpoint
+  name: 'default'
+  properties: {
+    privateDnsZoneConfigs: [
+      {
+        name: 'default'
+        properties: {
+          privateDnsZoneId: privateDnsZoneId
+        }
+      }
+    ]
   }
 }
 

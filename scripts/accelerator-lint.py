@@ -1688,6 +1688,18 @@ _ALZ_PARAM_CONTRACT: tuple[tuple[str, str, str], ...] = (
     ("container-app.bicep", "externalIngress", "external: true"),
 )
 
+# Tier 3 private-endpoint wiring contract. Each listed module must
+# accept both params so main.bicep can thread spoke subnet + hub DNS
+# zone IDs through from the overlay outputs. Container App is
+# intentionally excluded — its PE sub-resource requires a
+# vNet-integrated env with a dedicated infrastructure subnet, which is
+# partner-wired (see docs/patterns/azure-ai-landing-zone/README.md).
+_ALZ_PE_PARAM_CONTRACT: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("key-vault.bicep", ("peSubnetId", "privateDnsZoneId")),
+    ("ai-search.bicep", ("peSubnetId", "privateDnsZoneId")),
+    ("foundry.bicep",   ("peSubnetId", "privateDnsZoneId")),
+)
+
 
 @check
 def landing_zone_mode_consistent(ctx: Ctx) -> list[Finding]:
@@ -1903,6 +1915,59 @@ def landing_zone_mode_consistent(ctx: Ctx) -> list[Finding]:
                     f"{forbidden_literal!r} in {fname}; replace with the "
                     f"{required_param} parameter.",
                 ))
+
+        # Tier 3 private-endpoint wiring contract. The overlay produces
+        # peSubnetId and privateDnsZoneIds; main.bicep threads them into
+        # each workload module. Missing either param here means Tier 3
+        # "Disabled" does not become "reachable via PE".
+        for fname, required_params in _ALZ_PE_PARAM_CONTRACT:
+            bicep = modules_dir / fname
+            if not bicep.exists():
+                continue
+            try:
+                body = bicep.read_text(encoding="utf-8")
+            except Exception:
+                continue
+            for required_param in required_params:
+                if f"param {required_param}" not in body:
+                    out.append(Finding(
+                        "landing-zone-mode-consistent", "block",
+                        f"infra/modules/{fname}",
+                        f"mode=alz-integrated requires 'param "
+                        f"{required_param}' in {fname} so Tier 3 can wire a "
+                        "private endpoint + DNS zone group. Add the param "
+                        "(match key-vault.bicep's peSubnetId/"
+                        "privateDnsZoneId pattern) and the conditional "
+                        "Microsoft.Network/privateEndpoints resource.",
+                    ))
+
+        # Overlay must also create an NSG on the workload subnet; a
+        # spoke vNet with no NSG fails the AI ALZ baseline review.
+        overlay_net = overlay_dir / "network.bicep"
+        if overlay_net.exists():
+            try:
+                net_body = overlay_net.read_text(encoding="utf-8")
+                if "Microsoft.Network/networkSecurityGroups" not in net_body:
+                    out.append(Finding(
+                        "landing-zone-mode-consistent", "block",
+                        "infra/alz-overlay/network.bicep",
+                        "mode=alz-integrated requires an NSG on the "
+                        "workload subnet. Add a "
+                        "Microsoft.Network/networkSecurityGroups resource "
+                        "and associate it via the subnet's "
+                        "networkSecurityGroup.id property.",
+                    ))
+                elif "networkSecurityGroup:" not in net_body:
+                    out.append(Finding(
+                        "landing-zone-mode-consistent", "block",
+                        "infra/alz-overlay/network.bicep",
+                        "NSG resource is declared but not associated with "
+                        "the workload subnet. Add "
+                        "`networkSecurityGroup: { id: <nsg>.id }` to the "
+                        "subnet properties.",
+                    ))
+            except Exception:
+                pass
 
     return out
 

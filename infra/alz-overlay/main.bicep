@@ -45,6 +45,9 @@ param privateDnsZoneIds object = {
   search:            ''  // privatelink.search.windows.net
 }
 
+@description('When true, create vNet-links on each hub private DNS zone to the spoke vNet. Requires the deploying identity to have `Private DNS Zone Contributor` on every zone in privateDnsZoneIds. Leave false (default) to have the customer CCoE create the links out-of-band — this is the safer choice in regulated environments where DNS is delegated.')
+param createDnsZoneLinks bool = false
+
 // ----------------------------------------------------------------------------
 // Spoke resource group
 // ----------------------------------------------------------------------------
@@ -55,7 +58,7 @@ resource spokeRg 'Microsoft.Resources/resourceGroups@2024-03-01' = {
 }
 
 // ----------------------------------------------------------------------------
-// Spoke vNet + peering + subnet (deployed into the RG scope)
+// Spoke vNet + peering + subnet + NSG (deployed into the RG scope)
 // ----------------------------------------------------------------------------
 module spokeNetwork 'network.bicep' = {
   name: 'spoke-network'
@@ -71,9 +74,33 @@ module spokeNetwork 'network.bicep' = {
 }
 
 // ----------------------------------------------------------------------------
+// Optional: vNet-links on hub DNS zones (opt-in; see createDnsZoneLinks doc).
+// Each zone ID is parsed for its (subscriptionId, resourceGroup, name) so
+// the link module can be invoked at the zone's own RG scope.
+// ----------------------------------------------------------------------------
+var zoneIds = [
+  { key: 'cognitiveservices', id: privateDnsZoneIds.cognitiveservices }
+  { key: 'openai',            id: privateDnsZoneIds.openai }
+  { key: 'keyvault',           id: privateDnsZoneIds.keyvault }
+  { key: 'search',             id: privateDnsZoneIds.search }
+]
+
+module dnsLinks 'dns-zone-link.bicep' = [for z in zoneIds: if (createDnsZoneLinks && !empty(z.id)) {
+  name: 'dns-link-${z.key}'
+  scope: resourceGroup(split(z.id, '/')[2], split(z.id, '/')[4])
+  params: {
+    zoneName: split(z.id, '/')[8]
+    linkName: '${resourceGroupName}-spoke'
+    spokeVnetId: spokeNetwork.outputs.vnetId
+    tags: tags
+  }
+}]
+
+// ----------------------------------------------------------------------------
 // Outputs consumed by `azd env set` before the workload deploy
 // ----------------------------------------------------------------------------
 output resourceGroupName string = spokeRg.name
 output workloadSubnetId string = spokeNetwork.outputs.workloadSubnetId
+output workloadNsgId string = spokeNetwork.outputs.workloadNsgId
 output privateDnsZoneIds object = privateDnsZoneIds
 output hubLogAnalyticsWorkspaceId string = hubLogAnalyticsWorkspaceId

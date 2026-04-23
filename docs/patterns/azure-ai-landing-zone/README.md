@@ -18,16 +18,18 @@ via the `/configure-landing-zone` chatmode.
 |---|---|---|
 | Tier 1 `standalone` | **GA** | `infra/main.bicep` + modules; `azd up` stands up a public-endpoint deploy with Entra-only auth + RAI + workspace diagnostics. |
 | Tier 2 `avm` | **Preview** | Four drop-in AVM exemplars in `infra/avm-reference/` (`key-vault`, `ai-search`, `container-app`, `monitor`) — each matches the hand-rolled module's param signature + outputs so the swap is `cp` without main.bicep edits. Partner declares coverage via `landing_zone.avm_services`; lint blocks if declared services lack an exemplar or are still hand-rolled when mode=avm. **Top-level network plumbing (subnet for PE, hub private-DNS zone binding) is partner-authored** — the AVM modules expose `privateEndpoints:` / `networkAcls:` knobs but the accelerator does not wire them yet (H9). Foundry stays hand-rolled (no GA AVM res module for `CognitiveServices/accounts`). Container Apps managed-environment AVM module is **orphaned** — see `infra/avm-reference/README.md` before adopting. |
-| Tier 3 `alz-integrated` | **Preview (scaffold only)** | Subscription-scope overlay creates spoke RG + vNet + peering. `infra/main.parameters.alz.json` flips `publicNetworkAccess: Disabled` on Foundry/Search/Key Vault and makes Container App ingress internal-only. **Private DNS zones, private endpoints per service, route tables, NSGs, and hub-LAW diagnostics are NOT yet wired** — partner completes that via the customer's CCoE (or waits for H9). |
+| Tier 3 `alz-integrated` | **Preview** | Subscription-scope overlay creates spoke RG + vNet + NSG + peering, with opt-in hub DNS zone vNet-links. Workload `infra/main.bicep` creates PEs + DNS zone groups for Key Vault / AI Search / Foundry when the overlay outputs are threaded in via `main.parameters.alz.json`. Container App PE is partner-owned (requires vNet-integrated internal env with /23 infrastructure subnet; see `infra/alz-overlay/README.md` "Container App reachability"). Route table to hub firewall and hub-LAW diagnostic settings are still partner-authored. |
 
 ### "Disabled" vs. "Fully private & reachable"
 
 These are not the same thing and the difference will bite you.
 
 - **`publicNetworkAccess: Disabled`** — the data plane refuses public traffic. The Tier 3 parameter file flips this for you.
-- **Fully private & reachable** — there's a private endpoint in your vNet, its IP resolves via the hub's private DNS zones, and the client runs somewhere that can route to that IP. **The accelerator does not do this for you yet.** You must add PEs + DNS bindings + reachable ingress (e.g. Container Apps internal env with vNet integration, or Application Gateway fronted by the hub firewall).
+- **Fully private & reachable** — there's a private endpoint in your vNet, its IP resolves via the hub's private DNS zones, and the client runs somewhere that can route to that IP.
 
-If you set `mode: alz-integrated` and deploy, the workload will be provisioned with public access off — and will be **unreachable until the PE/DNS work is completed**. That's by design (fail-closed) but it is not "done".
+For **Key Vault, AI Search, and Foundry**, Tier 3 closes this gap: when the overlay outputs are wired through `azd env set` (see `infra/alz-overlay/README.md`), the workload deploy creates PE + DNS zone groups automatically, and the services become reachable privately via the hub zones. For **Container App**, reachability is partner-owned — pick App Gateway/Front Door in front of an external env, or switch to an internal env with a /23 infrastructure subnet. See `infra/alz-overlay/README.md` "Container App reachability".
+
+If you set `mode: alz-integrated`, deploy, and skip the overlay output wiring, the workload will be provisioned with public access off — and the services will be **unreachable until the PE/DNS IDs are threaded in**. That's by design (fail-closed).
 
 ## Tier decision tree
 
@@ -132,12 +134,11 @@ checklist in `docs/customer-runbook.md`.
 
 **Files involved.**
 - `infra/alz-overlay/main.bicep` — subscription-scope deploy that
-  creates the spoke RG + vNet + peering. Ships as a skeleton; partner
-  fills in hub resource IDs via `/configure-landing-zone` (in
-  `main.parameters.json`, not `main.bicep`). **Current scope: network
-  only.** PEs, DNS zone groups, route tables, NSGs, and hub-LAW
-  diagnostics are planned for H9 and must be wired by the partner
-  until then.
+  creates the spoke RG + vNet + NSG + peering, with opt-in hub DNS
+  zone vNet-link creation. Partner fills in hub resource IDs via
+  `/configure-landing-zone` (in `main.parameters.json`, not
+  `main.bicep`). The overlay's outputs flow into `azd env set` before
+  the workload deploy.
 - `infra/alz-overlay/README.md` — pre-reqs, what the overlay does /
   does not do, and the `az deployment sub create` command.
 - `infra/main.parameters.alz.json` — **shipped**, pre-baked Tier 3

@@ -12,6 +12,15 @@
     "modelDeploymentName": { "value": "${AZURE_AI_FOUNDRY_MODEL=gpt-4o-mini}" },
     "modelCapacity": { "value": "${AZURE_AI_FOUNDRY_MODEL_CAPACITY=30}" },
     "extraModelDeploymentsJson": { "value": "${AZURE_AI_FOUNDRY_EXTRA_DEPLOYMENTS_JSON=[]}" },
-    "scenarioId": { "value": "${ACCELERATOR_SCENARIO_ID=sales-research}" }
+    "scenarioId": { "value": "${ACCELERATOR_SCENARIO_ID=sales-research}" },
+    "peSubnetId": { "value": "${AZURE_PE_SUBNET_ID=}" },
+    "privateDnsZoneIds": {
+      "value": {
+        "cognitiveservices": "${AZURE_PRIVATE_DNS_ZONE_COGNITIVESERVICES=}",
+        "openai":            "${AZURE_PRIVATE_DNS_ZONE_OPENAI=}",
+        "keyvault":          "${AZURE_PRIVATE_DNS_ZONE_KEYVAULT=}",
+        "search":             "${AZURE_PRIVATE_DNS_ZONE_SEARCH=}"
+      }
+    }
   }
 }

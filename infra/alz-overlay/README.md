@@ -34,34 +34,61 @@ them in via the `/configure-landing-zone` chatmode.
 ## What `main.bicep` does today
 
 1. Creates the spoke resource group (at subscription scope).
-2. Creates a spoke vNet.
-3. Establishes vNet peering to the hub vNet (bidirectional config on the
+2. Creates a spoke vNet with a `snet-workload` subnet.
+3. Creates a baseline NSG on the workload subnet (allow intra-vNet,
+   deny inbound from Internet) and associates it with the subnet.
+4. Establishes vNet peering to the hub vNet (bidirectional config on the
    spoke side; the hub-side peering must be created by the customer's
    CCoE with `allowForwardedTraffic` + `useRemoteGateways` as appropriate).
+5. **Opt-in** (`createDnsZoneLinks: true`): creates vNet-links on each
+   hub private DNS zone (`privateDnsZoneIds.{cognitiveservices, openai,
+   keyvault, search}`) to the spoke vNet, so PEs resolve through the
+   hub zones. Requires the deploying identity to have **Private DNS
+   Zone Contributor** on each zone's RG. Default `false` — most
+   regulated customers have DNS delegated to CCoE and want the links
+   created out-of-band.
 
-That's it. This is deliberately a minimal scaffold; it compiles clean
-and is enough to hand to a customer CCoE as a starting point.
+Outputs (`workloadSubnetId`, `workloadNsgId`, `privateDnsZoneIds`,
+`hubLogAnalyticsWorkspaceId`) flow into `azd env set` before the
+workload `infra/main.bicep` runs with `main.parameters.alz.json`.
 
-## What `main.bicep` does NOT do (yet)
+## Where reachability is completed
 
-The following are **planned for H9** and are explicitly out of scope
-for this Tier 3 preview:
+Workload private endpoints (Key Vault, AI Search, Foundry) are created
+by the hand-rolled modules in `infra/modules/` when `peSubnetId` and
+the relevant `privateDnsZoneIds.<service>` are non-empty — i.e. when
+the workload deploy runs with `main.parameters.alz.json` after the
+overlay. Tier 3 makes the workload reachable privately for those three
+services without any partner edits.
 
-- Private DNS zone group bindings (privatelink.* resolution via hub).
-- Private endpoints for Foundry / Search / Key Vault / Container App.
-- Route tables forcing egress through the hub firewall.
-- NSGs on the workload subnet.
-- Diagnostic settings binding the spoke RG's activity log to the hub
-  Log Analytics workspace.
-- ALZ policy assignments (those are inherited from the MG and are
-  customer-owned anyway).
-- Foundry account, Key Vault, Search, Container App — those are still
-  `infra/main.bicep` run afterward with `main.parameters.alz.json`.
+### Container App reachability (partner-owned)
 
-Until H9 lands, the partner must wire PE + DNS + diagnostics by hand
-(or in coordination with the customer CCoE). Be transparent about this
-with the customer — deploying Tier 3 as-shipped flips public access
-off but does **not** make the workload reachable.
+Container App private endpoint is **not** auto-wired. The PE
+sub-resource on `Microsoft.App/managedEnvironments` requires the env
+to be vNet-integrated with a dedicated infrastructure subnet
+(Consumption env: **/23 minimum**), which is larger than the `/26`
+that this overlay provisions by default and requires fundamentally
+different env configuration. Pick one of:
+
+1. **External env + App Gateway / Front Door fronted by the hub FW**
+   (simplest; `externalIngress: true` still, but public traffic must
+   traverse the hub). Partner owns AGW/AFD provisioning.
+2. **Internal env + vNet integration.** Partner enlarges
+   `workloadSubnetPrefix` to `/23`, sets `externalIngress: false`,
+   and adds `vnetConfiguration` + PE on the managed env. The
+   `/configure-landing-zone` chatmode walks through the subnet
+   enlargement; the PE + DNS link are authored by hand.
+
+## What the overlay still does NOT do
+
+- Route table forcing egress through the hub firewall (customer's FW
+  private IP is CCoE-owned; add a `Microsoft.Network/routeTables`
+  resource with a 0.0.0.0/0 UDR and associate via the subnet's
+  `routeTable` property once you have that IP).
+- Diagnostic settings binding workload resources to the hub LAW
+  (Tier 3 maximal — not scoped here; workload resources emit to the
+  local LAW created by `infra/modules/monitor.bicep`).
+- ALZ policy assignments (inherited from the MG; customer-owned).
 
 ## Deploy sequence
 
@@ -72,11 +99,15 @@ az deployment sub create \
   --template-file infra/alz-overlay/main.bicep \
   --parameters infra/alz-overlay/main.parameters.json
 
-# Step 2 — workload deploy (every azd up)
-azd env set AZURE_PE_SUBNET_ID   "<output from step 1>"
-azd env set AZURE_PRIVATE_DNS_KV "<customer-provided DNS zone ID>"
-# ... etc
-azd up
+# Step 2 — wire overlay outputs into the workload deploy
+azd env set AZURE_PE_SUBNET_ID                       "<workloadSubnetId output>"
+azd env set AZURE_PRIVATE_DNS_ZONE_KEYVAULT          "<keyvault zone id>"
+azd env set AZURE_PRIVATE_DNS_ZONE_SEARCH            "<search zone id>"
+azd env set AZURE_PRIVATE_DNS_ZONE_COGNITIVESERVICES "<cognitiveservices zone id>"
+azd env set AZURE_PRIVATE_DNS_ZONE_OPENAI            "<openai zone id>"
+
+# Step 3 — workload deploy
+azd up   # uses infra/main.parameters.alz.json
 ```
 
 ## Consistency with the rest of the repo
@@ -85,10 +116,16 @@ The `landing_zone_mode_consistent` lint rule asserts that when
 `accelerator.yaml.landing_zone.mode == 'alz-integrated'`:
 - `infra/alz-overlay/main.bicep` exists and has no `CHANGEME`
   placeholders in `main.parameters.json`.
+- `infra/alz-overlay/network.bicep` creates an NSG and associates it
+  with the workload subnet.
 - `infra/main.parameters.alz.json` exists and sets
   `enablePrivateLink: true` and `externalIngress: false`.
 - Workload modules (`key-vault.bicep`, `container-app.bicep`) accept
   the `publicNetworkAccess` / `externalIngress` parameter rather than
   hardcoding `Enabled` / `true`.
+- Workload modules (`key-vault.bicep`, `ai-search.bicep`,
+  `foundry.bicep`) accept `peSubnetId` and `privateDnsZoneId` params
+  so `infra/main.bicep` can thread the overlay outputs into the PE
+  resources.
 
 Fix lint findings by completing the chatmode walkthrough.

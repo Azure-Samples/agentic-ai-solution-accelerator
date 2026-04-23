@@ -25,6 +25,17 @@ param enablePrivateLink bool = false
 @description('Controls Container App ingress. true = public FQDN (Tier 1/2). false = internal only (Tier 3). Must be false when landing_zone.mode = alz-integrated.')
 param externalIngress bool = true
 
+@description('Tier 3 only. Resource ID of the spoke subnet that hosts private endpoints for Key Vault, AI Search, and Foundry. Empty in Tier 1/2; set from the alz-overlay output via `azd env set` before `azd up`.')
+param peSubnetId string = ''
+
+@description('Tier 3 only. Hub private DNS zone resource IDs used by workload private endpoints. Keys must be: cognitiveservices, openai, keyvault, search. Wire these from the alz-overlay output via `azd env set` before `azd up`.')
+param privateDnsZoneIds object = {
+  cognitiveservices: ''
+  openai: ''
+  keyvault: ''
+  search: ''
+}
+
 @description('Resource token for unique naming')
 param resourceToken string = uniqueString(subscription().id, resourceGroup().id, envName)
 
@@ -78,6 +89,8 @@ module keyVault 'modules/key-vault.bicep' = {
     tags: tags
     rbacPrincipalId: identity.outputs.principalId
     enablePrivateLink: enablePrivateLink
+    peSubnetId: peSubnetId
+    privateDnsZoneId: privateDnsZoneIds.keyvault
   }
 }
 
@@ -89,6 +102,8 @@ module search 'modules/ai-search.bicep' = {
     tags: tags
     rbacPrincipalId: identity.outputs.principalId
     enablePrivateLink: enablePrivateLink
+    peSubnetId: peSubnetId
+    privateDnsZoneId: privateDnsZoneIds.search
   }
 }
 
@@ -105,6 +120,8 @@ module foundry 'modules/foundry.bicep' = {
     modelCapacity: modelCapacity
     extraModelDeploymentsJson: extraModelDeploymentsJson
     enablePrivateLink: enablePrivateLink
+    peSubnetId: peSubnetId
+    privateDnsZoneId: privateDnsZoneIds.cognitiveservices
   }
 }
 

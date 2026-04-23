@@ -16,6 +16,7 @@
         "keyvault":          "CHANGEME-dns-zone-id",
         "search":            "CHANGEME-dns-zone-id"
       }
-    }
+    },
+    "createDnsZoneLinks": { "value": false }
   }
 }

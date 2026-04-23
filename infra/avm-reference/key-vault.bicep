@@ -26,7 +26,6 @@
 
 targetScope = 'resourceGroup'
 
-// --- drop-in signature (matches infra/modules/key-vault.bicep) ---------------
 param name string
 param location string
 param tags object
@@ -34,6 +33,14 @@ param rbacPrincipalId string
 
 @description('When true, flips publicNetworkAccess to Disabled. NOTE: disabled does NOT by itself mean the vault is reachable — private endpoints + DNS wiring are required for Tier 3 (alz-integrated). See docs/patterns/azure-ai-landing-zone/README.md.')
 param enablePrivateLink bool = false
+
+@description('Tier 3 only. Resource ID of the spoke subnet that hosts the vault PE. Leave empty in Tier 1/2. When set together with privateDnsZoneId, a private endpoint + DNS zone group are created.')
+param peSubnetId string = ''
+
+@description('Tier 3 only. Resource ID of the hub private DNS zone `privatelink.vaultcore.azure.net`. Leave empty in Tier 1/2.')
+param privateDnsZoneId string = ''
+
+var deployPrivateEndpoint = !empty(peSubnetId) && !empty(privateDnsZoneId)
 
 module kv 'br/public:avm/res/key-vault/vault:0.9.0' = {
   name: 'kv-${name}'
@@ -66,6 +73,24 @@ module kv 'br/public:avm/res/key-vault/vault:0.9.0' = {
       defaultAction: enablePrivateLink ? 'Deny' : 'Allow'
       bypass: 'AzureServices'
     }
+
+    // Tier 3: bind the vault to a spoke subnet PE + hub DNS zone. The
+    // AVM `privateEndpoints:` array produces the same underlying
+    // `Microsoft.Network/privateEndpoints` + `privateDnsZoneGroups`
+    // resources that the hand-rolled module creates directly. Empty
+    // array in Tier 1/2 is a no-op.
+    privateEndpoints: deployPrivateEndpoint ? [
+      {
+        subnetResourceId: peSubnetId
+        privateDnsZoneGroup: {
+          privateDnsZoneGroupConfigs: [
+            {
+              privateDnsZoneResourceId: privateDnsZoneId
+            }
+          ]
+        }
+      }
+    ] : []
 
     // Replaces the hand-rolled role-assignment resource in
     // ../modules/key-vault.bicep. 4633458b... = "Key Vault Secrets User".

@@ -33,6 +33,14 @@ param tags object
 param rbacPrincipalId string
 param enablePrivateLink bool = false
 
+@description('Tier 3 only. Resource ID of the spoke subnet that hosts the Search PE.')
+param peSubnetId string = ''
+
+@description('Tier 3 only. Resource ID of the hub private DNS zone `privatelink.search.windows.net`.')
+param privateDnsZoneId string = ''
+
+var deployPrivateEndpoint = !empty(peSubnetId) && !empty(privateDnsZoneId)
+
 module search 'br/public:avm/res/search/search-service:0.12.0' = {
   name: 'search-${name}'
   params: {
@@ -56,6 +64,20 @@ module search 'br/public:avm/res/search/search-service:0.12.0' = {
     // partner is responsible for creating the PE + DNS binding via
     // alz-overlay/ or their hub CCoE before the workload is reachable.
     publicNetworkAccess: enablePrivateLink ? 'Disabled' : 'Enabled'
+
+    // Tier 3 PE wiring (drop-in parity with ../modules/ai-search.bicep).
+    privateEndpoints: deployPrivateEndpoint ? [
+      {
+        subnetResourceId: peSubnetId
+        privateDnsZoneGroup: {
+          privateDnsZoneGroupConfigs: [
+            {
+              privateDnsZoneResourceId: privateDnsZoneId
+            }
+          ]
+        }
+      }
+    ] : []
 
     // Replaces the hand-rolled role-assignment resources in
     // ../modules/ai-search.bicep. Role IDs match what seed-search.py

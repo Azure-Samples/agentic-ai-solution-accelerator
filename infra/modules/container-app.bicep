@@ -10,6 +10,18 @@ param searchEndpoint string
 @description('When true, the Container App has a public FQDN (Tier 1/2). When false, ingress is internal-only and requires a vNet-integrated environment reachable via private endpoint or hub firewall (Tier 3).')
 param externalIngress bool = true
 
+// NOTE — Container Apps private endpoint is intentionally NOT wired in
+// Tier 3 by this module. The PE sub-resource for
+// `Microsoft.App/managedEnvironments` requires the env to be
+// vNet-integrated with a dedicated infrastructure subnet (Consumption
+// env: /23 minimum), which is larger than the /26 the overlay
+// provisions. Tier 3 reachability for the API is expected via:
+//   (a) external env + App Gateway/Front Door fronted by the hub FW, or
+//   (b) partner enlarges overlay subnet and enables vNet integration
+//       via the /configure-landing-zone walkthrough.
+// See docs/patterns/azure-ai-landing-zone/README.md "Container App
+// reachability" section.
+
 resource env 'Microsoft.App/managedEnvironments@2024-03-01' = {
   name: '${name}-env'
   location: location
