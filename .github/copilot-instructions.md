@@ -58,10 +58,11 @@ Do not hand-scaffold. Run `python scripts/scaffold-agent.py <agent_id> --scenari
 - MUST flag PII handling in the solution brief; map RAI risks to eval cases.
 - See `docs/patterns/rai/README.md` for the full RAI checklist.
 
-### Well-Architected Framework + Azure Landing Zone
+### Well-Architected Framework + Azure AI Landing Zone
 - Follow `docs/patterns/waf-alignment/README.md` (reliability · security · cost · op-ex · performance).
-- Follow `docs/patterns/architecture/README.md` for topology, hub-spoke, private endpoints.
-- Regulated workloads: `controls.private_endpoints = required` AND `controls.key_vault = true`.
+- Follow `docs/patterns/architecture/README.md` for topology.
+- Pick a landing-zone tier in `accelerator.yaml` `landing_zone.mode`: `standalone` (pilot/SMB), `avm` (mid-market with AVM + PE), or `alz-integrated` (enterprise with existing AI ALZ hub). See `docs/patterns/azure-ai-landing-zone/README.md`; use `/configure-landing-zone` to switch. Lint rule `landing_zone_mode_consistent` enforces the infra/ shape matches.
+- Regulated workloads: `controls.private_endpoints = required` AND `controls.key_vault = true` (implies Tier 2 or Tier 3).
 
 ### CI gates
 - MUST keep `scripts/accelerator-lint.py` green. It reads `accelerator.yaml` + repo state.

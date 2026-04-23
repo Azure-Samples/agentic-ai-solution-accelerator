@@ -1665,6 +1665,106 @@ def template_defaults_match_parameters(ctx: Ctx) -> list[Finding]:
     return out
 
 
+_VALID_LZ_MODES = ("standalone", "avm", "alz-integrated")
+
+
+@check
+def landing_zone_mode_consistent(ctx: Ctx) -> list[Finding]:
+    """Validate ``accelerator.yaml`` ``landing_zone.mode`` matches the
+    shape of ``infra/``.
+
+    Modes (see ``docs/patterns/azure-ai-landing-zone/README.md``):
+      - ``standalone`` — hand-rolled modules in infra/modules/ only.
+      - ``avm`` — at least one infra/modules/*.bicep file references an
+        AVM module (``br/public:avm/``) OR the partner has copied an
+        exemplar from infra/avm-reference/.
+      - ``alz-integrated`` — infra/alz-overlay/main.bicep exists, has
+        no ``CHANGEME`` placeholders, and infra/main.parameters.alz.json
+        exists.
+    """
+    manifest_path = ROOT / "accelerator.yaml"
+    if not manifest_path.exists():
+        return []
+    try:
+        import yaml
+    except ImportError:
+        return []
+    try:
+        data = yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return []
+
+    lz = data.get("landing_zone") or {}
+    mode = lz.get("mode")
+    if mode is None:
+        return []  # absent is OK (older engagements)
+
+    out: list[Finding] = []
+    if mode not in _VALID_LZ_MODES:
+        out.append(Finding(
+            "landing-zone-mode-consistent", "block", "accelerator.yaml",
+            f"landing_zone.mode={mode!r} is not one of "
+            f"{list(_VALID_LZ_MODES)}. See docs/patterns/azure-ai-landing-zone/README.md.",
+        ))
+        return out
+
+    modules_dir = ROOT / "infra" / "modules"
+    overlay_dir = ROOT / "infra" / "alz-overlay"
+
+    if mode == "avm":
+        avm_used = False
+        if modules_dir.is_dir():
+            for bicep in modules_dir.glob("*.bicep"):
+                try:
+                    if "br/public:avm/" in bicep.read_text(encoding="utf-8"):
+                        avm_used = True
+                        break
+                except Exception:
+                    continue
+        if not avm_used:
+            out.append(Finding(
+                "landing-zone-mode-consistent", "block", "accelerator.yaml",
+                "landing_zone.mode='avm' but no infra/modules/*.bicep "
+                "file references an AVM module ('br/public:avm/'). Copy "
+                "an exemplar from infra/avm-reference/ into infra/modules/ "
+                "or run the /configure-landing-zone chatmode.",
+            ))
+
+    elif mode == "alz-integrated":
+        overlay = overlay_dir / "main.bicep"
+        params_alz = ROOT / "infra" / "main.parameters.alz.json"
+        if not overlay.exists():
+            out.append(Finding(
+                "landing-zone-mode-consistent", "block", "accelerator.yaml",
+                "landing_zone.mode='alz-integrated' requires "
+                "infra/alz-overlay/main.bicep; not found. Run the "
+                "/configure-landing-zone chatmode.",
+            ))
+        else:
+            try:
+                params_file = overlay_dir / "main.parameters.json"
+                if params_file.exists():
+                    if "CHANGEME" in params_file.read_text(encoding="utf-8"):
+                        out.append(Finding(
+                            "landing-zone-mode-consistent", "block",
+                            "infra/alz-overlay/main.parameters.json",
+                            "CHANGEME placeholders remain in the overlay "
+                            "parameters. Fill in hub IDs via "
+                            "/configure-landing-zone before deploying.",
+                        ))
+            except Exception:
+                pass
+        if not params_alz.exists():
+            out.append(Finding(
+                "landing-zone-mode-consistent", "block", "accelerator.yaml",
+                "landing_zone.mode='alz-integrated' requires "
+                "infra/main.parameters.alz.json (workload params with "
+                "publicNetworkAccess: Disabled). Not found.",
+            ))
+
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------

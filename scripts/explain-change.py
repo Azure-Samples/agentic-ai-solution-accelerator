@@ -237,6 +237,21 @@ CATEGORIES: list[Category] = [
         ],
     ),
     Category(
+        id="landing-zone",
+        title="Azure AI Landing Zone (Tier 2 AVM / Tier 3 ALZ) artifacts",
+        impact=[
+            "lint: landing_zone_mode_consistent — asserts infra/ shape matches accelerator.yaml `landing_zone.mode` (standalone | avm | alz-integrated).",
+            "Tier 2 (avm): partners copy exemplars from infra/avm-reference/ into infra/modules/. Changes to exemplars should keep WAF/CAF baseline (soft-delete, purge protection, diagnostics, RBAC-only).",
+            "Tier 3 (alz-integrated): subscription-scope deploy in infra/alz-overlay/ runs BEFORE the workload deploy. CHANGEME placeholders MUST be replaced; lint fails if any remain.",
+            "docs: /configure-landing-zone chatmode walks partners between tiers. Keep docs/patterns/azure-ai-landing-zone/README.md in sync with changes here.",
+        ],
+        patterns=[
+            "infra/avm-reference/**",
+            "infra/alz-overlay/**",
+            "docs/patterns/azure-ai-landing-zone/**",
+        ],
+    ),
+    Category(
         id="other-scripts",
         title="Other helper scripts (scripts/*.py)",
         impact=[

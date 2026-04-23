@@ -1,0 +1,21 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location":                    { "value": "CHANGEME-region" },
+    "resourceGroupName":           { "value": "CHANGEME-spoke-rg" },
+    "tags":                        { "value": { "workload": "aiaccelerator", "landingZone": "ai-alz" } },
+    "hubVnetId":                   { "value": "CHANGEME-hub-vnet-id" },
+    "spokeVnetAddressPrefix":      { "value": "10.200.0.0/24" },
+    "workloadSubnetPrefix":        { "value": "10.200.0.0/26" },
+    "hubLogAnalyticsWorkspaceId":  { "value": "CHANGEME-hub-law-id" },
+    "privateDnsZoneIds": {
+      "value": {
+        "cognitiveservices": "CHANGEME-dns-zone-id",
+        "openai":            "CHANGEME-dns-zone-id",
+        "keyvault":          "CHANGEME-dns-zone-id",
+        "search":            "CHANGEME-dns-zone-id"
+      }
+    }
+  }
+}

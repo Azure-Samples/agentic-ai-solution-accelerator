@@ -47,6 +47,40 @@ models:
     default: true
 
 # -----------------------------------------------------------------------------
+# landing_zone:  AZURE AI LANDING ZONE alignment tier for the engagement.
+# Picked by the partner during discovery (or via /configure-landing-zone
+# chatmode). Read by scripts/accelerator-lint.py (mode-consistency rule)
+# and referenced from docs/patterns/azure-ai-landing-zone/README.md.
+#
+# Modes (pick ONE):
+#   standalone      — flat single-RG deploy; fastest to stand up; partner
+#                     or customer owns all guardrails. Works out of the box
+#                     with infra/main.bicep and `azd up`. Best for SMB or
+#                     sandbox pilots with no existing ALZ.
+#   avm             — partner has swapped hand-rolled modules in infra/
+#                     for Azure Verified Modules (br/public:avm/...) and
+#                     added private endpoints + private DNS zones. Matches
+#                     CAF/WAF recommendations but still deploys standalone
+#                     (no hub). Best for mid-market or customers with some
+#                     existing platform team but no AI ALZ yet.
+#   alz-integrated  — partner drops the accelerator into a customer's
+#                     existing Azure AI Landing Zone: resources land in a
+#                     spoke subscription, private endpoints attach to the
+#                     hub's private DNS zones, Foundry network isolation
+#                     on, policy assignments inherited from the MG. Uses
+#                     the subscription-scope overlay in infra/alz-overlay/.
+#                     Best for enterprise customers with a CCoE / ALZ.
+#
+# Changing this value does NOT auto-rewrite infra/ — the lint rule
+# `landing_zone_mode_consistent` just asserts that the infra/ shape
+# matches the declared mode. Vibecode the switch with the
+# /configure-landing-zone chatmode or use the AVM reference modules in
+# infra/avm-reference/ and the overlay skeleton in infra/alz-overlay/.
+# -----------------------------------------------------------------------------
+landing_zone:
+  mode: standalone
+
+# -----------------------------------------------------------------------------
 # scenario:  HOW the accelerator plugs a concrete workflow into the framework.
 # The partner changes this (or runs `scripts/scaffold-scenario.py`) to swap
 # scenarios. Every field is resolved at process startup by
