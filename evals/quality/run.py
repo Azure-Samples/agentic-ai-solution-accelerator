@@ -52,7 +52,7 @@ REPO_ROOT = HERE.parent.parent
 CASES = HERE / "golden_cases.jsonl"
 sys.path.insert(0, str(REPO_ROOT))
 
-RESERVED_CASE_KEYS = {"case_id", "expected", "technique", "notes"}
+RESERVED_CASE_KEYS = {"case_id", "expected", "technique", "notes", "exercises"}
 _CITATIONS_RE = re.compile(r'"citations"\s*:\s*\[\s*[^\]\s]')
 
 # Public GA list prices (USD per 1M tokens). Keep conservative / partner-overridable.

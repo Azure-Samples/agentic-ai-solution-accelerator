@@ -1110,6 +1110,158 @@ def shared_assets_not_scenario_specific(ctx: Ctx) -> list[Finding]:
 
 
 @check
+def agent_has_golden_case(ctx: Ctx) -> list[Finding]:
+    """Every non-supervisor worker declared in ``accelerator.yaml.scenario.agents``
+    must be listed in the ``exercises`` array of at least one golden case.
+
+    The ``exercises`` field is a scenario-agnostic per-case signal for
+    "this case exercises these workers". Partners add a worker, scaffold
+    it, AND extend a golden case - otherwise the accelerator ships an
+    agent with zero eval coverage. The supervisor is exempt because it
+    is invoked on every request by definition.
+
+    Referential integrity on ``exercises`` (typos, unknown ids, non-list
+    shapes) is enforced by :func:`golden_cases_exercises_valid` so the
+    two error classes stay distinct.
+    """
+    manifest_path = ROOT / "accelerator.yaml"
+    cases_path = ROOT / "evals/quality/golden_cases.jsonl"
+    if not manifest_path.exists() or not cases_path.exists():
+        return []
+    try:
+        import yaml
+    except ImportError:
+        return []
+    try:
+        data = yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return []
+    scenario = data.get("scenario") or {}
+    agents = scenario.get("agents") or []
+    if not isinstance(agents, list):
+        return []
+    required_ids: set[str] = set()
+    for entry in agents:
+        if not isinstance(entry, dict):
+            continue
+        aid = entry.get("id")
+        if isinstance(aid, str) and aid and aid != "supervisor":
+            required_ids.add(aid)
+    if not required_ids:
+        return []
+
+    covered: set[str] = set()
+    for raw in cases_path.read_text(encoding="utf-8").splitlines():
+        raw = raw.strip()
+        if not raw:
+            continue
+        try:
+            case = json.loads(raw)
+        except json.JSONDecodeError:
+            continue  # golden_cases_exercises_valid reports JSON errors
+        ex = case.get("exercises")
+        if isinstance(ex, list):
+            for item in ex:
+                if isinstance(item, str):
+                    covered.add(item)
+
+    out: list[Finding] = []
+    for aid in sorted(required_ids - covered):
+        out.append(Finding(
+            "agent-has-golden-case", "block",
+            "evals/quality/golden_cases.jsonl",
+            f"agent {aid!r} is registered in accelerator.yaml but no golden "
+            f"case lists it under `exercises`. Add {aid!r} to the "
+            f"`exercises` array of at least one existing case, or author a "
+            f"new case that does - the worker is not production-ready "
+            f"until evals hit it."
+        ))
+    return out
+
+
+@check
+def golden_cases_exercises_valid(ctx: Ctx) -> list[Finding]:
+    """``exercises`` referential-integrity check.
+
+    For each golden case with an ``exercises`` field: must be a list of
+    non-empty strings, no duplicates, and every entry must be the id of an
+    agent declared in ``accelerator.yaml.scenario.agents``. Prevents the
+    ``agent_has_golden_case`` lint from being silently satisfied by typos.
+    """
+    cases_path = ROOT / "evals/quality/golden_cases.jsonl"
+    manifest_path = ROOT / "accelerator.yaml"
+    if not cases_path.exists() or not manifest_path.exists():
+        return []
+    try:
+        import yaml
+    except ImportError:
+        return []
+    try:
+        data = yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return []
+    known_ids: set[str] = set()
+    for entry in (data.get("scenario") or {}).get("agents") or []:
+        if isinstance(entry, dict) and isinstance(entry.get("id"), str):
+            known_ids.add(entry["id"])
+
+    out: list[Finding] = []
+    for lineno, raw in enumerate(
+        cases_path.read_text(encoding="utf-8").splitlines(), start=1
+    ):
+        raw = raw.strip()
+        if not raw:
+            continue
+        try:
+            case = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            out.append(Finding(
+                "golden-cases-exercises-valid", "block",
+                "evals/quality/golden_cases.jsonl",
+                f"line {lineno}: invalid JSON ({exc})",
+            ))
+            continue
+        if "exercises" not in case:
+            continue  # field is optional; agent_has_golden_case handles missing coverage
+        ex = case.get("exercises")
+        cid = case.get("case_id", f"line-{lineno}")
+        if not isinstance(ex, list):
+            out.append(Finding(
+                "golden-cases-exercises-valid", "block",
+                "evals/quality/golden_cases.jsonl",
+                f"case {cid}: `exercises` must be a JSON array; got "
+                f"{type(ex).__name__}",
+            ))
+            continue
+        seen: set[str] = set()
+        for item in ex:
+            if not isinstance(item, str) or not item.strip():
+                out.append(Finding(
+                    "golden-cases-exercises-valid", "block",
+                    "evals/quality/golden_cases.jsonl",
+                    f"case {cid}: `exercises` entries must be non-empty "
+                    f"strings; got {item!r}",
+                ))
+                continue
+            if item in seen:
+                out.append(Finding(
+                    "golden-cases-exercises-valid", "block",
+                    "evals/quality/golden_cases.jsonl",
+                    f"case {cid}: duplicate agent id {item!r} in `exercises`",
+                ))
+                continue
+            seen.add(item)
+            if known_ids and item not in known_ids:
+                out.append(Finding(
+                    "golden-cases-exercises-valid", "block",
+                    "evals/quality/golden_cases.jsonl",
+                    f"case {cid}: `exercises` names unknown agent {item!r}. "
+                    f"Known: {sorted(known_ids)}",
+                ))
+    return out
+
+
+@check
 def agent_specs_no_hardcoded_model(ctx: Ctx) -> list[Finding]:
     """Agent spec files must not declare ``**Model:**``. The single model
     deployed by ``infra/modules/foundry.bicep`` (``AZURE_AI_FOUNDRY_MODEL``

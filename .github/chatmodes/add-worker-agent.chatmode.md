@@ -1,91 +1,64 @@
 ---
-description: Add a new specialist worker agent to the supervisor orchestration, following the three-layer prompt/transform/validate pattern, and wire it into the workflow.
-tools: ['codebase', 'editFiles', 'search']
+description: Add a new specialist worker agent to an existing scenario by invoking scripts/scaffold-agent.py, then finishing the three manual follow-ups the scaffolder cannot do.
+tools: ['codebase', 'editFiles', 'search', 'runCommands']
 ---
 
-# /add-worker-agent — scaffold a new worker following the 3-layer pattern
+# /add-worker-agent — scaffold a new worker via scripts/scaffold-agent.py
 
 Use this when the brief or a follow-on requirement introduces a capability no current worker covers (e.g., "pricing calc", "risk scoring", "invoice classification").
 
+**Do not hand-scaffold.** `scripts/scaffold-agent.py` is the single supported entry point. It edits the declarative `WORKERS: dict[str, WorkerSpec]` registry in `src/scenarios/<scenario>/workflow.py` — that dict is the only attachment point the supervisor DAG reads. Hand edits that don't match the scaffolder's regex contract flip the file to "no longer scaffold-managed" and break future automation.
+
 ## Preconditions
-- The solution is using the `supervisor-routing` pattern (check `accelerator.yaml.solution.pattern`).
+- The solution uses the `supervisor-routing` pattern (check `accelerator.yaml.solution.pattern`).
+- The target scenario exists under `src/scenarios/<scenario>/` and its `workflow.py` declares `WORKERS: dict[str, WorkerSpec] = { ... }` in the canonical single-form shape. (The flagship `sales-research` scenario is the reference.)
 - The new worker has a clear, one-sentence capability. If you can't write that sentence, push back on the partner to clarify — don't scaffold fuzziness.
 
 ## Ask the partner
-1. **Agent name** (snake_case, e.g., `pricing_calculator`)
-2. **One-sentence capability** (used in the supervisor's routing prompt)
-3. **Input fields** (what the supervisor passes it)
-4. **Output schema** (JSON shape `transform_response` will produce)
-5. **Tools it uses** (call out any side-effect tools; HITL applies)
-6. **Foundry agent name** (will be retrieved via `AzureAIClient(agent_name=..., use_latest_version=True)`)
+1. **Agent id** (snake_case, e.g. `pricing_calculator`, `risk_scoring`)
+2. **Scenario id** (kebab-case — matches `accelerator.yaml.scenario.id`, e.g. `sales-research`)
+3. **One-sentence capability** (used by the supervisor router; quoted verbatim into the YAML snippet)
+4. **Upstream workers it depends on** (comma-separated list of existing worker ids the DAG must schedule first)
+5. **Whether it's optional** (the DAG can skip it and still produce a valid answer)
+6. **Foundry agent name** — defaults to `accel-<scenario-id>-<agent-id-with-underscores-to-hyphens>` (e.g. `risk_scoring` → `accel-sales-research-risk-scoring`). Ensure the agent exists in the Foundry portal with system instructions configured there — never in code.
 
-## Files to create
-```
-src/scenarios/<scenario>/agents/<agent_name>/
-├── __init__.py
-├── prompt.py       build_prompt(request_data: dict) -> str
-├── transform.py    transform_response(response: str) -> dict
-└── validate.py     validate_response(response: dict) -> tuple[bool, str]
-```
-
-## prompt.py skeleton
-```python
-"""<Agent display name> prompt builder.
-
-Capability: <one-sentence capability>
-"""
-from __future__ import annotations
-
-
-def build_prompt(request_data: dict) -> str:
-    return (
-        "Task: <derived from capability>.\n"
-        "Context: <fields from request_data>.\n"
-        "Output: JSON matching the documented schema; include `sources: []` for any factual claim."
-    )
+## Invoke the scaffolder
+```bash
+python scripts/scaffold-agent.py <agent_id> \
+  --scenario <scenario-id> \
+  --capability "<one-sentence capability>" \
+  --depends-on <upstream_a>,<upstream_b> \
+  [--optional]
 ```
 
-## transform.py skeleton
-```python
-from __future__ import annotations
-import json
+The scaffolder will:
+- Create `src/scenarios/<scenario>/agents/<agent_id>/{__init__,prompt,transform,validate}.py` with working three-layer stubs.
+- Patch `src/scenarios/<scenario>/agents/__init__.py` — add the import and extend `__all__`.
+- Patch `src/scenarios/<scenario>/workflow.py` — add the import, insert a `_build_input_<agent_id>` helper immediately above `WORKERS`, and insert a new `"<agent_id>": WorkerSpec(...)` entry immediately before the dict's closing `}`.
+- Write a Foundry agent spec stub at `docs/agent-specs/<foundry-agent-name>.md`.
+- Print the YAML snippet you must paste into `accelerator.yaml -> scenario.agents[]`.
 
+The scaffolder is **transactional**: it snapshots `workflow.py` and `agents/__init__.py` before any write and rolls everything back (including deleting newly created files) on any failure, including a post-write `ast.parse` syntax check. It is also **re-run safe**: a second run with the same `<agent_id>` exits non-zero without changing anything.
 
-def transform_response(response: str) -> dict:
-    try:
-        data = json.loads(response)
-    except json.JSONDecodeError:
-        start, end = response.find("{"), response.rfind("}")
-        data = json.loads(response[start:end + 1]) if start >= 0 else {}
-    return {**data}
+## Three manual follow-ups
+The scaffolder cannot do these; you must.
+
+1. **Paste the printed YAML snippet** into `accelerator.yaml -> scenario.agents[]`. The lint rule `agents_registered_in_manifest_match_code` enforces parity between the manifest and the `WORKERS` dict.
+2. **Add the agent id to at least one golden case's `exercises` array** in `evals/quality/golden_cases.jsonl`. Example: `"exercises": ["account_planner", "<new_agent_id>"]`. The blocking lint rule `agent_has_golden_case` rejects any registered worker that no golden case exercises. A separate rule `golden_cases_exercises_valid` checks the ids resolve.
+3. **Tune the `_build_input_<agent_id>` stub** in `workflow.py` if the default (pass each declared dependency's output plus `request`) isn't the right payload. The TODO comment marks the spot.
+
+## Tools
+If the agent needs a side-effect tool (writes to a system, sends email/webhook, destructive action), run `/add-tool` for each separately — never mix tool creation with worker scaffolding, and ensure the tool flows through `src/accelerator_baseline/hitl.py`.
+
+## Validate
+```bash
+python scripts/accelerator-lint.py   # must be 0 blocking / 0 warning
+python -c "from src.main import app; print('OK')"
 ```
 
-## validate.py skeleton
-```python
-from __future__ import annotations
-
-
-REQUIRED_FIELDS: tuple[str, ...] = ()
-
-
-def validate_response(response: dict) -> tuple[bool, str]:
-    missing = [f for f in REQUIRED_FIELDS if f not in response]
-    if missing:
-        return False, f"missing fields: {missing}"
-    if response.get("factual_claims") and not response.get("sources"):
-        return False, "factual claims without sources"
-    return True, ""
-```
-
-## Wire into supervisor
-1. In `src/scenarios/<scenario>/agents/supervisor/prompt.py`, add a routing cue for the new worker.
-2. In `src/scenarios/<scenario>/workflow.py`, add the worker to the executor graph; register the Foundry agent name in `accelerator.yaml -> scenario.agents[]`.
-3. In `src/accelerator_baseline/telemetry.py`, add `worker.<agent_name>.completed` if missing.
-
-## Evals
-Add at least 2 golden cases to `evals/quality/golden_cases.jsonl` that exercise this worker through the supervisor, with expected fields and acceptance thresholds.
+If lint reports `agent_has_golden_case` or `agents_registered_in_manifest_match_code`, revisit the two manual follow-ups above. If the scaffolder reports `workflow.py is no longer scaffold-managed`, someone has hand-edited the `from .agents import (...)` tuple, the `WORKERS` dict shape, or the close-brace line; restore the canonical shape (see the flagship `sales_research/workflow.py`) before retrying.
 
 ## Guardrails
-- If a side-effect tool is needed, also run `/add-tool` for each. Never mix tool creation with worker scaffolding.
-- Do NOT write the Foundry system prompt in code. Ensure the Foundry agent already exists in the portal.
-- Run `scripts/accelerator-lint.py` after to catch registration gaps.
+- Never write the Foundry system prompt in code — it lives in the portal.
+- Never bypass the scaffolder to "just quickly add" a worker. The declarative `WORKERS` registry is the contract every future tool (scheduler, telemetry, lints, docs) reads.
+- The supervisor is always-invoked; do not list it in `depends_on` or golden-case `exercises`.

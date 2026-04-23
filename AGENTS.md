@@ -28,7 +28,7 @@ Every agent lives under `src/scenarios/<scenario>/agents/<agent_name>/` with thr
 - `prompt.py`   — `build_prompt(request_data) -> str`
 - `transform.py` — `transform_response(response) -> dict`
 - `validate.py`  — `validate_response(response) -> (bool, str)`
-Add a new agent with the `/add-worker-agent` chat mode; do not scaffold by hand. Scaffold a new *scenario* (sibling to `sales_research/`) with `python scripts/scaffold-scenario.py <id>`.
+Add a new agent by running `python scripts/scaffold-agent.py <agent_id> --scenario <scenario-id> --capability "<one-sentence capability>" [--depends-on a,b] [--optional]`; do not scaffold by hand. The scaffolder edits the declarative `WORKERS: dict[str, WorkerSpec]` registry in `src/scenarios/<scenario>/workflow.py` — that single dict is the supervisor DAG's only attachment point — and patches `agents/__init__.py`, creates the three-layer files, and writes a Foundry agent spec stub. It is transactional (rolls back on any failure) and re-run safe. You must still paste the printed YAML snippet into `accelerator.yaml -> scenario.agents[]` and add the new agent id to at least one golden case's `exercises` array (the `agent_has_golden_case` lint blocks otherwise). See the `/add-worker-agent` chat mode for the full flow. Scaffold a new *scenario* (sibling to `sales_research/`) with `python scripts/scaffold-scenario.py <id>`.
 
 ### HITL (Human-in-the-Loop)
 - **MUST** gate every side-effect tool (writes, sends, destructive actions) through `src/accelerator_baseline/hitl.py`.
