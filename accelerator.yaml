@@ -79,6 +79,15 @@ models:
 # -----------------------------------------------------------------------------
 landing_zone:
   mode: standalone
+  # avm_services (optional): required ONLY when mode == avm. List the services
+  # the partner has migrated to AVM exemplars in infra/modules/. Allowed
+  # tokens: key-vault | search | container-app | monitor. Foundry is currently
+  # NOT listed because no fully-GA AVM res module exists for CognitiveServices
+  # /accounts; it remains hand-rolled and is the documented exception.
+  # Example:
+  #   mode: avm
+  #   avm_services: [key-vault]     # partner has swapped only KV so far
+  # avm_services: []
 
 # -----------------------------------------------------------------------------
 # scenario:  HOW the accelerator plugs a concrete workflow into the framework.

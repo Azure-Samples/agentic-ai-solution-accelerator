@@ -1,11 +1,12 @@
 {
   "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
   "contentVersion": "1.0.0.0",
+  "_comment": "Tier 3 (landing_zone.mode: alz-integrated) workload parameters. Partner generates this from main.parameters.json via /configure-landing-zone. Flips publicNetworkAccess to Disabled on Foundry + Search + Key Vault and makes Container App ingress internal-only. NOTE: this by itself does NOT wire private endpoints + DNS — run infra/alz-overlay/main.bicep first and consume its outputs (PE subnet ID, hub DNS zone IDs). See docs/patterns/azure-ai-landing-zone/README.md.",
   "parameters": {
     "envName": { "value": "${AZURE_ENV_NAME}" },
     "location": { "value": "${AZURE_LOCATION}" },
-    "enablePrivateLink": { "value": false },
-    "externalIngress": { "value": true },
+    "enablePrivateLink": { "value": true },
+    "externalIngress": { "value": false },
     "modelName": { "value": "${AZURE_AI_FOUNDRY_MODEL_NAME=gpt-4o-mini}" },
     "modelVersion": { "value": "${AZURE_AI_FOUNDRY_MODEL_VERSION=2024-07-18}" },
     "modelDeploymentName": { "value": "${AZURE_AI_FOUNDRY_MODEL=gpt-4o-mini}" },

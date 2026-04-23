@@ -12,6 +12,23 @@ This pattern defines **three landing-zone tiers** the partner picks in
 artifacts for each tier; Copilot helps the partner move between tiers
 via the `/configure-landing-zone` chatmode.
 
+## Tier status (be honest)
+
+| Tier | Status | What's shipped today |
+|---|---|---|
+| Tier 1 `standalone` | **GA** | `infra/main.bicep` + modules; `azd up` stands up a public-endpoint deploy with Entra-only auth + RAI + workspace diagnostics. |
+| Tier 2 `avm` | **Preview** | One AVM exemplar: `infra/avm-reference/key-vault.bicep`. Partner declares coverage via `landing_zone.avm_services`. Exemplars for AI Search / Container Apps / Monitor are planned (H8). Foundry stays hand-rolled (no GA AVM res module for CognitiveServices/accounts). |
+| Tier 3 `alz-integrated` | **Preview (scaffold only)** | Subscription-scope overlay creates spoke RG + vNet + peering. `infra/main.parameters.alz.json` flips `publicNetworkAccess: Disabled` on Foundry/Search/Key Vault and makes Container App ingress internal-only. **Private DNS zones, private endpoints per service, route tables, NSGs, and hub-LAW diagnostics are NOT yet wired** — partner completes that via the customer's CCoE (or waits for H9). |
+
+### "Disabled" vs. "Fully private & reachable"
+
+These are not the same thing and the difference will bite you.
+
+- **`publicNetworkAccess: Disabled`** — the data plane refuses public traffic. The Tier 3 parameter file flips this for you.
+- **Fully private & reachable** — there's a private endpoint in your vNet, its IP resolves via the hub's private DNS zones, and the client runs somewhere that can route to that IP. **The accelerator does not do this for you yet.** You must add PEs + DNS bindings + reachable ingress (e.g. Container Apps internal env with vNet integration, or Application Gateway fronted by the hub firewall).
+
+If you set `mode: alz-integrated` and deploy, the workload will be provisioned with public access off — and will be **unreachable until the PE/DNS work is completed**. That's by design (fail-closed) but it is not "done".
+
 ## Tier decision tree
 
 ```
@@ -72,9 +89,12 @@ inherits from AVM's opinions.
 **Files involved.**
 - `infra/avm-reference/README.md` — how to swap a hand-rolled module
   for its AVM equivalent (study-only exemplars).
+- `infra/avm-reference/key-vault.bicep` — only AVM exemplar shipped today.
 - `infra/modules/*.bicep` — partner replaces selected modules with AVM
   references during vibecoding via `/configure-landing-zone`.
-- `accelerator.yaml` → `landing_zone.mode: avm`.
+- `accelerator.yaml` → `landing_zone.mode: avm` **and**
+  `landing_zone.avm_services: [key-vault, ...]` listing the services
+  actually migrated (lint asserts the list matches reality).
 
 ## Tier 3 — `alz-integrated` (Azure AI Landing Zone)
 
@@ -106,13 +126,19 @@ checklist in `docs/customer-runbook.md`.
 
 **Files involved.**
 - `infra/alz-overlay/main.bicep` — subscription-scope deploy that
-  wires the spoke into the hub. Ships as a skeleton; partner fills in
-  the hub resource IDs via `/configure-landing-zone`.
-- `infra/alz-overlay/README.md` — pre-reqs (hub IDs, DNS zone IDs,
-  log analytics workspace ID, MG path) and the `az deployment sub create`
-  command.
-- `infra/main.parameters.alz.json` — partner-generated parameters
-  flipping `publicNetworkAccess: Disabled`, binding PE subnets, etc.
+  creates the spoke RG + vNet + peering. Ships as a skeleton; partner
+  fills in hub resource IDs via `/configure-landing-zone` (in
+  `main.parameters.json`, not `main.bicep`). **Current scope: network
+  only.** PEs, DNS zone groups, route tables, NSGs, and hub-LAW
+  diagnostics are planned for H9 and must be wired by the partner
+  until then.
+- `infra/alz-overlay/README.md` — pre-reqs, what the overlay does /
+  does not do, and the `az deployment sub create` command.
+- `infra/main.parameters.alz.json` — **shipped**, pre-baked Tier 3
+  workload parameters: `enablePrivateLink: true` (→
+  `publicNetworkAccess: Disabled` on Foundry, Search, Key Vault) and
+  `externalIngress: false` (→ Container App internal-only). Partner
+  adjusts env-var defaults to match the engagement.
 
 ## What's consistent across all three tiers
 

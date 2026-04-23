@@ -44,15 +44,19 @@ to confirm. Do NOT make changes without explicit confirmation.
 
 ### If target = `avm`
 - Set `accelerator.yaml` → `landing_zone.mode: avm`.
+- Add `landing_zone.avm_services:` with the list of services the partner
+  has migrated. Allowed tokens: `key-vault`, `search`, `container-app`,
+  `monitor`. Start with `[key-vault]` if only the KV exemplar has been
+  copied; expand as more AVM exemplars land.
 - Copy one or more exemplars from `infra/avm-reference/` into
-  `infra/modules/` replacing the hand-rolled equivalents (the
-  README there lists which modules are covered).
+  `infra/modules/` replacing the hand-rolled equivalents.
 - Wire private endpoints: add a vNet + private DNS zones to
   `infra/main.bicep`. The AVM module docs include PE parameter
   blocks — copy those shapes exactly.
 - Run `python scripts/accelerator-lint.py`. The
-  `landing_zone_mode_consistent` rule will fail if no AVM module
-  reference is present. Fix until green.
+  `landing_zone_mode_consistent` rule fails if `avm_services` is
+  missing OR if a listed service has no AVM reference in
+  `infra/modules/`. Fix until green.
 
 ### If target = `alz-integrated`
 - Set `accelerator.yaml` → `landing_zone.mode: alz-integrated`.
@@ -64,13 +68,24 @@ to confirm. Do NOT make changes without explicit confirmation.
   - Log Analytics workspace ID for diagnostics landing
   - Target MG path + spoke subscription ID
   - Spoke resource group name (pre-created or to-be-created)
-- Fill in `infra/alz-overlay/main.bicep` parameters.
-- Generate `infra/main.parameters.alz.json` from
-  `infra/main.parameters.json`, flipping `publicNetworkAccess: Disabled`
-  and wiring PE subnet IDs.
+- Fill in `infra/alz-overlay/main.parameters.json` (NOT `main.bicep` —
+  placeholders live in the parameters file). All `CHANGEME` tokens must
+  be replaced.
+- Review `infra/main.parameters.alz.json` — it ships with
+  `enablePrivateLink: true` and `externalIngress: false` baked in, so
+  Foundry/Search/KV flip to `publicNetworkAccess: Disabled` and
+  Container App ingress becomes internal-only. Adjust model name /
+  scenario id to the engagement.
+- **Important:** the overlay only creates the spoke RG + vNet +
+  peering today. Private DNS zone group bindings, private endpoints per
+  service, route tables, NSGs, and hub-LAW diagnostic settings are
+  **not yet shipped** (planned for H9). The partner must wire these by
+  hand or wait. Be transparent about this with the customer CCoE.
 - Run `python scripts/accelerator-lint.py`. The
-  `landing_zone_mode_consistent` rule will fail if
-  `infra/alz-overlay/main.bicep` still has placeholders.
+  `landing_zone_mode_consistent` rule fails if overlay placeholders
+  remain, if `infra/main.parameters.alz.json` is missing, or if the
+  workload modules hardcode `publicNetworkAccess: 'Enabled'` /
+  `external: true` instead of accepting the parameter.
 
 ## 4. Explain the change
 Run `python scripts/explain-change.py --base HEAD` and summarise for

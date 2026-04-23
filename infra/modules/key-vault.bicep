@@ -3,6 +3,9 @@ param location string
 param tags object
 param rbacPrincipalId string
 
+@description('When true, flips publicNetworkAccess to Disabled. NOTE: disabled does NOT by itself mean the vault is reachable — private endpoints + DNS wiring are required for Tier 3 (alz-integrated). See docs/patterns/azure-ai-landing-zone/README.md.')
+param enablePrivateLink bool = false
+
 resource kv 'Microsoft.KeyVault/vaults@2023-07-01' = {
   name: name
   location: location
@@ -13,7 +16,11 @@ resource kv 'Microsoft.KeyVault/vaults@2023-07-01' = {
     enableRbacAuthorization: true
     enableSoftDelete: true
     enablePurgeProtection: true
-    publicNetworkAccess: 'Enabled'
+    publicNetworkAccess: enablePrivateLink ? 'Disabled' : 'Enabled'
+    networkAcls: {
+      bypass: 'AzureServices'
+      defaultAction: enablePrivateLink ? 'Deny' : 'Allow'
+    }
   }
 }
 

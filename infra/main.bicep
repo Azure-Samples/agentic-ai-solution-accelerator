@@ -19,8 +19,11 @@ param envName string
 @description('Location for all resources')
 param location string = resourceGroup().location
 
-@description('Enable private endpoints (prod-privatelink profile)')
+@description('Flip publicNetworkAccess to Disabled on Foundry, Search, and Key Vault. Actual private endpoints + DNS wiring are partner-owned for Tier 2 (avm) or come from the overlay for Tier 3 (alz-integrated). See docs/patterns/azure-ai-landing-zone/README.md.')
 param enablePrivateLink bool = false
+
+@description('Controls Container App ingress. true = public FQDN (Tier 1/2). false = internal only (Tier 3). Must be false when landing_zone.mode = alz-integrated.')
+param externalIngress bool = true
 
 @description('Resource token for unique naming')
 param resourceToken string = uniqueString(subscription().id, resourceGroup().id, envName)
@@ -74,6 +77,7 @@ module keyVault 'modules/key-vault.bicep' = {
     location: location
     tags: tags
     rbacPrincipalId: identity.outputs.principalId
+    enablePrivateLink: enablePrivateLink
   }
 }
 
@@ -115,6 +119,7 @@ module containerApp 'modules/container-app.bicep' = {
     foundryEndpoint: foundry.outputs.projectEndpoint
     modelDeploymentName: foundry.outputs.modelDeploymentName
     searchEndpoint: search.outputs.endpoint
+    externalIngress: externalIngress
   }
 }
 

@@ -1226,7 +1226,7 @@ def shared_assets_not_scenario_specific(ctx: Ctx) -> list[Finding]:
     if not infra_root.exists():
         return []
 
-    allowlist_rel = {"infra/main.parameters.json"}
+    allowlist_rel = {"infra/main.parameters.json", "infra/main.parameters.alz.json"}
 
     out: list[Finding] = []
     for p, text in ctx.iter():
@@ -1667,6 +1667,27 @@ def template_defaults_match_parameters(ctx: Ctx) -> list[Finding]:
 
 _VALID_LZ_MODES = ("standalone", "avm", "alz-integrated")
 
+# Tier 2 avm_services tokens → required substring in infra/modules/<file>.bicep
+# to prove the AVM exemplar has actually been adopted (not just that
+# some AVM reference exists somewhere).
+_AVM_SERVICE_MODULES: dict[str, tuple[str, ...]] = {
+    "key-vault": ("key-vault.bicep",),
+    "search": ("ai-search.bicep", "search.bicep"),
+    "container-app": ("container-app.bicep",),
+    "monitor": ("monitor.bicep",),
+}
+_AVM_SERVICE_TOKENS = tuple(_AVM_SERVICE_MODULES.keys())
+
+# Tier 3 workload parametrization contract. Each listed module must
+# accept the param (not hardcode the public value) so the alz
+# parameter file can actually flip it. If the hardcoded string is
+# present AND the param declaration is absent, the module is
+# non-compliant for mode=alz-integrated.
+_ALZ_PARAM_CONTRACT: tuple[tuple[str, str, str], ...] = (
+    ("key-vault.bicep", "enablePrivateLink", "publicNetworkAccess: 'Enabled'"),
+    ("container-app.bicep", "externalIngress", "external: true"),
+)
+
 
 @check
 def landing_zone_mode_consistent(ctx: Ctx) -> list[Finding]:
@@ -1675,12 +1696,14 @@ def landing_zone_mode_consistent(ctx: Ctx) -> list[Finding]:
 
     Modes (see ``docs/patterns/azure-ai-landing-zone/README.md``):
       - ``standalone`` — hand-rolled modules in infra/modules/ only.
-      - ``avm`` — at least one infra/modules/*.bicep file references an
-        AVM module (``br/public:avm/``) OR the partner has copied an
-        exemplar from infra/avm-reference/.
-      - ``alz-integrated`` — infra/alz-overlay/main.bicep exists, has
-        no ``CHANGEME`` placeholders, and infra/main.parameters.alz.json
-        exists.
+      - ``avm`` — partner declares ``avm_services:`` list and each
+        listed service has an AVM reference (``br/public:avm/``) in
+        the corresponding infra/modules/*.bicep file.
+      - ``alz-integrated`` — infra/alz-overlay/main.bicep exists, its
+        parameters have no ``CHANGEME`` placeholders,
+        infra/main.parameters.alz.json exists with
+        enablePrivateLink=true + externalIngress=false, and workload
+        modules parameterise (not hardcode) public access knobs.
     """
     manifest_path = ROOT / "accelerator.yaml"
     if not manifest_path.exists():
@@ -1712,23 +1735,56 @@ def landing_zone_mode_consistent(ctx: Ctx) -> list[Finding]:
     overlay_dir = ROOT / "infra" / "alz-overlay"
 
     if mode == "avm":
-        avm_used = False
-        if modules_dir.is_dir():
-            for bicep in modules_dir.glob("*.bicep"):
-                try:
-                    if "br/public:avm/" in bicep.read_text(encoding="utf-8"):
-                        avm_used = True
-                        break
-                except Exception:
-                    continue
-        if not avm_used:
+        avm_services = lz.get("avm_services")
+        if avm_services is None or avm_services == []:
             out.append(Finding(
                 "landing-zone-mode-consistent", "block", "accelerator.yaml",
-                "landing_zone.mode='avm' but no infra/modules/*.bicep "
-                "file references an AVM module ('br/public:avm/'). Copy "
-                "an exemplar from infra/avm-reference/ into infra/modules/ "
-                "or run the /configure-landing-zone chatmode.",
+                "landing_zone.mode='avm' requires landing_zone.avm_services "
+                f"(list of {list(_AVM_SERVICE_TOKENS)}). An empty or missing "
+                "list means no service has actually been migrated to AVM; "
+                "either move to mode=standalone or declare which services "
+                "you have swapped. Foundry is intentionally not in the list "
+                "(no GA AVM res module for CognitiveServices/accounts).",
             ))
+        elif not isinstance(avm_services, list):
+            out.append(Finding(
+                "landing-zone-mode-consistent", "block", "accelerator.yaml",
+                f"landing_zone.avm_services must be a list; got "
+                f"{type(avm_services).__name__}.",
+            ))
+        else:
+            for svc in avm_services:
+                if svc not in _AVM_SERVICE_MODULES:
+                    out.append(Finding(
+                        "landing-zone-mode-consistent", "block",
+                        "accelerator.yaml",
+                        f"landing_zone.avm_services contains {svc!r}; allowed "
+                        f"tokens: {list(_AVM_SERVICE_TOKENS)}.",
+                    ))
+                    continue
+                # Assert an AVM reference exists in the corresponding module file.
+                filenames = _AVM_SERVICE_MODULES[svc]
+                found = False
+                for fname in filenames:
+                    bicep = modules_dir / fname
+                    if not bicep.exists():
+                        continue
+                    try:
+                        if "br/public:avm/" in bicep.read_text(encoding="utf-8"):
+                            found = True
+                            break
+                    except Exception:
+                        continue
+                if not found:
+                    out.append(Finding(
+                        "landing-zone-mode-consistent", "block",
+                        "accelerator.yaml",
+                        f"landing_zone.avm_services declares {svc!r} but "
+                        f"infra/modules/{'/'.join(filenames)} does not "
+                        "reference an AVM module (br/public:avm/). Copy the "
+                        f"exemplar from infra/avm-reference/ for {svc!r} "
+                        "into infra/modules/, or remove it from avm_services.",
+                    ))
 
     elif mode == "alz-integrated":
         overlay = overlay_dir / "main.bicep"
@@ -1759,8 +1815,66 @@ def landing_zone_mode_consistent(ctx: Ctx) -> list[Finding]:
                 "landing-zone-mode-consistent", "block", "accelerator.yaml",
                 "landing_zone.mode='alz-integrated' requires "
                 "infra/main.parameters.alz.json (workload params with "
-                "publicNetworkAccess: Disabled). Not found.",
+                "enablePrivateLink: true, externalIngress: false). Not found.",
             ))
+        else:
+            try:
+                alz_json = json.loads(params_alz.read_text(encoding="utf-8"))
+                alz_params = alz_json.get("parameters", {})
+                epl = alz_params.get("enablePrivateLink", {}).get("value")
+                if epl is not True:
+                    out.append(Finding(
+                        "landing-zone-mode-consistent", "block",
+                        "infra/main.parameters.alz.json",
+                        "enablePrivateLink must be true for "
+                        "mode=alz-integrated (flips Foundry, Search, Key "
+                        f"Vault publicNetworkAccess to Disabled). Got {epl!r}.",
+                    ))
+                ext = alz_params.get("externalIngress", {}).get("value")
+                if ext is not False:
+                    out.append(Finding(
+                        "landing-zone-mode-consistent", "block",
+                        "infra/main.parameters.alz.json",
+                        "externalIngress must be false for mode=alz-integrated "
+                        f"(Container App internal-only). Got {ext!r}.",
+                    ))
+            except Exception as e:
+                out.append(Finding(
+                    "landing-zone-mode-consistent", "warn",
+                    "infra/main.parameters.alz.json",
+                    f"could not parse: {e!s}",
+                ))
+
+        # Workload modules must parameterise — not hardcode — the
+        # public-access knobs, otherwise the Tier 3 param file can't
+        # flip them.
+        for fname, required_param, forbidden_literal in _ALZ_PARAM_CONTRACT:
+            bicep = modules_dir / fname
+            if not bicep.exists():
+                continue
+            try:
+                body = bicep.read_text(encoding="utf-8")
+            except Exception:
+                continue
+            has_param = f"param {required_param}" in body
+            has_hardcode = forbidden_literal in body
+            if not has_param:
+                out.append(Finding(
+                    "landing-zone-mode-consistent", "block",
+                    f"infra/modules/{fname}",
+                    f"mode=alz-integrated requires 'param {required_param}' "
+                    f"in {fname} so the Tier 3 parameter file can flip it. "
+                    "Add the param (match foundry.bicep's enablePrivateLink "
+                    "pattern).",
+                ))
+            if has_hardcode:
+                out.append(Finding(
+                    "landing-zone-mode-consistent", "block",
+                    f"infra/modules/{fname}",
+                    f"mode=alz-integrated forbids the hardcoded literal "
+                    f"{forbidden_literal!r} in {fname}; replace with the "
+                    f"{required_param} parameter.",
+                ))
 
     return out
 
