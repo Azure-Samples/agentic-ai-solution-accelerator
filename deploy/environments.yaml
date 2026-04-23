@@ -1,0 +1,24 @@
+# deploy/environments.yaml — source of truth for BYO-Azure deploy targets
+#
+# Every Azure environment the `.github/workflows/deploy.yml` pipeline can
+# provision is listed here. A matching GitHub Environment (repo Settings
+# → Environments) must exist for each entry and must hold scoped OIDC
+# secrets (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`)
+# plus a scoped variable (`AZURE_LOCATION`). The azd environment name
+# comes from this file's `name:` field — not from any `vars.AZURE_ENV_NAME`.
+#
+# To add a new environment, follow the `/deploy-to-env` chat mode; it
+# walks through the manifest entry, GitHub Environment creation, OIDC
+# federated-credential setup, and a first workflow_dispatch run.
+#
+# The lint rule `deploy_matrix_matches_azure_envs` enforces this file's
+# shape and cross-references it against deploy.yml.
+
+# Name of the environment deployed automatically on push to main.
+# Must appear in `environments[]` below.
+default_env: dev
+
+environments:
+  - name: dev
+    github_environment: dev
+    description: Default partner sandbox — deployed automatically on push to main.

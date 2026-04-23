@@ -714,6 +714,160 @@ def deploy_gated_on_lint_and_evals(ctx: Ctx) -> list[Finding]:
 
 
 # ---------------------------------------------------------------------------
+# BYO-Azure multi-environment: deploy.yml must match deploy/environments.yaml
+# ---------------------------------------------------------------------------
+_ENV_NAME_RE = re.compile(r"^[a-z][a-z0-9-]{1,30}$")
+
+
+@check
+def deploy_matrix_matches_azure_envs(ctx: Ctx) -> list[Finding]:
+    """`deploy/environments.yaml` is the source of truth for BYO-Azure envs.
+
+    Enforces:
+      * manifest exists, well-formed, `default_env` is in `environments[]`,
+        names are unique and match the env-name regex, each entry has a
+        `github_environment`;
+      * `deploy.yml` declares `workflow_dispatch.inputs.env_name`;
+      * a `resolve-env` job exists and reads `deploy/environments.yaml`;
+      * `azd-up.environment` resolves from `needs.resolve-env.outputs.github_environment`;
+      * `azd-up` step env `AZURE_ENV_NAME` derives from the resolve-env
+        output, not from `vars.AZURE_ENV_NAME` (which would drift).
+    """
+    out: list[Finding] = []
+    manifest_p = ROOT / "deploy/environments.yaml"
+    wf_p = ROOT / ".github/workflows/deploy.yml"
+
+    if not manifest_p.exists():
+        return [Finding("deploy-envs", "block", "deploy/environments.yaml",
+                        "deploy/environments.yaml is required "
+                        "(source of truth for BYO-Azure deploy targets)")]
+    try:
+        import yaml
+    except ImportError:
+        return []
+    try:
+        manifest = yaml.safe_load(manifest_p.read_text(encoding="utf-8")) or {}
+    except Exception as exc:
+        return [Finding("deploy-envs", "block", "deploy/environments.yaml",
+                        f"deploy/environments.yaml is not valid YAML: {exc}")]
+
+    envs = manifest.get("environments") or []
+    default_env = manifest.get("default_env")
+    if not isinstance(envs, list) or not envs:
+        out.append(Finding("deploy-envs", "block", "deploy/environments.yaml",
+                           "`environments[]` must be a non-empty list"))
+    if not isinstance(default_env, str) or not default_env:
+        out.append(Finding("deploy-envs", "block", "deploy/environments.yaml",
+                           "`default_env` must be a non-empty string"))
+
+    names: list[str] = []
+    for i, entry in enumerate(envs if isinstance(envs, list) else []):
+        if not isinstance(entry, dict):
+            out.append(Finding("deploy-envs", "block",
+                               "deploy/environments.yaml",
+                               f"environments[{i}] must be a mapping"))
+            continue
+        name = entry.get("name")
+        if not isinstance(name, str) or not _ENV_NAME_RE.match(name):
+            out.append(Finding("deploy-envs", "block",
+                               "deploy/environments.yaml",
+                               f"environments[{i}].name must match "
+                               f"{_ENV_NAME_RE.pattern} (got {name!r})"))
+            continue
+        if name in names:
+            out.append(Finding("deploy-envs", "block",
+                               "deploy/environments.yaml",
+                               f"duplicate environments[].name: {name!r}"))
+        names.append(name)
+        gh_env = entry.get("github_environment")
+        if not isinstance(gh_env, str) or not gh_env:
+            out.append(Finding("deploy-envs", "block",
+                               "deploy/environments.yaml",
+                               f"environments[{i}] ({name}) is missing "
+                               "`github_environment`"))
+
+    if isinstance(default_env, str) and default_env and default_env not in names:
+        out.append(Finding("deploy-envs", "block", "deploy/environments.yaml",
+                           f"default_env={default_env!r} is not in "
+                           f"environments[]; known: {names}"))
+
+    if not wf_p.exists():
+        out.append(Finding("deploy-envs", "block",
+                           ".github/workflows/deploy.yml",
+                           "deploy.yml is missing"))
+        return out
+
+    try:
+        wf = yaml.safe_load(wf_p.read_text(encoding="utf-8")) or {}
+    except Exception as exc:
+        out.append(Finding("deploy-envs", "block",
+                           ".github/workflows/deploy.yml",
+                           f"deploy.yml is not valid YAML: {exc}"))
+        return out
+
+    # PyYAML parses the ``on:`` key as Python True because YAML 1.1 treats
+    # the bare word ``on`` as a boolean. Accept either form.
+    on_block = wf.get("on") if "on" in wf else wf.get(True)
+    dispatch = (on_block or {}).get("workflow_dispatch") if isinstance(on_block, dict) else None
+    inputs = (dispatch or {}).get("inputs") if isinstance(dispatch, dict) else None
+    if not isinstance(inputs, dict) or "env_name" not in inputs:
+        out.append(Finding("deploy-envs", "block",
+                           ".github/workflows/deploy.yml",
+                           "deploy.yml must declare "
+                           "`on.workflow_dispatch.inputs.env_name` so "
+                           "partners can pick a target env from "
+                           "deploy/environments.yaml"))
+
+    jobs = wf.get("jobs") or {}
+    if "resolve-env" not in jobs:
+        out.append(Finding("deploy-envs", "block",
+                           ".github/workflows/deploy.yml",
+                           "deploy.yml must declare a `resolve-env` job that "
+                           "parses deploy/environments.yaml and emits "
+                           "azd_env_name + github_environment outputs"))
+    else:
+        resolve_text = yaml.safe_dump(jobs["resolve-env"])
+        if "deploy/environments.yaml" not in resolve_text:
+            out.append(Finding("deploy-envs", "block",
+                               ".github/workflows/deploy.yml",
+                               "the resolve-env job must read "
+                               "deploy/environments.yaml"))
+        for required_output in ("azd_env_name", "github_environment"):
+            if required_output not in resolve_text:
+                out.append(Finding("deploy-envs", "block",
+                                   ".github/workflows/deploy.yml",
+                                   f"the resolve-env job must emit "
+                                   f"`{required_output}` as an output"))
+
+    azd_up = jobs.get("azd-up") if isinstance(jobs, dict) else None
+    if isinstance(azd_up, dict):
+        env_field = azd_up.get("environment")
+        expected_env = "${{ needs.resolve-env.outputs.github_environment }}"
+        if env_field != expected_env:
+            out.append(Finding("deploy-envs", "block",
+                               ".github/workflows/deploy.yml",
+                               f"`azd-up.environment` must be {expected_env!r} "
+                               f"so the job binds to the resolved GitHub "
+                               f"Environment (got {env_field!r})"))
+        steps = azd_up.get("steps") or []
+        joined_steps = yaml.safe_dump(steps)
+        if "vars.AZURE_ENV_NAME" in joined_steps:
+            out.append(Finding("deploy-envs", "block",
+                               ".github/workflows/deploy.yml",
+                               "azd-up must not read AZURE_ENV_NAME from "
+                               "`vars.AZURE_ENV_NAME`; derive it from "
+                               "`needs.resolve-env.outputs.azd_env_name` so "
+                               "the manifest stays authoritative"))
+        expected_azd_name_ref = "needs.resolve-env.outputs.azd_env_name"
+        if expected_azd_name_ref not in joined_steps:
+            out.append(Finding("deploy-envs", "block",
+                               ".github/workflows/deploy.yml",
+                               f"azd-up must set AZURE_ENV_NAME from "
+                               f"`{expected_azd_name_ref}`"))
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Workflow secrets must be documented
 # ---------------------------------------------------------------------------
 _SECRET_REF_RE = re.compile(r"\$\{\{\s*(secrets|vars)\.([A-Z0-9_]+)\s*\}\}")

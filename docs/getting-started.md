@@ -36,20 +36,39 @@ below. The accelerator lint (`scripts/accelerator-lint.py` →
 `workflow_secrets_documented`) fails the build if a workflow references a name
 that does not appear here.
 
-### Secrets (repo → Settings → Secrets and variables → Actions → Secrets)
+This template supports **multi-environment BYO-Azure deploys**: `deploy/environments.yaml`
+lists every Azure environment the pipeline can target, and each entry maps to a
+**GitHub Environment** (repo → Settings → Environments) that holds its own scoped
+OIDC credentials and region. Out of the box, the `dev` environment is registered.
+Add more via the `/deploy-to-env` chat mode — never by hand-editing `deploy.yml`.
+
+### Environment-scoped secrets (repo → Settings → Environments → `<env>` → Environment secrets)
+
+Set these on **each** GitHub Environment you register (starting with `dev`). They are
+read by `azd-up` inside `deploy.yml` after the `resolve-env` job picks which environment
+to deploy to:
 
 | Name | Purpose | Source |
 |------|---------|--------|
 | `AZURE_CLIENT_ID` | Federated-credentials client id used by `Azure/login@v2` | Entra app registration for CI |
 | `AZURE_TENANT_ID` | Entra tenant id | Entra portal → Overview |
-| `AZURE_SUBSCRIPTION_ID` | Subscription that hosts the accelerator | `az account show` |
+| `AZURE_SUBSCRIPTION_ID` | Subscription that hosts this environment's accelerator resources | `az account show` |
 
-### Variables (repo → Settings → Secrets and variables → Actions → Variables)
+### Environment-scoped variables (repo → Settings → Environments → `<env>` → Environment variables)
 
 | Name | Purpose | Example |
 |------|---------|---------|
-| `AZURE_ENV_NAME` | `azd` environment name (used in resource naming) | `dev` |
-| `AZURE_LOCATION` | Azure region | `eastus2` |
+| `AZURE_LOCATION` | Azure region for this environment | `eastus2` |
+
+Do **not** set `AZURE_ENV_NAME` anywhere. The azd environment name is derived from
+`deploy/environments.yaml` (the `name:` field of the resolved entry). Setting it as
+a variable would drift from the manifest; the `deploy_matrix_matches_azure_envs`
+lint rule rejects that shape.
+
+### Repo-level variables (repo → Settings → Secrets and variables → Actions → Variables)
+
+| Name | Purpose | Example |
+|------|---------|---------|
 | `EVALS_API_URL` | API base URL used by the PR-triggered `evals` workflow (`.github/workflows/evals.yml`). Only required if you run evals standalone against an already-deployed environment. | `https://<ca-name>.<region>.azurecontainerapps.io` |
 
 The `deploy.yml` workflow does NOT need `EVALS_API_URL` — it runs `azd up` first

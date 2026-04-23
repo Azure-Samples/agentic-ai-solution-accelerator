@@ -91,6 +91,11 @@ Do not hand-scaffold. Run `python scripts/scaffold-agent.py <agent_id> --scenari
 - Run `/discover-scenario` to fill `docs/discovery/solution-brief.md`.
 - Then `/scaffold-from-brief` to customize prompts, tools, retrieval, HITL, evals, manifest.
 
+### Deploying to a new Azure environment (partner dev / staging / customer subscription)
+- Run `/deploy-to-env`. It adds an entry to `deploy/environments.yaml` (the source of truth for BYO-Azure deploy targets), creates the matching GitHub Environment, wires the OIDC federated credential, and dispatches a first deploy.
+- Never hand-edit `deploy.yml` to add envs. The `resolve-env` job + the manifest are the contract; the `deploy_matrix_matches_azure_envs` lint rule enforces it.
+- The azd environment name is **always** derived from `deploy/environments.yaml`. Never set `vars.AZURE_ENV_NAME` — that's drift.
+
 ---
 
 ## Things that will fail code review / lint (don't do these)

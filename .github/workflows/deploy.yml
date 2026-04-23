@@ -1,19 +1,36 @@
 name: deploy
 
-# Deploy chain: lint -> azd-up -> post-deploy evals.
+# Deploy chain: accelerator-lint -> resolve-env -> azd-up -> post-deploy evals.
+#
+# BYO-Azure multi-environment:
+#   * `deploy/environments.yaml` is the source of truth for which Azure
+#     environments this template can target. The `resolve-env` job parses
+#     it, picks the correct entry based on `workflow_dispatch.inputs.env_name`
+#     (or falls back to `default_env` on push), and emits both the azd
+#     environment name and the matching GitHub Environment name. The
+#     `azd-up` job binds to the resolved GitHub Environment so it picks
+#     up scoped OIDC secrets + AZURE_LOCATION.
+#   * The azd env name is NOT read from `vars.AZURE_ENV_NAME`; it is
+#     derived from the manifest to prevent drift between the repo's
+#     declared envs and what GitHub Actions actually deploys to.
 #
 # Gating posture:
-#   * PR-time `.github/workflows/evals.yml` is the merge gate. It runs quality
-#     + redteam evals against a standing staging URL (`vars.EVALS_API_URL`)
-#     and must pass before a PR can merge into `main`.
-#   * This workflow is the post-deploy regression safety net. Evals run
-#     AFTER `azd up` so the URL is emitted by the deploy itself; this avoids
-#     the day-0 chicken-and-egg where the repo has no URL to eval against.
-#     A regression here fails the deploy job and surfaces the delta.
-# The lint rule `deploy_gated_on_lint_and_evals` statically verifies this chain.
+#   * PR-time `.github/workflows/evals.yml` is the merge gate.
+#   * This workflow is the post-deploy regression safety net; evals run
+#     AFTER `azd up` so the API URL comes from the deploy itself.
+#
+# Lint rules that statically verify this chain:
+#   * `deploy_gated_on_lint_and_evals` — job dependency chain.
+#   * `deploy_matrix_matches_azure_envs` — manifest + resolve-env wiring.
 
 on:
   workflow_dispatch:
+    inputs:
+      env_name:
+        description: Name of an environment listed in deploy/environments.yaml. Leave blank to deploy default_env.
+        required: false
+        type: string
+        default: ""
   push:
     branches: [main]
 
@@ -40,10 +57,51 @@ jobs:
       - name: Accelerator lint
         run: python scripts/accelerator-lint.py
 
-  azd-up:
-    needs: [accelerator-lint]
+  resolve-env:
     runs-on: ubuntu-latest
-    environment: dev
+    outputs:
+      azd_env_name: ${{ steps.resolve.outputs.azd_env_name }}
+      github_environment: ${{ steps.resolve.outputs.github_environment }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Resolve Azure environment from deploy/environments.yaml
+        id: resolve
+        env:
+          INPUT_ENV_NAME: ${{ inputs.env_name }}
+        run: |
+          python - <<'PY'
+          import os, sys, pathlib
+          try:
+              import yaml
+          except ImportError:
+              os.system("pip install pyyaml")
+              import yaml
+          manifest = pathlib.Path("deploy/environments.yaml")
+          data = yaml.safe_load(manifest.read_text(encoding="utf-8")) or {}
+          envs = data.get("environments") or []
+          default_env = data.get("default_env")
+          if not envs or not default_env:
+              sys.exit("deploy/environments.yaml missing `environments[]` or `default_env`.")
+          requested = (os.environ.get("INPUT_ENV_NAME") or "").strip() or default_env
+          match = next((e for e in envs if e.get("name") == requested), None)
+          if match is None:
+              names = ", ".join(sorted(e.get("name", "") for e in envs))
+              sys.exit(f"Environment '{requested}' not found in deploy/environments.yaml. Known: {names}.")
+          gh_env = match.get("github_environment") or match["name"]
+          out = os.environ["GITHUB_OUTPUT"]
+          with open(out, "a", encoding="utf-8") as fh:
+              fh.write(f"azd_env_name={match['name']}\n")
+              fh.write(f"github_environment={gh_env}\n")
+          print(f"Resolved azd_env_name={match['name']} github_environment={gh_env}")
+          PY
+
+  azd-up:
+    needs: [accelerator-lint, resolve-env]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.resolve-env.outputs.github_environment }}
     outputs:
       api_url: ${{ steps.deploy.outputs.api_url }}
     steps:
@@ -58,7 +116,7 @@ jobs:
       - name: Provision + deploy
         id: deploy
         env:
-          AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
+          AZURE_ENV_NAME: ${{ needs.resolve-env.outputs.azd_env_name }}
           AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
           AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
