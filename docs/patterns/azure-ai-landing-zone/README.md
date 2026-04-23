@@ -71,12 +71,15 @@ enterprise.
 
 **What it is.** Same topology as Tier 1 (no hub), but the Bicep is
 migrated to **Azure Verified Modules** (`br/public:avm/res/<...>`)
-wherever AVM is GA, and private endpoints + private DNS zones are
-added inline. The accelerator ships **reference exemplars** in
-`infra/avm-reference/` — study-only Bicep snippets that partners copy
-into `infra/modules/` during vibecoding. Lint rule
-`landing_zone_mode_consistent` asserts at least one AVM module
-reference exists when `mode: avm`.
+wherever AVM is GA. The accelerator ships **drop-in exemplars** in
+`infra/avm-reference/` — each matches the hand-rolled module's param
+signature + outputs so the partner can `cp` into `infra/modules/`
+without editing `main.bicep`. Private endpoints, private-DNS zone
+bindings, and hub-LAW diagnostics are **not** wired inline — that is
+Tier 3 (alz-overlay) work. Lint rule `landing_zone_mode_consistent`
+asserts each declared `avm_services` entry has an actual
+`module ... 'br/public:avm/...'` declaration in the corresponding
+module file.
 
 **When to use.** Mid-market customer with a platform team who wants
 CAF-shaped guardrails, private networking, and AVM maintenance cadence

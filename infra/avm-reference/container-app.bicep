@@ -56,6 +56,12 @@ module managedEnv 'br/public:avm/res/app/managed-environment:0.13.0' = {
     // thread an `infrastructureSubnetResourceId` through main.bicep
     // when adopting.
     internal: !externalIngress
+    // AVM `app/managed-environment:0.13.0` defaults
+    // `publicNetworkAccess` to **Disabled**. Without an explicit flip
+    // here, `externalIngress: true` would silently produce an
+    // unreachable environment. Bind the env's public-access flag to
+    // the same knob the app ingress uses.
+    publicNetworkAccess: externalIngress ? 'Enabled' : 'Disabled'
     workloadProfiles: [
       {
         name: 'Consumption'
@@ -81,8 +87,10 @@ module app 'br/public:avm/res/app/container-app:0.22.0' = {
     // Ingress config — app-level controls matter even when the env is
     // internal. `ingressExternal: false` + `env.internal: true` together
     // yield a fully-internal Container App. External env + external app
-    // is the Tier 1/2 default; external env + internal app supports
-    // "behind App Gateway" shapes.
+    // is the Tier 1/2 default. Fronting Container Apps with App Gateway
+    // requires an **internal** env with infrastructure-subnet vNet
+    // integration (see Azure Container Apps networking docs) — that is
+    // Tier 3 territory, not Tier 2.
     activeRevisionsMode: 'Single'
     ingressExternal: externalIngress
     ingressTargetPort: 8000

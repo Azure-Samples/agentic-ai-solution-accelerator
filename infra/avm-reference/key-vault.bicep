@@ -1,39 +1,39 @@
 // ============================================================================
 // STUDY-ONLY AVM exemplar — Key Vault (Tier 2 `landing_zone.mode: avm`).
 //
-// This file is NOT wired into infra/main.bicep. It shows the canonical
-// Azure Verified Modules shape the partner drops into `infra/modules/`
-// when replacing the hand-rolled `infra/modules/key-vault.bicep`.
+// This file is NOT wired into infra/main.bicep. It is a **drop-in
+// replacement** for infra/modules/key-vault.bicep — same param
+// signature, same outputs — so a partner can
+// `cp infra/avm-reference/key-vault.bicep infra/modules/key-vault.bicep`
+// during vibecoding without touching main.bicep.
 //
-// AVM docs: https://azure.github.io/Azure-Verified-Modules/indexes/bicep/bicep-resource-modules/
-// Module:   br/public:avm/res/key-vault/vault
+// AVM module: br/public:avm/res/key-vault/vault:0.9.0
 //
-// Compare against ../modules/key-vault.bicep to see what the partner is
-// trading:
-//   - AVM handles RBAC role assignments via `roleAssignments:` array
-//     (no hand-rolled role-assignment resource).
-//   - AVM handles private endpoints via `privateEndpoints:` array
-//     (hand-rolled module has none today).
-//   - AVM handles diagnostic settings via `diagnosticSettings:` array.
-//   - AVM's default parameters already set soft-delete, purge
-//     protection, RBAC-only — matching WAF/CAF baseline without
-//     explicit flags.
+// What you trade by adopting the AVM shape:
+//   - RBAC role assignments move to the AVM `roleAssignments:` array
+//     (no separate Microsoft.Authorization/roleAssignments resource).
+//   - AVM defaults already set soft-delete, purge protection, RBAC-only
+//     — matching WAF/CAF baseline without explicit flags.
+//
+// What "drop-in" does NOT mean (per infra/avm-reference/README.md):
+//   - Private endpoints + private-DNS zone binding — AVM exposes a
+//     `privateEndpoints:` array, but wiring subnet + zone IDs through
+//     main.bicep is Tier 3 (alz-overlay) work, not Tier 2.
+//   - Diagnostic settings to a hub-central Log Analytics workspace —
+//     also Tier 3. The hand-rolled module does not emit diagnostics
+//     today; the exemplar matches that for drop-in parity.
 // ============================================================================
 
 targetScope = 'resourceGroup'
 
+// --- drop-in signature (matches infra/modules/key-vault.bicep) ---------------
 param name string
 param location string
 param tags object
 param rbacPrincipalId string
 
-// Tier 2 adds private networking. Tier 1 callers pass empty arrays.
-param privateEndpointSubnetId string = ''
-param privateDnsZoneId string = ''
-
-// Diagnostics land in the workload's own Log Analytics workspace in
-// Tier 2; Tier 3 overrides this to the hub's central workspace.
-param logAnalyticsWorkspaceId string
+@description('When true, flips publicNetworkAccess to Disabled. NOTE: disabled does NOT by itself mean the vault is reachable — private endpoints + DNS wiring are required for Tier 3 (alz-integrated). See docs/patterns/azure-ai-landing-zone/README.md.')
+param enablePrivateLink bool = false
 
 module kv 'br/public:avm/res/key-vault/vault:0.9.0' = {
   name: 'kv-${name}'
@@ -45,10 +45,9 @@ module kv 'br/public:avm/res/key-vault/vault:0.9.0' = {
     enableSoftDelete: true
     enableRbacAuthorization: true
 
-    // Tier 2: lock public access. Entra auth + PE is the only path.
-    publicNetworkAccess: empty(privateEndpointSubnetId) ? 'Enabled' : 'Disabled'
+    publicNetworkAccess: enablePrivateLink ? 'Disabled' : 'Enabled'
     networkAcls: {
-      defaultAction: empty(privateEndpointSubnetId) ? 'Allow' : 'Deny'
+      defaultAction: enablePrivateLink ? 'Deny' : 'Allow'
       bypass: 'AzureServices'
     }
 
@@ -61,33 +60,9 @@ module kv 'br/public:avm/res/key-vault/vault:0.9.0' = {
         roleDefinitionIdOrName: '4633458b-17de-408a-b874-0445c86b69e6'
       }
     ]
-
-    // Private Endpoint binding — empty in Tier 1 fallback.
-    privateEndpoints: empty(privateEndpointSubnetId) ? [] : [
-      {
-        subnetResourceId: privateEndpointSubnetId
-        privateDnsZoneGroup: empty(privateDnsZoneId) ? null : {
-          privateDnsZoneGroupConfigs: [
-            {
-              privateDnsZoneResourceId: privateDnsZoneId
-            }
-          ]
-        }
-      }
-    ]
-
-    // Diagnostics — every AI ALZ deployment requires this.
-    diagnosticSettings: [
-      {
-        workspaceResourceId: logAnalyticsWorkspaceId
-        logCategoriesAndGroups: [
-          { categoryGroup: 'audit' }
-          { categoryGroup: 'allLogs' }
-        ]
-      }
-    ]
   }
 }
 
+// Signature parity with ../modules/key-vault.bicep.
 output id string = kv.outputs.resourceId
 output uri string = kv.outputs.uri

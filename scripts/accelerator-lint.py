@@ -1765,11 +1765,19 @@ def landing_zone_mode_consistent(ctx: Ctx) -> list[Finding]:
                 # Assert an AVM reference exists in an actual `module`
                 # declaration in the corresponding module file — not just
                 # anywhere (comment, dead code, unrelated AVM helper).
-                # Pattern matches: module <name> 'br/public:avm/...' = {
+                # Step 1: find any `module <name> 'br/public:avm/...' = ...`
+                # declaration line.
+                # Step 2: reject dead-code `= if (false)` decls — they
+                # never deploy and satisfy the rule only vacuously.
+                # Non-literal conditionals (`= if (deployFoo)`) are
+                # accepted: they are legitimate AVM module invocations.
                 filenames = _AVM_SERVICE_MODULES[svc]
                 module_re = re.compile(
-                    r"^\s*module\s+\w+\s+['\"]br/public:avm/",
+                    r"^\s*module\s+\w+\s+['\"]br/public:avm/[^'\"]+['\"]\s*=[^\n]*$",
                     re.MULTILINE,
+                )
+                dead_code_re = re.compile(
+                    r"=\s*if\s*\(\s*false\s*\)"
                 )
                 found = False
                 for fname in filenames:
@@ -1777,8 +1785,12 @@ def landing_zone_mode_consistent(ctx: Ctx) -> list[Finding]:
                     if not bicep.exists():
                         continue
                     try:
-                        if module_re.search(bicep.read_text(encoding="utf-8")):
-                            found = True
+                        text = bicep.read_text(encoding="utf-8")
+                        for m in module_re.finditer(text):
+                            if not dead_code_re.search(m.group(0)):
+                                found = True
+                                break
+                        if found:
                             break
                     except Exception:
                         continue
