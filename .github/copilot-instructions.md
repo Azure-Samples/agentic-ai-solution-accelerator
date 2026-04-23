@@ -100,6 +100,11 @@ Do not hand-scaffold. Run `python scripts/scaffold-agent.py <agent_id> --scenari
 - Run `/explain-change` (or `python scripts/explain-change.py`). It maps the current diff to the specific `accelerator-lint.py` rules, eval runners, and deploy-pipeline steps the change will trigger, plus a tailored recommended pre-commit command list.
 - The preflight is read-only; CI gates (`accelerator-lint`, `evals`) remain authoritative. Run them locally before pushing.
 
+### Assigning a different model to an agent
+- Edit `accelerator.yaml`. Add a `models:` entry with a unique `slug` + `deployment_name` + `model`/`version`/`capacity` (Bicep provisions it on the next `azd up`), then set `scenario.agents[].model: <slug>` on the agent you want re-pointed.
+- The reserved slug `default` is always the default deployment; omitting `model:` on an agent falls through to it.
+- Pre-provision hook `scripts/sync-models-from-manifest.py` syncs the block to azd env vars; `scripts/foundry-bootstrap.py` resolves each agent's slug → deployment name at post-provision. Lint rules `models_block_shape` + `agent_model_refs_exist` block malformed manifests at PR time.
+
 ---
 
 ## Things that will fail code review / lint (don't do these)

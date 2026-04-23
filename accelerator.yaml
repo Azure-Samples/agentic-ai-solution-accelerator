@@ -14,6 +14,33 @@ schema_version: "1.0"
 accelerator_version: "1.0.0"   # pins to the template version partner cloned
 
 # -----------------------------------------------------------------------------
+# models:  MODEL DEPLOYMENTS — authoritative source of truth for what Bicep
+# provisions inside the Foundry account. Read by
+# `scripts/sync-models-from-manifest.py` at preprovision time; flows into
+# `infra/main.parameters.json` → `infra/modules/foundry.bicep`.
+#
+# Shape per entry:
+#   - slug:            logical name referenced by `scenario.agents[].model`
+#                      (slug `default` is reserved and MUST mark the default)
+#   - deployment_name: actual Foundry deployment resource name
+#   - model:           OpenAI model name (e.g. gpt-4o-mini, gpt-4o)
+#   - version:         model version string
+#   - capacity:        TPM in thousands (GlobalStandard SKU)
+#   - default:         exactly one entry MUST set `default: true`
+#
+# Omitting this whole block is supported for back-compat: Bicep then
+# provisions only the single default deployment configured via env vars
+# (AZURE_AI_FOUNDRY_MODEL_NAME/VERSION/MODEL/CAPACITY).
+# -----------------------------------------------------------------------------
+models:
+  - slug: default
+    deployment_name: gpt-4o-mini
+    model: gpt-4o-mini
+    version: "2024-07-18"
+    capacity: 30
+    default: true
+
+# -----------------------------------------------------------------------------
 # scenario:  HOW the accelerator plugs a concrete workflow into the framework.
 # The partner changes this (or runs `scripts/scaffold-scenario.py`) to swap
 # scenarios. Every field is resolved at process startup by

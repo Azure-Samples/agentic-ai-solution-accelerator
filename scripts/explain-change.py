@@ -96,9 +96,10 @@ CATEGORIES: list[Category] = [
         id="scenario-manifest",
         title="accelerator.yaml (scenario manifest)",
         impact=[
-            "lint: manifest_present, scenario_manifest_valid, agent_has_golden_case, acceptance_wired_to_evals, agent_specs_no_hardcoded_model",
+            "lint: manifest_present, scenario_manifest_valid, agent_has_golden_case, acceptance_wired_to_evals, agent_specs_no_hardcoded_model, models_block_shape, agent_model_refs_exist",
             "evals: acceptance thresholds come from accelerator.yaml -> acceptance; changes here move the quality gate",
             "runtime: src/main.py reads this file at startup to mount /<scenario.endpoint.path>; path changes are breaking",
+            "models: changes to the `models:` block drive scripts/sync-models-from-manifest.py on the next `azd up` preprovision and re-shape foundry.bicep deployments (slug->deployment_name map). Removing the block back-compats to single-deployment via env vars.",
         ],
         patterns=[
             "accelerator.yaml",
@@ -221,6 +222,18 @@ CATEGORIES: list[Category] = [
         patterns=[
             "scripts/scaffold-agent.py",
             "scripts/scaffold-scenario.py",
+        ],
+    ),
+    Category(
+        id="azure-yaml",
+        title="azd project manifest (azure.yaml)",
+        impact=[
+            "runtime: azd reads this to resolve service projects, infra module, and pre/postprovision hooks. A shape change here affects every `azd up` and `azd deploy`.",
+            "hooks: pre/postprovision shell scripts run against the azd env; add hooks here rather than wrapping azd in CI scripts.",
+            "partners: if you changed hooks, verify scripts/ entries are executable and lint-clean before pushing.",
+        ],
+        patterns=[
+            "azure.yaml",
         ],
     ),
     Category(

@@ -1436,6 +1436,175 @@ def agent_specs_no_hardcoded_model(ctx: Ctx) -> list[Finding]:
     return out
 
 
+@check
+def models_block_shape(ctx: Ctx) -> list[Finding]:
+    """Validate ``accelerator.yaml`` ``models:`` block (G10).
+
+    Shape contract (all BLOCKING):
+      - every entry is a mapping with fields slug / deployment_name / model
+        / version / capacity
+      - slugs are unique
+      - deployment_names are unique (Foundry rejects duplicates anyway, but
+        failing here gives a better error)
+      - exactly one entry has ``default: true`` AND uses ``slug: default``
+      - no non-default entry uses ``slug: default`` (slug ``default`` is reserved)
+
+    Absent block is OK (back-compat with pre-G10 partners).
+    """
+    manifest_path = ROOT / "accelerator.yaml"
+    if not manifest_path.exists():
+        return []
+    try:
+        import yaml
+    except ImportError:
+        return []
+    try:
+        data = yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return []
+    models = data.get("models")
+    if models is None:
+        return []
+    out: list[Finding] = []
+    if not isinstance(models, list):
+        out.append(Finding(
+            "models-block-shape", "block", "accelerator.yaml",
+            "`models:` must be a list of deployment entries",
+        ))
+        return out
+
+    required = ("slug", "deployment_name", "model", "version", "capacity")
+    slugs: list[str] = []
+    dep_names: list[str] = []
+    default_slugs: list[str] = []
+    for i, m in enumerate(models):
+        if not isinstance(m, dict):
+            out.append(Finding(
+                "models-block-shape", "block", "accelerator.yaml",
+                f"`models[{i}]` must be a mapping",
+            ))
+            continue
+        missing = [f for f in required if f not in m]
+        if missing:
+            out.append(Finding(
+                "models-block-shape", "block", "accelerator.yaml",
+                f"`models[{i}]` (slug={m.get('slug','?')}) missing required "
+                f"field(s) {missing}",
+            ))
+        slug = m.get("slug")
+        dep = m.get("deployment_name")
+        if isinstance(slug, str):
+            slugs.append(slug)
+        if isinstance(dep, str):
+            dep_names.append(dep)
+        if m.get("default"):
+            default_slugs.append(str(slug))
+        elif slug == "default":
+            out.append(Finding(
+                "models-block-shape", "block", "accelerator.yaml",
+                f"`models[{i}]` uses reserved slug 'default' but is not the "
+                "default entry (missing `default: true`)",
+            ))
+
+    for bucket, label in ((slugs, "slug"), (dep_names, "deployment_name")):
+        seen: set[str] = set()
+        dups = sorted({x for x in bucket if (x in seen) or seen.add(x)})
+        if dups:
+            out.append(Finding(
+                "models-block-shape", "block", "accelerator.yaml",
+                f"`models[].{label}` values must be unique; duplicates: {dups}",
+            ))
+
+    if len(default_slugs) != 1:
+        out.append(Finding(
+            "models-block-shape", "block", "accelerator.yaml",
+            f"`models:` needs exactly one entry with `default: true` "
+            f"(found {len(default_slugs)})",
+        ))
+    elif default_slugs and default_slugs[0] != "default":
+        out.append(Finding(
+            "models-block-shape", "block", "accelerator.yaml",
+            f"the default `models:` entry must use `slug: default` "
+            f"(reserved); got slug={default_slugs[0]!r}",
+        ))
+    return out
+
+
+@check
+def agent_model_refs_exist(ctx: Ctx) -> list[Finding]:
+    """Every ``scenario.agents[].model`` must name a declared ``models[].slug``.
+
+    Agents without a ``model:`` field fall through to the reserved slug
+    ``default`` — which is only valid when a ``models:`` block exists
+    with a ``default: true`` entry, OR when the block is omitted entirely
+    (back-compat: Bicep still provisions the single default deployment
+    from env vars).
+    """
+    manifest_path = ROOT / "accelerator.yaml"
+    if not manifest_path.exists():
+        return []
+    try:
+        import yaml
+    except ImportError:
+        return []
+    try:
+        data = yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return []
+
+    models = data.get("models")
+    agents = (data.get("scenario") or {}).get("agents") or []
+    if not isinstance(agents, list):
+        return []
+
+    declared_slugs: set[str] = set()
+    has_default = False
+    if isinstance(models, list):
+        for m in models:
+            if isinstance(m, dict) and isinstance(m.get("slug"), str):
+                declared_slugs.add(m["slug"])
+            if isinstance(m, dict) and m.get("default"):
+                has_default = True
+
+    out: list[Finding] = []
+    for i, a in enumerate(agents):
+        if not isinstance(a, dict):
+            continue
+        slug = a.get("model")
+        if slug is None:
+            # Implicit 'default'. OK if models block absent (back-compat)
+            # OR a default entry exists.
+            if models is not None and not has_default:
+                out.append(Finding(
+                    "agent-model-refs-exist", "block", "accelerator.yaml",
+                    f"scenario.agents[{i}] has no `model:` field so it falls "
+                    "through to slug 'default', but `models:` does not declare "
+                    "a `default: true` entry.",
+                ))
+            continue
+        if not isinstance(slug, str) or not slug.strip():
+            out.append(Finding(
+                "agent-model-refs-exist", "block", "accelerator.yaml",
+                f"scenario.agents[{i}].model must be a non-empty string slug",
+            ))
+            continue
+        if models is None:
+            out.append(Finding(
+                "agent-model-refs-exist", "block", "accelerator.yaml",
+                f"scenario.agents[{i}].model={slug!r} but no `models:` block "
+                "is declared in accelerator.yaml. Add one with this slug, or "
+                "remove the `model:` field to use the env-managed default.",
+            ))
+            continue
+        if slug not in declared_slugs:
+            out.append(Finding(
+                "agent-model-refs-exist", "block", "accelerator.yaml",
+                f"scenario.agents[{i}].model={slug!r} does not match any "
+                f"declared `models[].slug`. Declared: {sorted(declared_slugs)}",
+            ))
+    return out
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------

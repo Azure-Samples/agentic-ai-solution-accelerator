@@ -18,6 +18,19 @@ infra:
   path: infra
   module: main
 hooks:
+  preprovision:
+    posix:
+      shell: sh
+      run: |
+        set -e
+        echo "[preprovision] syncing accelerator.yaml models block -> azd env..."
+        python scripts/sync-models-from-manifest.py
+    windows:
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+        Write-Host "[preprovision] syncing accelerator.yaml models block -> azd env..."
+        python scripts/sync-models-from-manifest.py
   postprovision:
     posix:
       shell: sh

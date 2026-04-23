@@ -66,23 +66,55 @@ _MODEL_RE = re.compile(r"^\*\*Model:\*\*\s*(\S+)", re.MULTILINE)
 _INSTRUCTIONS_RE = re.compile(r"## Instructions\s*\n(.*)", re.DOTALL)
 
 
-def _load_agent_names_from_manifest() -> list[str]:
-    """Return the list of Foundry agent names declared by the scenario."""
+def _load_agents_from_manifest() -> list[dict]:
+    """Return the list of agents (name + optional model slug) from the manifest."""
     from src.workflow.registry import read_scenario_raw
 
     scenario = read_scenario_raw(ROOT / "accelerator.yaml")
     agents = scenario.get("agents") or []
-    names: list[str] = []
+    out: list[dict] = []
     for i, a in enumerate(agents):
-        name = (a or {}).get("foundry_name")
+        if not isinstance(a, dict):
+            raise ValueError(
+                f"accelerator.yaml: scenario.agents[{i}] must be a mapping"
+            )
+        name = a.get("foundry_name")
         if not name:
             raise ValueError(
                 f"accelerator.yaml: scenario.agents[{i}] missing 'foundry_name'"
             )
-        names.append(name)
-    if not names:
+        out.append({"foundry_name": name, "model_slug": a.get("model") or "default"})
+    if not out:
         raise ValueError("accelerator.yaml: scenario.agents is empty")
-    return names
+    return out
+
+
+def _load_model_map() -> dict[str, str]:
+    """Resolve slug -> deployment_name from env (emitted by Bicep output).
+
+    Falls back to ``{"default": AZURE_AI_FOUNDRY_MODEL}`` when the map
+    env var is absent (i.e. partners on the pre-G10 flow with no
+    `models:` block in their manifest).
+    """
+    import json as _json
+
+    default_dep = os.environ.get("AZURE_AI_FOUNDRY_MODEL", "")
+    raw = os.environ.get("AZURE_AI_FOUNDRY_MODEL_MAP", "").strip()
+    if not raw:
+        return {"default": default_dep} if default_dep else {}
+    try:
+        mapping = _json.loads(raw)
+    except ValueError as exc:
+        raise ValueError(
+            f"AZURE_AI_FOUNDRY_MODEL_MAP is not valid JSON: {exc}. "
+            "It should be the Bicep `AZURE_AI_FOUNDRY_MODEL_MAP` output."
+        ) from exc
+    if not isinstance(mapping, dict):
+        raise ValueError(
+            "AZURE_AI_FOUNDRY_MODEL_MAP must be a JSON object "
+            "(slug -> deployment_name)"
+        )
+    return {str(k): str(v) for k, v in mapping.items()}
 
 
 def _parse_spec(path: pathlib.Path) -> str:
@@ -105,20 +137,23 @@ def _parse_spec(path: pathlib.Path) -> str:
     return instr_match.group(1).strip()
 
 
-def _preflight(credential: DefaultAzureCredential) -> list[str]:
-    """Management-plane checks. Returns list of error strings (empty == ok)."""
+def _preflight(credential: DefaultAzureCredential,
+               deployment_names: list[str]) -> list[str]:
+    """Management-plane checks for every deployment in the model map.
+
+    Returns a list of error strings (empty == ok).
+    """
     errors: list[str] = []
     subscription_id = os.environ.get("AZURE_SUBSCRIPTION_ID")
     resource_group = os.environ.get("AZURE_RESOURCE_GROUP")
     account_name = os.environ.get("AZURE_AI_FOUNDRY_ACCOUNT_NAME")
-    deployment_name = os.environ.get("AZURE_AI_FOUNDRY_MODEL")
 
-    if not (subscription_id and resource_group and account_name and deployment_name):
+    if not (subscription_id and resource_group and account_name and deployment_names):
         errors.append(
             "pre-flight requires AZURE_SUBSCRIPTION_ID, AZURE_RESOURCE_GROUP, "
-            "AZURE_AI_FOUNDRY_ACCOUNT_NAME, and AZURE_AI_FOUNDRY_MODEL "
-            "(all emitted by Bicep). Run inside an `azd` env or pass "
-            "--skip-preflight to bypass."
+            "AZURE_AI_FOUNDRY_ACCOUNT_NAME, and at least one resolved model "
+            "deployment (from AZURE_AI_FOUNDRY_MODEL_MAP or AZURE_AI_FOUNDRY_MODEL). "
+            "Run inside an `azd` env or pass --skip-preflight to bypass."
         )
         return errors
 
@@ -131,31 +166,34 @@ def _preflight(credential: DefaultAzureCredential) -> list[str]:
 
     mgmt = CognitiveServicesManagementClient(credential, subscription_id)
 
-    try:
-        deployment = mgmt.deployments.get(resource_group, account_name, deployment_name)
-    except Exception as exc:
-        errors.append(
-            f"model deployment '{deployment_name}' not found on account "
-            f"'{account_name}' in '{resource_group}': {exc}. "
-            "Re-run `azd up` or fix model capacity quota."
-        )
-        return errors
+    for deployment_name in deployment_names:
+        try:
+            deployment = mgmt.deployments.get(
+                resource_group, account_name, deployment_name
+            )
+        except Exception as exc:
+            errors.append(
+                f"model deployment '{deployment_name}' not found on account "
+                f"'{account_name}' in '{resource_group}': {exc}. "
+                "Re-run `azd up` or fix model capacity quota."
+            )
+            continue
 
-    rai_policy = getattr(deployment.properties, "rai_policy_name", None)
-    if not rai_policy:
-        errors.append(
-            f"model deployment '{deployment_name}' has no RAI (content filter) "
-            "policy bound. Re-run `azd up` so Bicep reapplies the default "
-            "accelerator content filter policy."
-        )
-        return errors
+        rai_policy = getattr(deployment.properties, "rai_policy_name", None)
+        if not rai_policy:
+            errors.append(
+                f"model deployment '{deployment_name}' has no RAI (content filter) "
+                "policy bound. Re-run `azd up` so Bicep reapplies the default "
+                "accelerator content filter policy."
+            )
+            continue
 
-    print(
-        f"preflight ok: model={deployment_name} "
-        f"sku={getattr(deployment.sku, 'name', '?')} "
-        f"capacity={getattr(deployment.sku, 'capacity', '?')} "
-        f"rai_policy={rai_policy}"
-    )
+        print(
+            f"preflight ok: model={deployment_name} "
+            f"sku={getattr(deployment.sku, 'name', '?')} "
+            f"capacity={getattr(deployment.sku, 'capacity', '?')} "
+            f"rai_policy={rai_policy}"
+        )
     return errors
 
 
@@ -172,24 +210,52 @@ def main() -> int:
         print("::error::AZURE_AI_FOUNDRY_ENDPOINT is not set", file=sys.stderr)
         return 1
 
-    default_model = os.environ.get("AZURE_AI_FOUNDRY_MODEL")
-    if not default_model:
-        print("::error::AZURE_AI_FOUNDRY_MODEL is not set; it is emitted by "
-              "Bicep and is the authoritative model deployment for all agents",
-              file=sys.stderr)
+    try:
+        model_map = _load_model_map()
+    except ValueError as exc:
+        print(f"::error::{exc}", file=sys.stderr)
+        return 1
+
+    if "default" not in model_map or not model_map["default"]:
+        print(
+            "::error::no default model deployment resolved. Set "
+            "AZURE_AI_FOUNDRY_MODEL (from Bicep) or add a `models:` block with "
+            "a `default: true` entry to accelerator.yaml",
+            file=sys.stderr,
+        )
         return 1
 
     try:
-        agent_names = _load_agent_names_from_manifest()
+        agents_manifest = _load_agents_from_manifest()
     except Exception as exc:
         print(f"::error::failed to load agents from accelerator.yaml: {exc}",
               file=sys.stderr)
         return 1
 
+    # Validate every referenced slug resolves BEFORE hitting the control plane.
+    unresolved = [
+        a["foundry_name"] for a in agents_manifest
+        if a["model_slug"] not in model_map
+    ]
+    if unresolved:
+        slugs = sorted({
+            a["model_slug"] for a in agents_manifest
+            if a["model_slug"] not in model_map
+        })
+        print(
+            f"::error::{len(unresolved)} agent(s) reference undeclared model "
+            f"slug(s) {slugs}: {unresolved}. Declare the slug in "
+            "accelerator.yaml `models:` or remove the `model:` field to use "
+            "the default.",
+            file=sys.stderr,
+        )
+        return 1
+
     credential = DefaultAzureCredential()
 
     if not args.skip_preflight:
-        errors = _preflight(credential)
+        deployments_to_check = sorted(set(model_map.values()))
+        errors = _preflight(credential, deployments_to_check)
         if errors:
             for err in errors:
                 print(f"::error::{err}", file=sys.stderr)
@@ -206,7 +272,10 @@ def main() -> int:
         return 1
 
     failures: list[str] = []
-    for name in agent_names:
+    for entry in agents_manifest:
+        name = entry["foundry_name"]
+        slug = entry["model_slug"]
+        deployment_name = model_map[slug]
         spec_path = SPECS_DIR / f"{name}.md"
         if not spec_path.exists():
             failures.append(f"{name}: missing spec file {spec_path}")
@@ -221,7 +290,7 @@ def main() -> int:
             if name not in existing_by_name:
                 failures.append(f"{name}: missing in Foundry project")
             else:
-                print(f"verify ok: {name}")
+                print(f"verify ok: {name} (slug={slug}, model={deployment_name})")
             continue
 
         try:
@@ -229,17 +298,17 @@ def main() -> int:
                 agent = existing_by_name[name]
                 client.agents.update_agent(
                     agent_id=agent.id,
-                    model=default_model,
+                    model=deployment_name,
                     instructions=instructions,
                 )
-                print(f"updated: {name} (model={default_model})")
+                print(f"updated: {name} (slug={slug}, model={deployment_name})")
             else:
                 client.agents.create_agent(
                     name=name,
-                    model=default_model,
+                    model=deployment_name,
                     instructions=instructions,
                 )
-                print(f"created: {name} (model={default_model})")
+                print(f"created: {name} (slug={slug}, model={deployment_name})")
         except Exception as exc:
             failures.append(f"{name}: {exc}")
 
@@ -248,7 +317,7 @@ def main() -> int:
             print(f"::error::{f}", file=sys.stderr)
         return 1
 
-    print(f"bootstrap ok: {len(agent_names)} agents verified in {endpoint}")
+    print(f"bootstrap ok: {len(agents_manifest)} agents verified in {endpoint}")
     return 0
 
 

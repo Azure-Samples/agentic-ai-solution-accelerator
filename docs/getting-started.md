@@ -142,6 +142,60 @@ Failures to reach the approver are treated as rejections (fail-closed).
    data, and eval golden cases to the brief.
 5. `python scripts/accelerator-lint.py` locally before PR; CI re-runs it.
 
+## Customizing models per agent
+
+The accelerator provisions a **single default model deployment** out of the box
+(`gpt-4o-mini`). To give individual agents a different model — e.g. put the
+supervisor on `gpt-4o` while workers stay on `gpt-4o-mini` for speed and cost —
+add a `models:` block to `accelerator.yaml`:
+
+```yaml
+models:
+  - slug: default                 # reserved slug; must be the default entry
+    deployment_name: gpt-4o-mini
+    model: gpt-4o-mini
+    version: "2024-07-18"
+    capacity: 30
+    default: true
+  - slug: planner                 # arbitrary slug; agents reference by slug
+    deployment_name: gpt-4o-planner
+    model: gpt-4o
+    version: "2024-11-20"
+    capacity: 10
+
+scenario:
+  agents:
+    - { id: supervisor, foundry_name: accel-sales-research-supervisor, model: planner }
+    - { id: account_planner, foundry_name: accel-account-planner }   # no `model:` → default
+    # ...
+```
+
+How it flows:
+
+1. **preprovision hook** (`scripts/sync-models-from-manifest.py`) reads the
+   `models:` block and writes azd env vars: the default entry drives the
+   existing `AZURE_AI_FOUNDRY_MODEL_NAME/VERSION/MODEL/CAPACITY` params, and
+   non-default entries are packed into `AZURE_AI_FOUNDRY_EXTRA_DEPLOYMENTS_JSON`.
+2. **Bicep** (`infra/modules/foundry.bicep`) provisions the default deployment
+   as before, then loops over the JSON array to create each extra deployment
+   bound to the same shared RAI (content filter) policy. Output
+   `AZURE_AI_FOUNDRY_MODEL_MAP` is a `slug -> deployment_name` object.
+3. **postprovision** (`scripts/foundry-bootstrap.py`) resolves each Foundry
+   agent's `scenario.agents[].model` slug via the map (or `default` when
+   omitted) and creates/updates the agent with that deployment name.
+
+Lint enforcement (both BLOCKING):
+
+- `models_block_shape` — every entry has slug/deployment_name/model/version/capacity;
+  slugs and deployment names are unique; exactly one entry has `default: true`
+  and uses `slug: default` (reserved).
+- `agent_model_refs_exist` — every `scenario.agents[].model` references a declared
+  slug; omitting the field falls through to slug `default`.
+
+Omitting the whole `models:` block is supported (back-compat): Bicep then
+provisions only the single default deployment from env vars, matching the
+pre-G10 behaviour bit-for-bit.
+
 ## CI chain
 
 `.github/workflows/deploy.yml` runs three jobs, chained so the first deploy

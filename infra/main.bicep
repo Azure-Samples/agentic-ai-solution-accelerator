@@ -37,6 +37,9 @@ param modelDeploymentName string = 'gpt-4o-mini'
 @description('Foundry model deployment capacity (TPM in thousands for GlobalStandard).')
 param modelCapacity int = 30
 
+@description('Extra model deployments (JSON string array); piped straight into foundry.bicep. Empty "[]" means only the single default deployment. Written by scripts/sync-models-from-manifest.py from accelerator.yaml.')
+param extraModelDeploymentsJson string = '[]'
+
 @description('Scenario id from accelerator.yaml.scenario.id. Flows into the `workload` resource tag so fleet reporting can attribute cost/usage per engagement without Bicep churn when partners swap scenarios.')
 param scenarioId string = 'sales-research'
 
@@ -96,6 +99,7 @@ module foundry 'modules/foundry.bicep' = {
     modelVersion: modelVersion
     modelDeploymentName: modelDeploymentName
     modelCapacity: modelCapacity
+    extraModelDeploymentsJson: extraModelDeploymentsJson
     enablePrivateLink: enablePrivateLink
   }
 }
@@ -119,6 +123,7 @@ output AZURE_AI_FOUNDRY_ACCOUNT_ENDPOINT string = foundry.outputs.accountEndpoin
 output AZURE_AI_FOUNDRY_ACCOUNT_NAME string = foundry.outputs.accountName
 output AZURE_AI_FOUNDRY_PROJECT_NAME string = foundry.outputs.projectName
 output AZURE_AI_FOUNDRY_MODEL string = foundry.outputs.modelDeploymentName
+output AZURE_AI_FOUNDRY_MODEL_MAP object = foundry.outputs.modelMap
 output AZURE_AI_FOUNDRY_RAI_POLICY string = foundry.outputs.raiPolicyName
 output AZURE_AI_SEARCH_ENDPOINT string = search.outputs.endpoint
 output APPLICATIONINSIGHTS_CONNECTION_STRING string = monitor.outputs.appInsightsConnectionString
