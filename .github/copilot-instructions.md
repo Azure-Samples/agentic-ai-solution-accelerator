@@ -96,6 +96,10 @@ Do not hand-scaffold. Run `python scripts/scaffold-agent.py <agent_id> --scenari
 - Never hand-edit `deploy.yml` to add envs. The `resolve-env` job + the manifest are the contract; the `deploy_matrix_matches_azure_envs` lint rule enforces it.
 - The azd environment name is **always** derived from `deploy/environments.yaml`. Never set `vars.AZURE_ENV_NAME` — that's drift.
 
+### Preflighting a change before commit / PR
+- Run `/explain-change` (or `python scripts/explain-change.py`). It maps the current diff to the specific `accelerator-lint.py` rules, eval runners, and deploy-pipeline steps the change will trigger, plus a tailored recommended pre-commit command list.
+- The preflight is read-only; CI gates (`accelerator-lint`, `evals`) remain authoritative. Run them locally before pushing.
+
 ---
 
 ## Things that will fail code review / lint (don't do these)

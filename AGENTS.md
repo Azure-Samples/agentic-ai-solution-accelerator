@@ -70,6 +70,7 @@ Add a new agent by running `python scripts/scaffold-agent.py <agent_id> --scenar
 - **New tool** → `/add-tool` chat mode → creates `src/tools/<tool>.py` with HITL scaffolding + unit test.
 - **New worker agent** → `/add-worker-agent` chat mode → creates the 3-layer module + wires into supervisor.
 - **New Azure environment** (partner dev/staging/customer sub) → `/deploy-to-env` chat mode → adds entry to `deploy/environments.yaml`, creates the GitHub Environment, wires OIDC, dispatches a deploy. Never hand-edit `deploy.yml` to add envs; the manifest + `resolve-env` job is the contract. The azd env name is **always** derived from `deploy/environments.yaml` — never set `vars.AZURE_ENV_NAME`.
+- **Preflight a change before commit / PR** → `/explain-change` chat mode → runs `python scripts/explain-change.py` to map the current diff to the specific lint rules, evals, and deploy-pipeline steps it will trigger. Read-only; does not replace CI gates.
 - **Switching pattern** → `/switch-to-variant` chat mode → walks through re-authoring the scenario under `src/scenarios/<new-id>/` toward a `single-agent` or `chat-with-actioning` shape (candidate patterns in `patterns/<variant>/README.md`; not drop-in packages).
 - **Starting a new customer engagement** → `/discover-scenario` then `/scaffold-from-brief`.
 
