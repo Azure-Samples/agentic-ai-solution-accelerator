@@ -43,11 +43,11 @@ them in via the `/configure-landing-zone` chatmode.
    CCoE with `allowForwardedTraffic` + `useRemoteGateways` as appropriate).
 5. **Opt-in** (`createDnsZoneLinks: true`): creates vNet-links on each
    hub private DNS zone (`privateDnsZoneIds.{cognitiveservices, openai,
-   keyvault, search}`) to the spoke vNet, so PEs resolve through the
-   hub zones. Requires the deploying identity to have **Private DNS
-   Zone Contributor** on each zone's RG. Default `false` — most
-   regulated customers have DNS delegated to CCoE and want the links
-   created out-of-band.
+   servicesai, keyvault, search}`) to the spoke vNet, so PEs resolve
+   through the hub zones. Requires the deploying identity to have
+   **Private DNS Zone Contributor** on each zone's RG. Default
+   `false` — most regulated customers have DNS delegated to CCoE and
+   want the links created out-of-band.
 
 Outputs (`workloadSubnetId`, `workloadNsgId`, `privateDnsZoneIds`,
 `hubLogAnalyticsWorkspaceId`) flow into `azd env set` before the
@@ -132,9 +132,10 @@ The `landing_zone_mode_consistent` lint rule asserts that when
 - Workload modules (`key-vault.bicep`, `container-app.bicep`) accept
   the `publicNetworkAccess` / `externalIngress` parameter rather than
   hardcoding `Enabled` / `true`.
-- Workload modules (`key-vault.bicep`, `ai-search.bicep`,
-  `foundry.bicep`) accept `peSubnetId` and `privateDnsZoneId` params
-  so `infra/main.bicep` can thread the overlay outputs into the PE
-  resources.
+- Workload modules (`key-vault.bicep`, `ai-search.bicep`) accept
+  `peSubnetId` and `privateDnsZoneId` params; `foundry.bicep` accepts
+  `peSubnetId` and the plural `privateDnsZoneIds` array (the AIServices
+  PE registers into three hub zones). `infra/main.bicep` threads the
+  overlay outputs into the PE resources.
 
 Fix lint findings by completing the chatmode walkthrough.

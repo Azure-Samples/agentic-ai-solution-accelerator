@@ -114,8 +114,10 @@ inherits from AVM's opinions.
 **What it is.** The accelerator lands in a **spoke subscription** that
 is already part of the customer's AI ALZ. Resources expose **private
 endpoints only**; PE IPs register into the **hub's** private DNS
-zones (not new ones); Foundry network isolation is enabled; egress
-goes through the hub firewall; subscription-scope policy assignments
+zones (not new ones); Foundry network isolation is enabled; **egress
+routing to the hub firewall is partner-authored** (route table on the
+spoke subnet → hub FW) — the overlay provisions the subnet + NSG but
+the UDR is not shipped. Subscription-scope policy assignments
 inherited from the management group enforce the `AI ALZ` initiative
 (diagnostics, customer-managed keys, content safety, allowed
 locations, etc).

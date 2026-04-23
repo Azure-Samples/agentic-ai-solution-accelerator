@@ -49,6 +49,35 @@ var foundryDnsZoneIds = filter(
   z => !empty(z)
 )
 
+// Tier 3 fail-fast guard. When enablePrivateLink=true, the Tier 3
+// PE inputs (peSubnetId + all five hub DNS zone IDs) must be wired in
+// via `azd env set` from the alz-overlay outputs before `azd up`. If
+// any are missing, azd silently substitutes '' and the module PE
+// conditionals are skipped -- yielding public-off + no-PE
+// (unreachable, not blocked). Fail-fast here with a self-describing
+// deployment name so the error surfaces in the deployment log instead
+// of presenting as a confusing runtime connection failure later.
+var _tier3InputsMissing = enablePrivateLink && (empty(peSubnetId) || empty(privateDnsZoneIds.keyvault) || empty(privateDnsZoneIds.search) || empty(foundryDnsZoneIds))
+
+resource tier3InputGuard 'Microsoft.Resources/deployments@2022-09-01' = if (_tier3InputsMissing) {
+  #disable-next-line no-deployments-resources BCP332
+  name: 'TIER3-FAIL-set-AZURE_PE_SUBNET_ID-and-DNS-env-vars'
+  properties: {
+    mode: 'Incremental'
+    template: {
+      '$schema': 'https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#'
+      contentVersion: '1.0.0.0'
+      resources: []
+      outputs: {
+        err: {
+          type: 'string'
+          value: '[reference(\'missing-AZURE_PE_SUBNET_ID-or-AZURE_PRIVATE_DNS_ZONE_env-vars-see-alz-overlay-README\').value]'
+        }
+      }
+    }
+  }
+}
+
 @description('Resource token for unique naming')
 param resourceToken string = uniqueString(subscription().id, resourceGroup().id, envName)
 

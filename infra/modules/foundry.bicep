@@ -44,7 +44,7 @@ param extraModelDeploymentsJson string = '[]'
 @description('Default project name inside the Foundry account.')
 param foundryProjectName string = 'accelerator-default'
 
-@description('When true, disables public network access on the Foundry account. Actual private endpoints + DNS zones require a pre-existing VNet and are wired via peSubnetId + privateDnsZoneId (Tier 3); see docs/patterns/azure-ai-landing-zone/README.md.')
+@description('When true, disables public network access on the Foundry account. Actual private endpoints + DNS zones require a pre-existing VNet and are wired via peSubnetId + privateDnsZoneIds (Tier 3); see docs/patterns/azure-ai-landing-zone/README.md.')
 param enablePrivateLink bool = false
 
 @description('Tier 3 only. Resource ID of the spoke subnet that hosts the Foundry PE.')
