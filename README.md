@@ -55,6 +55,7 @@ agentic-ai-solution-accelerator/
 │   ├── discovery/                solution-brief.md + SOLUTION-BRIEF-GUIDE.md
 │   ├── references/               reference scenarios (customer service, RFP response)
 │   ├── agent-specs/              per-agent Foundry bootstrap specs (flagship + candidates)
+│   ├── foundry-tool-catalog.md   when-to-use matrix for Foundry agent tools (File Search, AI Search, Bing, Code Interpreter, Functions, OpenAPI, Logic Apps, SharePoint, Fabric, Connected Agents)
 │   ├── patterns/                 architecture · WAF · RAI
 │   └── version-matrix.md         known-good SDK pins (weekly CI validates against latest)
 ├── .github/
