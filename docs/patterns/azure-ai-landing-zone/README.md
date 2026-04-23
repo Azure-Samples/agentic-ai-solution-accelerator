@@ -17,7 +17,7 @@ via the `/configure-landing-zone` chatmode.
 | Tier | Status | What's shipped today |
 |---|---|---|
 | Tier 1 `standalone` | **GA** | `infra/main.bicep` + modules; `azd up` stands up a public-endpoint deploy with Entra-only auth + RAI + workspace diagnostics. |
-| Tier 2 `avm` | **Preview** | One AVM exemplar: `infra/avm-reference/key-vault.bicep`. Partner declares coverage via `landing_zone.avm_services`. Exemplars for AI Search / Container Apps / Monitor are planned (H8). Foundry stays hand-rolled (no GA AVM res module for CognitiveServices/accounts). |
+| Tier 2 `avm` | **Preview** | Four AVM exemplars shipped (`key-vault`, `ai-search`, `container-app`, `monitor`) covering the core workload surface. Partner declares coverage via `landing_zone.avm_services`; lint blocks if declared services lack an exemplar or are still hand-rolled when mode=avm. Foundry stays hand-rolled (no GA AVM res module for `CognitiveServices/accounts`). Container Apps managed-environment AVM module is **orphaned** — see `infra/avm-reference/README.md` before adopting. |
 | Tier 3 `alz-integrated` | **Preview (scaffold only)** | Subscription-scope overlay creates spoke RG + vNet + peering. `infra/main.parameters.alz.json` flips `publicNetworkAccess: Disabled` on Foundry/Search/Key Vault and makes Container App ingress internal-only. **Private DNS zones, private endpoints per service, route tables, NSGs, and hub-LAW diagnostics are NOT yet wired** — partner completes that via the customer's CCoE (or waits for H9). |
 
 ### "Disabled" vs. "Fully private & reachable"
@@ -89,7 +89,10 @@ inherits from AVM's opinions.
 **Files involved.**
 - `infra/avm-reference/README.md` — how to swap a hand-rolled module
   for its AVM equivalent (study-only exemplars).
-- `infra/avm-reference/key-vault.bicep` — only AVM exemplar shipped today.
+- `infra/avm-reference/{key-vault,ai-search,container-app,monitor}.bicep`
+  — AVM exemplars for the core workload services. Each compiles
+  standalone (`az bicep build`) and documents which hand-rolled module
+  in `infra/modules/` it replaces. Foundry intentionally excluded.
 - `infra/modules/*.bicep` — partner replaces selected modules with AVM
   references during vibecoding via `/configure-landing-zone`.
 - `accelerator.yaml` → `landing_zone.mode: avm` **and**

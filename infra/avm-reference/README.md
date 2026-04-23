@@ -20,13 +20,22 @@ partner through copying them in.
 | Resource | Hand-rolled (Tier 1) | AVM reference (Tier 2) | Status |
 |---|---|---|---|
 | Key Vault | `../modules/key-vault.bicep` | `key-vault.bicep` | Shipped |
-| AI Search | `../modules/ai-search.bicep` | *(pending — partner vibecodes)* | Contributed by partners |
-| Container App | `../modules/container-app.bicep` | *(pending)* | Contributed by partners |
-| Monitor / Log Analytics | `../modules/monitor.bicep` | *(pending)* | Contributed by partners |
+| AI Search | `../modules/ai-search.bicep` | `ai-search.bicep` | Shipped |
+| Container App | `../modules/container-app.bicep` | `container-app.bicep` | Shipped (⚠ managed-env orphan) |
+| Monitor / Log Analytics | `../modules/monitor.bicep` | `monitor.bicep` | Shipped |
 
-Start with the Key Vault exemplar — it shows the pattern clearly
+Start with the Key Vault exemplar — it shows the pattern most cleanly
 (module reference, parameters, PE block, role assignments) and is the
-easiest to diff against the hand-rolled version.
+easiest to diff against the hand-rolled version. Then read the others
+in the order above.
+
+**⚠ container-app caveat.** The `app/managed-environment` AVM module
+is currently marked **orphaned** in the registry (security + bug fixes
+only). The `app/container-app` module itself is actively maintained.
+Check <https://aka.ms/AVM/OrphanedModules> before adopting, and — for
+regulated engagements — document the choice to move off the hand-rolled
+module in the engagement's landing-zone decision log. The hand-rolled
+`../modules/container-app.bicep` remains fully supported.
 
 ## Why Foundry is not in here
 
