@@ -28,13 +28,26 @@ param externalIngress bool = true
 @description('Tier 3 only. Resource ID of the spoke subnet that hosts private endpoints for Key Vault, AI Search, and Foundry. Empty in Tier 1/2; set from the alz-overlay output via `azd env set` before `azd up`.')
 param peSubnetId string = ''
 
-@description('Tier 3 only. Hub private DNS zone resource IDs used by workload private endpoints. Keys must be: cognitiveservices, openai, keyvault, search. Wire these from the alz-overlay output via `azd env set` before `azd up`.')
+@description('Tier 3 only. Hub private DNS zone resource IDs used by workload private endpoints. Keys: cognitiveservices / openai / servicesai (all three needed by Foundry AIServices PE); keyvault (Key Vault PE); search (AI Search PE). Wire these from the alz-overlay output via `azd env set` before `azd up`.')
 param privateDnsZoneIds object = {
   cognitiveservices: ''
   openai: ''
+  servicesai: ''
   keyvault: ''
   search: ''
 }
+
+// Foundry's AIServices-kind account PE registers THREE DNS suffixes
+// (see modules/foundry.bicep comment). Filter the object to the
+// applicable keys, drop empties, and pass the resulting array.
+var foundryDnsZoneIds = filter(
+  [
+    privateDnsZoneIds.cognitiveservices
+    privateDnsZoneIds.openai
+    privateDnsZoneIds.servicesai
+  ],
+  z => !empty(z)
+)
 
 @description('Resource token for unique naming')
 param resourceToken string = uniqueString(subscription().id, resourceGroup().id, envName)
@@ -121,7 +134,7 @@ module foundry 'modules/foundry.bicep' = {
     extraModelDeploymentsJson: extraModelDeploymentsJson
     enablePrivateLink: enablePrivateLink
     peSubnetId: peSubnetId
-    privateDnsZoneId: privateDnsZoneIds.cognitiveservices
+    privateDnsZoneIds: foundryDnsZoneIds
   }
 }
 

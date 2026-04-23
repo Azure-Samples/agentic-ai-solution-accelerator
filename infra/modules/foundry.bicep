@@ -50,10 +50,10 @@ param enablePrivateLink bool = false
 @description('Tier 3 only. Resource ID of the spoke subnet that hosts the Foundry PE.')
 param peSubnetId string = ''
 
-@description('Tier 3 only. Resource ID of the hub private DNS zone `privatelink.cognitiveservices.azure.com`.')
-param privateDnsZoneId string = ''
+@description('Tier 3 only. Resource IDs of the hub private DNS zones that the Foundry PE needs to register into. An AIServices-kind Foundry account exposes endpoints on THREE DNS suffixes and all three must resolve privately for the shipped runtime (`services.ai.azure.com` project endpoint + `cognitiveservices.azure.com` account endpoint + `openai.azure.com` OpenAI inference). Pass all zone IDs the customer CCoE has provisioned — empty strings are skipped. The PE group is `account` (single sub-resource) but its DNS zone group contains one config per zone so every hostname resolves to the PE IP.')
+param privateDnsZoneIds array = []
 
-var deployPrivateEndpoint = !empty(peSubnetId) && !empty(privateDnsZoneId)
+var deployPrivateEndpoint = !empty(peSubnetId) && !empty(privateDnsZoneIds)
 
 var accountName = 'fdy${take(uniqueString(resourceGroup().id, projectName), 12)}'
 
@@ -208,11 +208,12 @@ resource aiDeveloperAssignment 'Microsoft.Authorization/roleAssignments@2022-04-
   }
 }
 
-// Tier 3: private endpoint + DNS zone group. See key-vault.bicep for pattern.
-// Foundry `AIServices`-kind Cognitive Services accounts register the PE
-// under the `account` group ID and resolve through the
-// `privatelink.cognitiveservices.azure.com` zone. OpenAI-specific
-// inference PEs use a separate group ID / zone; not wired here.
+// Tier 3: private endpoint + multi-zone DNS group. A single PE on
+// `Microsoft.CognitiveServices/accounts` with groupId `account`
+// fronts ALL endpoints the runtime uses (account, project, openai);
+// the DNS zone group binds one config per zone so every hostname
+// (`*.cognitiveservices.azure.com`, `*.services.ai.azure.com`,
+// `*.openai.azure.com`) resolves to the PE IP.
 resource foundryPrivateEndpoint 'Microsoft.Network/privateEndpoints@2024-05-01' = if (deployPrivateEndpoint) {
   name: '${account.name}-pe'
   location: location
@@ -235,14 +236,12 @@ resource foundryPrivateEndpointDnsGroup 'Microsoft.Network/privateEndpoints/priv
   parent: foundryPrivateEndpoint
   name: 'default'
   properties: {
-    privateDnsZoneConfigs: [
-      {
-        name: 'default'
-        properties: {
-          privateDnsZoneId: privateDnsZoneId
-        }
+    privateDnsZoneConfigs: [for (zoneId, i) in privateDnsZoneIds: {
+      name: 'zone-${i}'
+      properties: {
+        privateDnsZoneId: zoneId
       }
-    ]
+    }]
   }
 }
 

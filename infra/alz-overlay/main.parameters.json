@@ -13,6 +13,7 @@
       "value": {
         "cognitiveservices": "CHANGEME-dns-zone-id",
         "openai":            "CHANGEME-dns-zone-id",
+        "servicesai":        "CHANGEME-dns-zone-id",
         "keyvault":          "CHANGEME-dns-zone-id",
         "search":            "CHANGEME-dns-zone-id"
       }

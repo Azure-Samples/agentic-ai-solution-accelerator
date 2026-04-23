@@ -1694,10 +1694,13 @@ _ALZ_PARAM_CONTRACT: tuple[tuple[str, str, str], ...] = (
 # intentionally excluded — its PE sub-resource requires a
 # vNet-integrated env with a dedicated infrastructure subnet, which is
 # partner-wired (see docs/patterns/azure-ai-landing-zone/README.md).
+# Foundry uses the plural `privateDnsZoneIds` (array) because one PE
+# registers into THREE hub zones (cognitiveservices + openai +
+# services.ai); the others use the singular form.
 _ALZ_PE_PARAM_CONTRACT: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("key-vault.bicep", ("peSubnetId", "privateDnsZoneId")),
     ("ai-search.bicep", ("peSubnetId", "privateDnsZoneId")),
-    ("foundry.bicep",   ("peSubnetId", "privateDnsZoneId")),
+    ("foundry.bicep",   ("peSubnetId", "privateDnsZoneIds")),
 )
 
 

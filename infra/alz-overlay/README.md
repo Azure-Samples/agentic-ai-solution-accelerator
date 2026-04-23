@@ -23,10 +23,11 @@ them in via the `/configure-landing-zone` chatmode.
 - **Spoke subscription ID** (pre-vended from the customer's subscription vending process).
 - **Hub vNet resource ID** for peering.
 - **Private DNS zone resource IDs** under the hub's `rg-dns` (or equivalent):
-  - `privatelink.cognitiveservices.azure.com`
-  - `privatelink.openai.azure.com`
-  - `privatelink.vaultcore.azure.net`
-  - `privatelink.search.windows.net`
+  - `privatelink.cognitiveservices.azure.com` (Foundry account endpoint)
+  - `privatelink.openai.azure.com` (Foundry OpenAI model inference)
+  - `privatelink.services.ai.azure.com` (Foundry project endpoint — `AZURE_AI_FOUNDRY_ENDPOINT`)
+  - `privatelink.vaultcore.azure.net` (Key Vault)
+  - `privatelink.search.windows.net` (AI Search)
   - `privatelink.monitor.azure.com` (for Private Link Scope, optional)
 - **Log Analytics workspace resource ID** in the hub's management subscription.
 - **Allowed locations** from the customer's ALZ policy initiative.
@@ -54,30 +55,36 @@ workload `infra/main.bicep` runs with `main.parameters.alz.json`.
 
 ## Where reachability is completed
 
-Workload private endpoints (Key Vault, AI Search, Foundry) are created
-by the hand-rolled modules in `infra/modules/` when `peSubnetId` and
-the relevant `privateDnsZoneIds.<service>` are non-empty — i.e. when
-the workload deploy runs with `main.parameters.alz.json` after the
-overlay. Tier 3 makes the workload reachable privately for those three
-services without any partner edits.
+Workload private endpoints for **Key Vault, AI Search, and Foundry**
+are created by the hand-rolled modules in `infra/modules/` when
+`peSubnetId` and the relevant `privateDnsZoneIds.*` values are
+non-empty — i.e. when the workload deploy runs with
+`main.parameters.alz.json` after the overlay. The Foundry PE registers
+into **all three** AIServices DNS suffixes on one PE (account,
+project, openai) so every hostname the shipped runtime produces
+(`AZURE_AI_FOUNDRY_ENDPOINT`, etc.) resolves privately.
+
+**The shipped Container App is NOT vNet-integrated** in Tier 3. The
+default managed-environment mode puts the app outside the spoke vNet,
+so it cannot consume the private KV / Search / Foundry PEs from its
+runtime. This is an explicit partner completion step — H9 privatizes
+the data plane; the app-path integration is still owned by the partner.
 
 ### Container App reachability (partner-owned)
 
-Container App private endpoint is **not** auto-wired. The PE
-sub-resource on `Microsoft.App/managedEnvironments` requires the env
-to be vNet-integrated with a dedicated infrastructure subnet
-(Consumption env: **/23 minimum**), which is larger than the `/26`
-that this overlay provisions by default and requires fundamentally
-different env configuration. Pick one of:
+Pick one of these to actually make the app reachable and able to talk
+to the privatized back-ends:
 
 1. **External env + App Gateway / Front Door fronted by the hub FW**
-   (simplest; `externalIngress: true` still, but public traffic must
-   traverse the hub). Partner owns AGW/AFD provisioning.
+   (simplest; `externalIngress: true`, public traffic traverses the
+   hub FW). Partner owns AGW/AFD provisioning. The app still talks to
+   KV/Search/Foundry over their PEs once the env is vNet-integrated —
+   see option 2 for that part.
 2. **Internal env + vNet integration.** Partner enlarges
-   `workloadSubnetPrefix` to `/23`, sets `externalIngress: false`,
-   and adds `vnetConfiguration` + PE on the managed env. The
-   `/configure-landing-zone` chatmode walks through the subnet
-   enlargement; the PE + DNS link are authored by hand.
+   `workloadSubnetPrefix` to `/23`, sets `externalIngress: false`, and
+   adds `vnetConfiguration` + a PE on the managed env. The
+   `/configure-landing-zone` chatmode walks through subnet enlargement;
+   the PE + DNS link are authored by hand.
 
 ## What the overlay still does NOT do
 
@@ -103,8 +110,10 @@ az deployment sub create \
 azd env set AZURE_PE_SUBNET_ID                       "<workloadSubnetId output>"
 azd env set AZURE_PRIVATE_DNS_ZONE_KEYVAULT          "<keyvault zone id>"
 azd env set AZURE_PRIVATE_DNS_ZONE_SEARCH            "<search zone id>"
+# Foundry PE needs all three AIServices zones:
 azd env set AZURE_PRIVATE_DNS_ZONE_COGNITIVESERVICES "<cognitiveservices zone id>"
 azd env set AZURE_PRIVATE_DNS_ZONE_OPENAI            "<openai zone id>"
+azd env set AZURE_PRIVATE_DNS_ZONE_SERVICESAI        "<services.ai zone id>"
 
 # Step 3 — workload deploy
 azd up   # uses infra/main.parameters.alz.json

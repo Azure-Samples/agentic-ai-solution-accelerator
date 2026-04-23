@@ -37,10 +37,11 @@ param workloadSubnetPrefix string
 @description('Hub Log Analytics workspace resource ID. CHANGEME to the customer hub LAW ID.')
 param hubLogAnalyticsWorkspaceId string
 
-@description('Hub private DNS zone resource IDs (CHANGEME). Used by workload PEs.')
+@description('Hub private DNS zone resource IDs (CHANGEME). Used by workload PEs. Foundry PE registers THREE zone suffixes (cognitiveservices / openai / servicesai) on one PE sub-resource.')
 param privateDnsZoneIds object = {
   cognitiveservices: ''  // privatelink.cognitiveservices.azure.com
   openai:            ''  // privatelink.openai.azure.com
+  servicesai:        ''  // privatelink.services.ai.azure.com
   keyvault:          ''  // privatelink.vaultcore.azure.net
   search:            ''  // privatelink.search.windows.net
 }
@@ -81,6 +82,7 @@ module spokeNetwork 'network.bicep' = {
 var zoneIds = [
   { key: 'cognitiveservices', id: privateDnsZoneIds.cognitiveservices }
   { key: 'openai',            id: privateDnsZoneIds.openai }
+  { key: 'servicesai',        id: privateDnsZoneIds.servicesai }
   { key: 'keyvault',           id: privateDnsZoneIds.keyvault }
   { key: 'search',             id: privateDnsZoneIds.search }
 ]
