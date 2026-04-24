@@ -1,0 +1,60 @@
+section,question_id,question,answer,notes
+1. Business context,BC-01,"Industry / segment","",Short.
+1. Business context,BC-02,"Customer name + size indicator (mid-market / enterprise)","",
+1. Business context,BC-03,"Executive sponsor (name · role · email)","",Person who signs off on go-live.
+1. Business context,BC-04,"Decision maker (if different from sponsor)","",
+1. Business context,BC-05,"Problem statement in ONE sentence","",No 'AI' or 'agent' in the sentence.
+1. Business context,BC-06,"In-scope processes","",Comma-separated.
+1. Business context,BC-07,"Out-of-scope (explicit)","",Things stakeholders keep asking for; capture why they're out.
+2. Users & journeys,UJ-01,"Primary persona — role / daily workflow / tools they live in","",
+2. Users & journeys,UJ-02,"Secondary persona (if any)","",Skip if none; don't invent.
+2. Users & journeys,UJ-03,"Top user journey #1 (one sentence)","",
+2. Users & journeys,UJ-04,"Top user journey #2 (one sentence)","",
+2. Users & journeys,UJ-05,"Top user journey #3 (one sentence)","",
+3. Success criteria,SC-01,"Time per task — current","",Unit: minutes. Median not best case.
+3. Success criteria,SC-02,"Time per task — target","",Unit: minutes. Must be achievable under acceptance.p95_latency_ms.
+3. Success criteria,SC-03,"Volume / throughput — current (unit = per period)","",
+3. Success criteria,SC-04,"Volume / throughput — target","",
+3. Success criteria,SC-05,"Quality bar — how customer will know quality is good enough","",E.g. '95% reviewer agreement on 50 sampled cases'.
+3. Success criteria,SC-06,"Must-not-do guardrails #1","",Hard rule. Becomes a redteam case.
+3. Success criteria,SC-07,"Must-not-do guardrails #2","",
+3. Success criteria,SC-08,"Must-not-do guardrails #3","",
+4. ROI hypothesis,RH-01,"Baseline cost of status quo — model","","FTE × rate" or "$ per txn × volume".
+4. ROI hypothesis,RH-02,"Baseline cost of status quo — number","",$/year. Derived from roi-calculator.xlsx Inputs §2 (rows 11–15: FTE count/cost/pct and/or txn volume/cost).
+4. ROI hypothesis,RH-03,"Target annual savings ($)","",$/year. Reconcile with ROI sheet B19.
+4. ROI hypothesis,RH-04,"Payback period target (months)","",Reconcile with ROI sheet B23.
+4. ROI hypothesis,RH-05,"KPI event #1 name","",Snake_case. Becomes telemetry event in accelerator_baseline.
+4. ROI hypothesis,RH-06,"KPI event #1 type","",duration_ms or ratio (only types wired today).
+4. ROI hypothesis,RH-07,"KPI event #1 baseline","",Current value; leave empty if unknown.
+4. ROI hypothesis,RH-08,"KPI event #1 target","",
+4. ROI hypothesis,RH-09,"KPI event #2 name","",
+4. ROI hypothesis,RH-10,"KPI event #2 type","",
+4. ROI hypothesis,RH-11,"KPI event #2 baseline","",
+4. ROI hypothesis,RH-12,"KPI event #2 target","",
+4. ROI hypothesis,RH-13,"KPI event #3 name","",Optional. Most engagements use 3–4 KPIs total.
+4. ROI hypothesis,RH-14,"KPI event #3 type","",
+4. ROI hypothesis,RH-15,"KPI event #3 baseline","",
+4. ROI hypothesis,RH-16,"KPI event #3 target","",
+5. Solution shape,SS-01,"Pattern (supervisor-routing / single-agent / chat-with-actioning)","",Maps to accelerator.yaml:solution.pattern.
+5. Solution shape,SS-02,"Rationale for pattern choice","",
+5. Solution shape,SS-03,"Grounding sources","",SharePoint / SQL / API / blob / etc. Feeds accelerator.yaml:solution.grounding_sources.
+5. Solution shape,SS-04,"Side-effect tool #1 — name / system / operation / reversible? / HITL policy","","Feeds accelerator.yaml:solution.side_effect_tools[]."
+5. Solution shape,SS-05,"Side-effect tool #2 (if any)","",
+5. Solution shape,SS-06,"Side-effect tool #3 (if any)","",
+5. Solution shape,SS-07,"Out-of-scope tools (explicit)","",Things the agent must NOT do in v1.
+5. Solution shape,SS-08,"HITL policy default","",required / optional / none. Maps to accelerator.yaml:solution.hitl.
+6. Constraints & risks,CR-01,"Data residency","",unset / us / eu / apac / custom.
+6. Constraints & risks,CR-02,"Identity provider","",entra-id / external-id / custom.
+6. Constraints & risks,CR-03,"Compliance regime","",SOC 2 / GDPR / HIPAA / PCI / none / custom.
+6. Constraints & risks,CR-04,"Azure AI Landing Zone tier","",standalone / avm / alz-integrated. See docs/patterns/azure-ai-landing-zone/.
+6. Constraints & risks,CR-05,"RAI risk #1 (specific to this scenario)","",Becomes redteam case.
+6. Constraints & risks,CR-06,"RAI risk #2","",
+6. Constraints & risks,CR-07,"RAI risk #3","",
+6. Constraints & risks,CR-08,"RAI risk #4 (optional)","",
+6. Constraints & risks,CR-09,"RAI risk #5 (optional)","",
+7. Acceptance evals,AE-01,"Quality threshold (0..1 golden agreement)","",Maps to accelerator.yaml:acceptance.quality_threshold.
+7. Acceptance evals,AE-02,"Groundedness threshold (0..1 on RAG cases)","",Maps to acceptance.groundedness_threshold.
+7. Acceptance evals,AE-03,"Safety: redteam must pass","",Always true; capture the bar anyway.
+7. Acceptance evals,AE-04,"Latency P50 target (ms)","",
+7. Acceptance evals,AE-05,"Latency P95 target (ms)","",Maps to acceptance.p95_latency_ms.
+7. Acceptance evals,AE-06,"Cost per call target ($)","",Maps to acceptance.cost_per_call_usd.

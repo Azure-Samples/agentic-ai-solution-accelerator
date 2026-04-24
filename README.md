@@ -52,7 +52,7 @@ agentic-ai-solution-accelerator/
 │   └── chat-with-actioning/      variant: conversational front-end with tools
 ├── docs/
 │   ├── getting-started.md        authoritative onboarding: prereqs, secrets, azd up, troubleshooting
-│   ├── discovery/                solution-brief.md + SOLUTION-BRIEF-GUIDE.md
+│   ├── discovery/                discovery kit: use-case-canvas.md (pre-workshop exec alignment), SOLUTION-BRIEF-GUIDE.md (how-to-facilitate), discovery-workbook.csv (live capture), solution-brief.md (canonical output), roi-calculator.xlsx (ROI hypothesis) + how-to-use.md (sequencing meta-guide)
 │   ├── references/               reference scenarios (customer service, RFP response)
 │   ├── agent-specs/              per-agent Foundry bootstrap specs (flagship + candidates)
 │   ├── foundry-tool-catalog.md   when-to-use matrix for Foundry Agent Service tools (File Search, AI Search, Web Search, Grounding with Bing, Code Interpreter, Function calling, Azure Functions, OpenAPI, MCP, SharePoint, Fabric, A2A, Browser Automation, Image Generation, Computer Use)

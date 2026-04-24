@@ -359,14 +359,16 @@ quota you might need for the next run.
   `/configure-landing-zone` against a Tier 2 `avm` overlay in your
   sandbox. Tier 3 `alz-integrated` requires a hub to peer to; if you
   don't have one, stop at Tier 2.
-- Discovery artifacts (use-case canvas, ROI calculator, discovery
-  workbook) are **planned later in this H batch as**
-  `docs/discovery/…` additions — not shipped yet. Run
-  `/discover-scenario` in the meantime; it produces the solution
-  brief that drives scaffolding.
-- The partner CLA (`.github/CLA.md`) is also planned later in this
-  H batch. Until then, external contributions fall under the
-  repo's existing contributor terms.
+- Discovery artifacts live under `docs/discovery/` — five
+  engagement artifacts (`use-case-canvas.md`,
+  `SOLUTION-BRIEF-GUIDE.md`, `discovery-workbook.csv`,
+  `solution-brief.md`, `roi-calculator.xlsx`) plus
+  `how-to-use.md` as the sequencing meta-guide. Run
+  `/discover-scenario` when you're ready to turn workshop notes
+  into a filled brief.
+- The partner CLA (`.github/CLA.md`) is planned later in this H
+  batch. Until then, external contributions fall under the repo's
+  existing contributor terms.
 
 ---
 
