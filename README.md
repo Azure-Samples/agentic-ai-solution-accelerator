@@ -58,6 +58,8 @@ agentic-ai-solution-accelerator/
 │   ├── foundry-tool-catalog.md   when-to-use matrix for Foundry Agent Service tools (File Search, AI Search, Web Search, Grounding with Bing, Code Interpreter, Function calling, Azure Functions, OpenAPI, MCP, SharePoint, Fabric, A2A, Browser Automation, Image Generation, Computer Use)
 │   ├── partner-playbook.md       end-to-end partner motion: discover → scaffold → deploy → UAT → handover → measure
 │   ├── customer-runbook.md       day-2 ops for the customer team: monitoring, killswitch, evals re-run, model swap, secret rotation, incident, scaling
+│   ├── enablement/
+│   │   └── hands-on-lab.md       partner-team self-paced first-deployment walkthrough (7 labs: deploy → telemetry → prompts → tools → evals → model swap → scaffold)
 │   ├── patterns/                 architecture · WAF · RAI
 │   └── version-matrix.md         known-good SDK pins (weekly CI validates against latest)
 ├── .github/

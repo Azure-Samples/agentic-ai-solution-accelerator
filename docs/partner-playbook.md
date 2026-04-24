@@ -46,7 +46,7 @@ This matters for scoping the SOW honestly.
 | Telemetry baseline           | `src/accelerator_baseline/` (telemetry / HITL / killswitch / cost / evals helpers)  | Customer dashboards, alerting thresholds            |
 | Landing-zone overlay         | `infra/avm-reference/` + `infra/modules/` (Tier 2 `avm`) and `infra/alz-overlay/` (Tier 3 `alz-integrated`) | Customer ALZ alignment, change control              |
 | SOW / commercial terms       | **Nothing**                                                                         | **You** — templates live in your partner practice   |
-| Customer training material   | **Nothing shipped today.** A partner-team self-paced walkthrough is planned later in this H batch as `docs/enablement/hands-on-lab.md`; customer-facing training is partner-owned. | Role-based customer training, support ops |
+| Customer training material   | **Nothing shipped today.** The shipped partner-team self-paced walkthrough is `docs/enablement/hands-on-lab.md`; customer-facing training is partner-owned. | Role-based customer training, support ops |
 
 **Call out explicitly in your SOW:** the accelerator is not a shipping product
 for the customer. It is a template a partner team customizes, deploys, and
@@ -382,7 +382,8 @@ installed per `docs/getting-started.md` §Prerequisites.
 - A promise that `azd up` will succeed on a subscription with wrong quotas,
   missing OIDC, or a conflicting ALZ policy. Stage 3 is iterative; the
   getting-started troubleshooting matrix is where failures go to die.
-- A substitute for customer-specific training. A partner-team self-paced
-  walkthrough (`docs/enablement/hands-on-lab.md`) is planned later in this
-  H batch — not shipped yet. Customer end-user training is partner-owned
+- A substitute for customer-specific training. The shipped partner-team
+  self-paced walkthrough lives at `docs/enablement/hands-on-lab.md` —
+  it gets partner engineers comfortable with the template, not a
+  customer's end users. Customer end-user training is partner-owned
   either way.
