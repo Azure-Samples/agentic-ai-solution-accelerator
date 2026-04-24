@@ -19,6 +19,7 @@ Then jump into your lane:
 ### 🧭 Delivery Lead — scope, discovery, UAT, handover, value review
 - **Start with:** [`docs/partner-playbook.md`](docs/partner-playbook.md) — end-to-end 7-stage motion, SOW guidance, "what good looks like" per stage
 - **Also use:** [`docs/discovery/how-to-use.md`](docs/discovery/how-to-use.md) (sequences the 5 discovery artifacts) · [`docs/handover/handover-packet-template.md`](docs/handover/handover-packet-template.md) (engagement-specific handover template)
+- **Live walk-through:** run `/delivery-guide` in Copilot Chat for a guided pass through the motion
 - **Customer already gave you a PRD/BRD/spec?** Run `/ingest-prd` to pre-draft the brief, then `/discover-scenario` gap-fills the TBDs. Full flow inside `how-to-use.md`.
 
 ### 🛠️ Partner Engineer — scaffold, deploy, iterate, UAT support

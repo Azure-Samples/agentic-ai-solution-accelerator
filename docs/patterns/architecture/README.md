@@ -19,7 +19,7 @@ What the accelerator ships today, and the shapes a partner can reasonably custom
             ├───────────────────────────────────────────┐
             ▼                                           ▼
    ┌─────────────────────┐                 ┌───────────────────────┐
-   │ Account Planner     │                 │ ICP Fit Analyst       │
+   │ Account Researcher  │                 │ ICP Fit Analyst       │
    │ Competitive Context │                 │ Outreach Personaliser │
    └─────────────────────┘                 └───────────────────────┘
             │                                           │
