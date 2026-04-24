@@ -10,7 +10,11 @@ license = { text = "MIT" }
 # Weekly version-matrix.yml CI job re-tests against latest; deprecation policy N-1 minor.
 dependencies = [
   "agent-framework>=1.0.0,<2.0.0",
-  "azure-ai-projects>=1.0.0,<2.0.0",
+  # Upper bound raised to <3.0.0 because agent-framework-foundry (transitive
+  # dep of agent-framework>=1.0.0) requires azure-ai-projects>=2.0.0. Keeping
+  # >=1.0.0 floor for flexibility; pip will resolve to the 2.x series in
+  # practice to satisfy agent-framework-foundry.
+  "azure-ai-projects>=1.0.0,<3.0.0",
   "azure-ai-agents>=1.0.0,<2.0.0",
   "azure-identity>=1.18.0,<2.0.0",
   "azure-keyvault-secrets>=4.8.0,<5.0.0",
