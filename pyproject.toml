@@ -48,9 +48,6 @@ evals = [
 requires = ["hatchling>=1.21"]
 build-backend = "hatchling.build"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/accelerator_baseline", "src/config", "src/retrieval", "src/scenarios", "src/tools", "src/workflow"]
-
 [tool.ruff]
 line-length = 100
 target-version = "py311"
