@@ -117,6 +117,23 @@ def stage() -> None:
         if stage_file(src, STAGE / rel, rules):
             rewritten += 1
 
+    # Stage non-markdown assets (workbook CSVs, ROI calculators, images,
+    # etc.) so partners can download them from the published site.
+    # MkDocs copies any file under `docs_dir` to the site output, so
+    # mirroring the source-tree path here is enough — no nav entry
+    # needed.
+    asset_suffixes = {".csv", ".xlsx", ".xlsm", ".png", ".jpg", ".jpeg",
+                      ".svg", ".pdf", ".gif", ".webp"}
+    asset_count = 0
+    for src in DOCS_SRC.rglob("*"):
+        if not src.is_file() or src.suffix.lower() not in asset_suffixes:
+            continue
+        rel = src.relative_to(DOCS_SRC)
+        dst = STAGE / rel
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)
+        asset_count += 1
+
     top_rules = rewrites_for_root_top()
     for name in ROOT_TOP:
         src = REPO_ROOT / name
@@ -139,6 +156,7 @@ def stage() -> None:
 
     total_md = sum(1 for _ in STAGE.rglob("*.md"))
     print(f"Staged {total_md} markdown files into {STAGE.relative_to(REPO_ROOT)}/")
+    print(f"Staged {asset_count} non-markdown assets")
     print(f"Rewrote out-of-tree links in {rewritten} files")
 
 

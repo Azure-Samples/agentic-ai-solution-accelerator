@@ -9,11 +9,13 @@ reads well but doesn't tie to measurable ROI.
 
 | # | Artifact | Purpose | Who fills it |
 |---|---|---|---|
-| 1 | `use-case-canvas.md` | 1-page exec alignment before you spend workshop time | Partner lead + customer sponsor, async |
-| 2 | `SOLUTION-BRIEF-GUIDE.md` | How to run the discovery workshop that fills the brief | Read by partner lead; optional coaching for junior facilitators |
-| 3 | `discovery-workbook.csv` | Structured capture during the live workshop | Partner facilitator (typing) + customer SMEs (answering) |
-| 4 | `solution-brief.md` | Canonical engagement doc — every downstream artifact derives from it | Output of `/discover-scenario` Copilot chatmode (or manually from workbook) |
-| 5 | `roi-calculator.xlsx` | Quantifies the hypothesis in §4 of the brief | Partner lead, after §3 of the brief is filled |
+| 1 | [`use-case-canvas.md`](use-case-canvas.md) | 1-page exec alignment before you spend workshop time | Partner lead + customer sponsor, async |
+| 2 | [`SOLUTION-BRIEF-GUIDE.md`](SOLUTION-BRIEF-GUIDE.md) | How to run the discovery workshop that fills the brief | Read by partner lead; optional coaching for junior facilitators |
+| 3 | [`discovery-workbook.csv`](discovery-workbook.csv) — *download* | Structured capture during the live workshop | Partner facilitator (typing) + customer SMEs (answering) |
+| 4 | [`solution-brief.md`](solution-brief.md) | Canonical engagement doc — every downstream artifact derives from it | Output of `/discover-scenario` Copilot chatmode (or manually from workbook) |
+| 5 | [`roi-calculator.xlsx`](roi-calculator.xlsx) — *download* | Quantifies the hypothesis in §4 of the brief | Partner lead, after §3 of the brief is filled |
+
+> **Downloads:** the workbook ([`discovery-workbook.csv`](discovery-workbook.csv)) and ROI calculator ([`roi-calculator.xlsx`](roi-calculator.xlsx)) are partner-fillable templates — click to download, fork per engagement.
 
 ## When to use which
 
