@@ -24,13 +24,7 @@ VS Code opens with Copilot already configured via `.github/copilot-instructions.
 
 ## Step 2 — Run the discovery workshop
 
-> **Before running `/discover-scenario`, follow the discovery-kit sequence** (full guide: [`docs/discovery/how-to-use.md`](docs/discovery/how-to-use.md)):
->
-> 1. **Pre-workshop** — send [`docs/discovery/use-case-canvas.md`](docs/discovery/use-case-canvas.md) to the customer sponsor. If they can't fill it in ~30 min, the engagement isn't workshop-ready.
-> 2. **Pre-workshop** — read [`docs/discovery/SOLUTION-BRIEF-GUIDE.md`](docs/discovery/SOLUTION-BRIEF-GUIDE.md) for facilitation instructions.
-> 3. **During the workshop** — capture answers live in [`docs/discovery/discovery-workbook.csv`](docs/discovery/discovery-workbook.csv) (one question per row).
-> 4. **Immediately after** — run `/discover-scenario` (below) with the filled workbook as context.
-> 5. **After the brief is filled** — quantify the hypothesis in [`docs/discovery/roi-calculator.xlsx`](docs/discovery/roi-calculator.xlsx).
+> **Full discovery sequence** (canvas → facilitation guide → workbook → `/discover-scenario` → ROI calc, plus the `/ingest-prd` branch when a PRD/BRD/spec exists) lives in [`docs/discovery/how-to-use.md`](docs/discovery/how-to-use.md). **Read it before running the chatmode** — the five artifacts have a fixed order and the workshop-readiness gate sits upstream.
 
 In Copilot Chat:
 

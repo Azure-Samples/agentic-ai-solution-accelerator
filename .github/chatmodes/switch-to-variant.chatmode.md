@@ -21,7 +21,7 @@ The `single-agent` variant is documented in `patterns/single-agent/README.md` as
 3. Keep one or two most-used tools; drop the rest.
 4. Point `accelerator.yaml.scenario.id` at the new scenario; archive the flagship scenario under `src/scenarios/sales_research/` (git history preserves).
 5. Set `accelerator.yaml.solution.pattern: single-agent`.
-6. Update `docs/architecture.md` diagram.
+6. Update the flagship diagram in `docs/patterns/architecture/README.md` to match the new shape (or replace it with a single-agent diagram).
 
 ### → chat-with-actioning
 The `chat-with-actioning` variant is documented in `patterns/chat-with-actioning/README.md` as a candidate pattern; it is not yet materialized as a drop-in package. To switch today:

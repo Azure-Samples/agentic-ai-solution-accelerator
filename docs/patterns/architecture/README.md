@@ -6,7 +6,7 @@ What the accelerator ships today, and the shapes a partner can reasonably custom
 
 ## Flagship topology (what `azd up` deploys)
 
-**Pattern — supervisor routing, 2 workers, retrieval-backed, HITL for side-effects.**
+**Pattern — supervisor routing, 4 specialists (grouped in 2 workstreams), retrieval-backed, HITL for side-effects.**
 
 ```
   user → POST /research/stream
@@ -39,6 +39,8 @@ Code pointers:
 - Retrieval: `src/retrieval/ai_search.py` + scenario index schema in `src/scenarios/sales_research/retrieval.py`
 - Endpoint binding: `src/main.py` reads `accelerator.yaml` and mounts `/research/stream` via `src.workflow.registry.load_scenario`
 - Tools (side-effect, HITL-gated): `src/tools/`
+
+> See **[Flagship implementation detail](#flagship-implementation-detail)** at the bottom for the full agent graph (including the aggregator + HITL gate), Azure topology, and step-by-step control flow.
 
 ---
 
@@ -95,3 +97,82 @@ Raising past 3–5 coordinated workers is out of scope for v1 — evaluation sur
 - Terraform first-class (BYO-IaC is fine; match the Bicep contracts)
 - .NET / Java runtime parity (roadmap item)
 - More than 5 coordinated agents
+
+---
+
+## Flagship implementation detail
+
+Deeper walk of how the flagship scenario actually runs end-to-end in the customer's subscription. This is how the supervisor-routing pattern materialises in `src/scenarios/sales_research/` and the Bicep under `infra/`.
+
+### Agent graph (flagship, as shipped)
+
+```
+            ┌───────────────────────────────────┐
+            │         Supervisor agent          │
+            │  (intent + parallel routing)      │
+            └───────────────────────────────────┘
+              │        │          │          │
+     ┌────────┘   ┌────┘     ┌────┘     ┌────┘
+     ▼            ▼           ▼           ▼
+┌──────────┐ ┌───────────┐ ┌────────────┐ ┌─────────────────┐
+│ Account  │ │ ICP / Fit │ │Competitive │ │     Outreach    │
+│Researcher│ │  Analyst  │ │  Context   │ │   Personalizer  │
+└──────────┘ └───────────┘ └────────────┘ └─────────────────┘
+     │            │           │                   │
+     └────────────┴───────────┴───────────────────┘
+                          ▼
+                  ┌───────────────┐
+                  │  Aggregator   │  assembles sales brief + outreach draft
+                  └───────────────┘
+                          ▼
+             ┌──────────────────────────┐
+             │ HITL gate: CRM write /   │
+             │           email send     │
+             └──────────────────────────┘
+                          ▼
+            (crm_write_contact, send_email)
+```
+
+### Azure topology (deployed by `azd up`)
+
+```
+┌─────────────────────── Customer subscription ──────────────────────┐
+│                                                                    │
+│   Container Apps (API + worker)                                    │
+│     ├── Managed Identity ─────────────────────────┐                │
+│     ├── uses DefaultAzureCredential               │                │
+│     └── emits OpenTelemetry → App Insights        │                │
+│                                                   │                │
+│   Azure AI Foundry project ◀──────────────────────┤                │
+│     agents retrieved by name; instructions in portal               │
+│     content filters applied via IaC                                │
+│                                                   │                │
+│   Azure AI Search ◀───────────────────────────────┤                │
+│     index: accounts, past-touches, competitive                     │
+│                                                   │                │
+│   Azure Key Vault ◀───────────────────────────────┤                │
+│     secrets for CRM, SMTP, misc external systems                   │
+│                                                   │                │
+│   Application Insights + Log Analytics                             │
+│     dashboards: roi-kpis, hitl-activity, cost-attribution          │
+│                                                                    │
+│   (optional) Private Endpoints — required for regulated workloads  │
+└────────────────────────────────────────────────────────────────────┘
+```
+
+### Data + control flow
+
+1. Partner or customer invokes the API (`src/main.py`).
+2. `src/scenarios/sales_research/workflow.py` executes the supervisor with the request.
+3. Supervisor classifies intent and dispatches to workers (parallel).
+4. Workers ground via `retrieval/ai_search.py` and tools; return structured outputs.
+5. Aggregator composes the final brief + outreach draft.
+6. Any side-effect tool (CRM write, email send) passes `accelerator_baseline/hitl.checkpoint` first.
+7. Telemetry events emitted to App Insights; KPI events drive ROI dashboards.
+
+### Why this shape
+
+- **Parallel specialists** reduce latency vs serial single-agent prompting.
+- **Aggregator as executor** keeps composition logic out of worker prompts (easier to eval).
+- **HITL at the edge** (not inside workers) means we can audit and change policy without retraining prompts.
+- **Foundry-managed instructions** let non-engineers refine agent behavior via portal.
