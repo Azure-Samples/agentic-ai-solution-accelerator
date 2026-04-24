@@ -1,11 +1,18 @@
 # Partner workflow — visual navigation map
 
+> **How to use this page:** scan once to orient yourself across the seven
+> stages and three responsibilities. Then open the README lane for your
+> role and follow it top-to-bottom. Come back here only if you lose the
+> thread.
+
 > **This page is a navigation map, not a source of truth.** Authoritative
 > instructions live in the linked docs. If the diagram and a linked doc
 > disagree, the linked doc wins.
 
 > **Responsibilities, not job titles.** At a small partner, one person
-> may wear all three hats. The lanes below show *who does what when*,
+> may wear both the Delivery Lead and Partner Engineer hats. The
+> Customer Ops lane is always customer-owned — that's who runs the
+> solution after handover. The lanes below show *who does what when*,
 > not who must be hired.
 
 This is the partner-facing end-to-end motion for cloning the
@@ -15,8 +22,11 @@ Engineer · Customer Ops) across the seven stages of
 [`docs/partner-playbook.md`](partner-playbook.md) (discover → scaffold
 → provision → iterate → UAT → handover → measure).
 
-Every node is clickable — it links to the one doc that owns the
-instructions for that step.
+Each node's click target is its **first-action doc** — the thing you
+actually open to get moving. The [node reference table](#node-reference-same-as-the-diagram)
+below keeps the authoritative matrix (who · why · playbook stage ·
+first action) aligned with the diagram — if anything drifts, the
+table is the source of truth.
 
 ---
 
@@ -47,7 +57,7 @@ flowchart LR
     subgraph CO["🏛️ Customer Ops"]
         direction LR
         C1["<b>6. Receive handover packet</b><br/>endpoint URLs · HITL approvers<br/>alerts · rollback · SLAs"]
-        C2["<b>7. Day-2 ops + incidents</b><br/>monitor · killswitch · eval re-run<br/>secret rotation · model swap"]
+        C2["<b>7. Ongoing day-2 ops</b><br/>monitor · killswitch · eval re-run<br/>secret rotation · model swap"]
     end
 
     D1 --> E1
@@ -55,22 +65,23 @@ flowchart LR
     E4 --> D5
     D5 --> D6 --> C1
     C1 --> C2
-    C2 -. incidents + usage signal .-> D7
+    C2 -. usage signal .-> D7
+    C2 -. new feature / expansion request .-> D1
 
     class D1,D5,D6,D7 lead;
     class E1,E2,E3,E4 eng;
     class C1,C2 ops;
 
-    click D1 "discovery/how-to-use.md" "Discovery kit sequence (includes PRD/BRD branch)"
-    click D5 "partner-playbook.md#stage-5--uat" "Stage 5 — UAT"
-    click D6 "partner-playbook.md#stage-6--production-handover" "Stage 6 — Production handover"
-    click D7 "partner-playbook.md#stage-7--measure" "Stage 7 — Measure"
-    click E1 "partner-playbook.md#stage-2--scaffold" "Stage 2 — Scaffold"
-    click E2 "partner-playbook.md#stage-3--provision" "Stage 3 — Provision"
-    click E3 "partner-playbook.md#stage-4--iterate" "Stage 4 — Iterate"
-    click E4 "partner-playbook.md#stage-5--uat" "Stage 5 — UAT (engineer view)"
-    click C1 "customer-runbook.md" "Customer day-2 runbook (+ partner handover packet wins on conflict)"
-    click C2 "customer-runbook.md" "Customer ops — monitoring, killswitch, incidents"
+    click D1 "discovery/how-to-use.md" "D1 first action: open the discovery kit sequence (canvas → workshop, or /ingest-prd branch)"
+    click D5 "partner-playbook.md#stage-5--uat" "D5 first action: read Stage 5 UAT sign-off criteria"
+    click D6 "handover/handover-packet-template.md" "D6 first action: open the handover packet template"
+    click D7 "partner-playbook.md#stage-7--measure" "D7 first action: Stage 7 — Measure (monthly KPI review)"
+    click E1 "../QUICKSTART.md#step-3--scaffold-the-solution-from-the-brief" "E1 first action: QUICKSTART Step 3 — Scaffold (first-timer? run hands-on-lab once first)"
+    click E2 "getting-started.md" "E2 first action: getting-started.md — setup + azd up + troubleshooting"
+    click E3 "../QUICKSTART.md#step-4--provision--deploy-to-customers-azure" "E3 first action: QUICKSTART Steps 4–5 — iterate through CI gates"
+    click E4 "partner-playbook.md#stage-5--uat" "E4 first action: Stage 5 — UAT (engineer view)"
+    click C1 "customer-runbook.md" "C1 first action: open your engagement-specific handover packet (partner-delivered); customer-runbook.md is the fallback"
+    click C2 "customer-runbook.md" "C2 first action: your handover packet for this engagement; customer-runbook.md is the fallback"
 ```
 
 ---
@@ -79,18 +90,25 @@ flowchart LR
 
 Each row states **why this step matters**. "Authority" is the doc that owns the motion; "Start with" is the first action-oriented doc to read. What to do lives in those docs.
 
-| # | Who | Step | Why | Authority | Start with |
+| # | Who | Step | Why | Authority (playbook) | First action (click target) |
 |---|---|---|---|---|---|
-| D1 | Delivery Lead | Scope + discover | Decides whether the engagement is workshop-ready, produces the solution brief + ROI hypothesis that drives everything downstream. Supports both blank-start (canvas → workshop) and PRD-in-hand (`/ingest-prd` pre-drafts, `/discover-scenario` gap-fills). | [Playbook Stage 1](partner-playbook.md#stage-1--discovery) | [`discovery/how-to-use.md`](discovery/how-to-use.md) |
-| E1 | Partner Engineer | Scaffold from brief | `/scaffold-from-brief` turns the brief into working code — prompts, tools, retrieval, HITL, evals, manifest. First-timers must run the lab once so the scaffold doesn't land in unfamiliar bones. | [Playbook Stage 2](partner-playbook.md#stage-2--scaffold) | [`enablement/hands-on-lab.md`](enablement/hands-on-lab.md) (first time) → then `/scaffold-from-brief` |
-| E2 | Partner Engineer | Provision customer Azure | `azd up` provisions Foundry + Search + KV + ACA + App Insights in the **customer's** subscription with MI. No keys. | [Playbook Stage 3](partner-playbook.md#stage-3--provision) | [`getting-started.md`](getting-started.md) |
-| E3 | Partner Engineer | Iterate with Copilot | Every change goes through PRs that lint + quality evals + redteam must pass. Keeps HITL + RAI invariants intact. | [Playbook Stage 4](partner-playbook.md#stage-4--iterate) | [`../QUICKSTART.md`](../QUICKSTART.md) (Steps 4–5) |
-| E4 | Partner Engineer | UAT support | Engineer is on-call for eval tuning, HITL approver wiring, and scenario fixes while customer runs UAT against acceptance evals. | [Playbook Stage 5](partner-playbook.md#stage-5--uat) | [`partner-playbook.md`](partner-playbook.md#stage-5--uat) |
-| D5 | Delivery Lead | UAT sign-off | Customer sponsor walks the acceptance evals, approves production deploy. Gate before handover. | [Playbook Stage 5](partner-playbook.md#stage-5--uat) | [`partner-playbook.md`](partner-playbook.md#stage-5--uat) |
-| D6 | Delivery Lead | Handover meeting | Formal session with customer ops — walk the packet + runbook, confirm approvers, test killswitch, hand over alerts. | [Playbook Stage 6](partner-playbook.md#stage-6--production-handover) | [`handover/handover-packet-template.md`](handover/handover-packet-template.md) |
-| C1 | Customer Ops | Receive handover packet | Customer ops owns the deployment from here. The engagement-specific packet is primary; the generic runbook is fallback (packet wins on conflict). | — (customer-owned) | [`customer-runbook.md`](customer-runbook.md) |
-| C2 | Customer Ops | Day-2 ops + incidents | Monitoring, killswitch, eval re-run, secret rotation, model swap, incident response. | — (customer-owned) | [`customer-runbook.md`](customer-runbook.md) |
-| D7 | Delivery Lead | Monthly value review | Measure realized KPIs against the ROI hypothesis from D1. Feeds the next engagement; justifies renewals. | [Playbook Stage 7](partner-playbook.md#stage-7--measure) | [`partner-playbook.md`](partner-playbook.md#stage-7--measure) |
+| D1 | Delivery Lead | Scope + discover | Decides whether the engagement is workshop-ready, produces the solution brief + ROI hypothesis that drives everything downstream. Supports both blank-start (canvas → workshop) and PRD-in-hand (`/ingest-prd` pre-drafts, `/discover-scenario` gap-fills). | [Stage 1](partner-playbook.md#stage-1--discovery) | [`discovery/how-to-use.md`](discovery/how-to-use.md) |
+| E1 | Partner Engineer | Scaffold from brief | `/scaffold-from-brief` turns the brief into working code — prompts, tools, retrieval, HITL, evals, manifest. | [Stage 2](partner-playbook.md#stage-2--scaffold) | [`QUICKSTART.md` Step 3](../QUICKSTART.md#step-3--scaffold-the-solution-from-the-brief) · **first time only:** run [`enablement/hands-on-lab.md`](enablement/hands-on-lab.md) once before your first customer engagement |
+| E2 | Partner Engineer | Provision customer Azure | `azd up` provisions Foundry + Search + KV + ACA + App Insights in the **customer's** subscription with MI. No keys. | [Stage 3](partner-playbook.md#stage-3--provision) | [`getting-started.md`](getting-started.md) |
+| E3 | Partner Engineer | Iterate with Copilot | Every change goes through PRs that lint + quality evals + redteam must pass. Keeps HITL + RAI invariants intact. | [Stage 4](partner-playbook.md#stage-4--iterate) | [`QUICKSTART.md` Steps 4–5](../QUICKSTART.md#step-4--provision--deploy-to-customers-azure) |
+| E4 | Partner Engineer | UAT support | Engineer is on-call for eval tuning, HITL approver wiring, and scenario fixes while customer runs UAT against acceptance evals. | [Stage 5](partner-playbook.md#stage-5--uat) | [`partner-playbook.md` §Stage 5](partner-playbook.md#stage-5--uat) |
+| D5 | Delivery Lead | UAT sign-off | Customer sponsor walks the acceptance evals, approves production deploy. Gate before handover. | [Stage 5](partner-playbook.md#stage-5--uat) | [`partner-playbook.md` §Stage 5](partner-playbook.md#stage-5--uat) |
+| D6 | Delivery Lead | Handover meeting | Formal session with customer ops — walk the packet + runbook, confirm approvers, test killswitch, hand over alerts. | [Stage 6](partner-playbook.md#stage-6--production-handover) | [`handover/handover-packet-template.md`](handover/handover-packet-template.md) |
+| C1 | Customer Ops | Receive handover packet | Customer ops owns the deployment from here. The engagement-specific packet is primary; the generic runbook is fallback (packet wins on conflict). | — (customer-owned) | Your engagement-specific handover packet (from the partner) · [`customer-runbook.md`](customer-runbook.md) as fallback |
+| C2 | Customer Ops | Ongoing day-2 ops | Monitoring, killswitch, eval re-run, secret rotation, model swap, incident response. Steady-state, not a finish line. | — (customer-owned) | Your handover packet · [`customer-runbook.md`](customer-runbook.md) as fallback |
+| D7 | Delivery Lead | Monthly value review | Measure realized KPIs against the ROI hypothesis from D1. Feeds the next engagement; justifies renewals. | [Stage 7](partner-playbook.md#stage-7--measure) | [`partner-playbook.md` §Stage 7](partner-playbook.md#stage-7--measure) |
+
+> **Loopback note.** The dashed `C2 ⇢ D1` arrow is for **new feature or
+> expansion requests** only — those legitimately restart discovery as a
+> follow-on engagement. Incidents stay inside C2 and the customer
+> runbook. The dashed `C2 ⇢ D7` is the **usage signal** (what adoption
+> and value look like in practice) feeding the Lead's monthly review;
+> it is not a net-new engagement trigger.
 
 ---
 

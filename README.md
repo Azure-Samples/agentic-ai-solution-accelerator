@@ -12,31 +12,40 @@
 
 ## Start here
 
-**👉 See the full workflow on one page:** [`docs/partner-workflow.md`](docs/partner-workflow.md) — visual map of all 7 stages (discover → scaffold → provision → iterate → UAT → handover → measure) across the three responsibilities. Every step links to its authoritative doc.
+**👉 Scan the full workflow first:** [`docs/partner-workflow.md`](docs/partner-workflow.md) — one-page visual of all 7 stages (discover → scaffold → provision → iterate → UAT → handover → measure) across the three responsibilities. Use it to orient yourself, then come back here and open your lane below.
 
-Then jump into your lane:
+> **When guidance conflicts, the linked doc / chatmode wins over this README.** Full precedence chain is in [Reference material](#reference-material) below.
 
 ### 🧭 Delivery Lead — scope, discovery, UAT, handover, value review
 - **Start with:** [`docs/partner-playbook.md`](docs/partner-playbook.md) — end-to-end 7-stage motion, SOW guidance, "what good looks like" per stage
+- **Then run:** `/delivery-guide` in Copilot Chat for a guided pass through the motion
 - **Also use:** [`docs/discovery/how-to-use.md`](docs/discovery/how-to-use.md) (sequences the 5 discovery artifacts) · [`docs/handover/handover-packet-template.md`](docs/handover/handover-packet-template.md) (engagement-specific handover template)
-- **Live walk-through:** run `/delivery-guide` in Copilot Chat for a guided pass through the motion
 - **Customer already gave you a PRD/BRD/spec?** Run `/ingest-prd` to pre-draft the brief, then `/discover-scenario` gap-fills the TBDs. Full flow inside `how-to-use.md`.
+- **✅ Done when:** customer sponsor signs off at UAT (Stage 5), handover packet is delivered with a named owner and date (Stage 6), and the first monthly value review is on the calendar (Stage 7).
 
 ### 🛠️ Partner Engineer — scaffold, deploy, iterate, UAT support
 - **Start with:** [`QUICKSTART.md`](QUICKSTART.md) — the 5-step mechanics summary from clone to customer deploy
+- **Then run:** `/scaffold-from-brief` once a solution brief exists (engineer's interactive equivalent of the lead's `/delivery-guide`)
 - **Also use:** [`docs/getting-started.md`](docs/getting-started.md) (authoritative setup, prereqs, `azd up` troubleshooting) · [`docs/enablement/hands-on-lab.md`](docs/enablement/hands-on-lab.md) (7-lab sandbox rehearsal — **strongly recommended before your first customer-facing deployment**)
+- **✅ Done when:** acceptance evals (quality + redteam) pass in the customer's environment and the handover artifacts — repo access, runbook, approver rota, killswitch drill notes — are delivered to customer ops.
 
 ### 🏛️ Customer Ops — day-2 operations after handover
 - **Primary:** Your engagement-specific handover packet (partner delivers at handover — Stage 6)
 - **Fallback:** [`docs/customer-runbook.md`](docs/customer-runbook.md) — generic day-2 ops (monitoring, killswitch, evals, model swap, secret rotation, incidents). Partner packet wins on conflict.
+- **✅ Done when (handover accepted):** alerts route to your on-call, HITL approver rota is current, killswitch + secret-rotation drills have been run once, and you know which partner contact handles expansion requests. *Day-2 ops is steady-state, not a finish line.*
 
-> **Wearing multiple hats at a small partner?** The lanes above are responsibilities, not required job titles. Follow the playbook top-to-bottom; it cross-references the other docs at the right moments.
-
-**Precedence when guidance disagrees:** chatmodes in `.github/chatmodes/` → `docs/partner-playbook.md` (motion) + `docs/getting-started.md` (setup) → this README.
+> **Wearing multiple hats at a small partner?** The lanes above are responsibilities, not required job titles. **Solo partner:** run the Lead lane top-to-bottom through Stage 1; drop into the Engineer lane at Stage 2 (scaffold → provision → iterate); return to the Lead lane at Stage 5 (UAT) through Stage 7. Customer ops is always the customer's lane.
 
 ---
 
 ## Reference material
+
+<details>
+<summary><b>Full precedence when guidance disagrees</b> (click to expand)</summary>
+
+Chatmodes in `.github/chatmodes/` (they drive the executable surface) → `docs/partner-playbook.md` (delivery motion) and `docs/getting-started.md` (setup mechanics) → this README. The engagement-specific handover packet supersedes the generic `docs/customer-runbook.md` for the customer ops lane.
+
+</details>
 
 ### 📐 Patterns & compliance
 [Architecture](docs/patterns/architecture/README.md) · [WAF alignment](docs/patterns/waf-alignment/README.md) · [Responsible AI](docs/patterns/rai/README.md) · [Azure AI Landing Zone](docs/patterns/azure-ai-landing-zone/README.md)
