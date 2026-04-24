@@ -1976,6 +1976,154 @@ def landing_zone_mode_consistent(ctx: Ctx) -> list[Finding]:
 
 
 # ---------------------------------------------------------------------------
+# Doc links resolve (Markdown links + Mermaid click targets)
+# ---------------------------------------------------------------------------
+# Block on missing files (high confidence). Warn on missing heading
+# anchors (slugs can drift innocently when a heading is reworded).
+# Scope = every `.md` file in the repo (ctx.iter already skips
+# .git / node_modules / __pycache__ / .venv).
+_DOC_LINK_MD_RE = re.compile(r"(?<!\!)\[([^\]]*)\]\(([^)]+)\)")
+_DOC_LINK_MERMAID_BLOCK_RE = re.compile(r"```mermaid\s*\n(.*?)```", re.DOTALL)
+_DOC_LINK_MERMAID_CLICK_RE = re.compile(
+    r'^\s*click\s+\w+\s+"([^"]+)"', re.MULTILINE
+)
+_DOC_LINK_HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$", re.MULTILINE)
+_DOC_LINK_FENCE_RE = re.compile(r"```.*?```", re.DOTALL)
+_DOC_LINK_INLINE_CODE_RE = re.compile(r"`[^`\n]*`")
+_DOC_LINK_EXTERNAL_RE = re.compile(
+    r"^(https?://|mailto:|tel:|ftp://)", re.IGNORECASE
+)
+
+
+def _doc_link_slug(heading: str) -> str:
+    """Approximate GitHub heading-slug algorithm."""
+    h = heading.lower()
+    kept: list[str] = []
+    for ch in h:
+        if ch.isalnum() or ch in "-_ ":
+            kept.append(ch)
+    return "".join(kept).strip().replace(" ", "-")
+
+
+def _doc_link_build_slugs(content: str) -> set[str]:
+    """Return every anchor slug GitHub would emit for this document,
+    including the -1/-2/... suffixes GitHub appends for duplicate
+    headings. Without this, a valid link to a repeated heading would
+    false-warn.
+    """
+    seen: dict[str, int] = {}
+    slugs: set[str] = set()
+    for m in _DOC_LINK_HEADING_RE.finditer(content):
+        base = _doc_link_slug(m.group(2))
+        if not base:
+            continue
+        n = seen.get(base, 0)
+        slugs.add(base if n == 0 else f"{base}-{n}")
+        seen[base] = n + 1
+    return slugs
+
+
+def _doc_link_check_target(
+    src: pathlib.Path,
+    rel_src: str,
+    raw: str,
+    rule_prefix: str,
+    slugs_by_path: dict[pathlib.Path, set[str]],
+    out: list[Finding],
+) -> None:
+    raw = raw.strip()
+    if not raw:
+        return
+    # Markdown link title: [text](path "title") — drop the title.
+    first_token = raw.split(None, 1)[0]
+    raw = first_token
+    # Normalize Windows-style backslashes in hand-written links so the
+    # check behaves the same on Linux CI and local Windows. A partner
+    # writing `docs\foo.md` on Windows would otherwise false-block on
+    # Linux where `\` is a literal filename character.
+    raw = raw.replace("\\", "/")
+    if _DOC_LINK_EXTERNAL_RE.match(raw):
+        return
+    # Pure in-file anchor
+    if raw.startswith("#"):
+        anchor = raw.lstrip("#")
+        if not anchor:
+            return
+        target_slugs = slugs_by_path.get(src.resolve(), set())
+        if _doc_link_slug(anchor) not in target_slugs:
+            out.append(Finding(
+                f"{rule_prefix}-anchor", "warn", rel_src,
+                f"unknown in-file anchor #{anchor}"
+            ))
+        return
+    if "#" in raw:
+        path_part, anchor = raw.split("#", 1)
+    else:
+        path_part, anchor = raw, None
+    if not path_part:
+        return
+    try:
+        target = (src.parent / path_part).resolve()
+    except (OSError, ValueError):
+        return
+    if not target.exists():
+        out.append(Finding(
+            rule_prefix, "block", rel_src,
+            f"broken link: {raw} (target does not exist)"
+        ))
+        return
+    if target.is_dir():
+        return
+    if anchor and target.suffix == ".md":
+        target_slugs = slugs_by_path.get(target, set())
+        if _doc_link_slug(anchor) not in target_slugs:
+            try:
+                rel_target = _rel(target)
+            except ValueError:
+                rel_target = str(target)
+            out.append(Finding(
+                f"{rule_prefix}-anchor", "warn", rel_src,
+                f"unknown anchor #{anchor} in {rel_target}"
+            ))
+
+
+@check
+def doc_links_resolve(ctx: Ctx) -> list[Finding]:
+    """Every Markdown link and Mermaid click target in a .md file must
+    resolve. Blocks on missing files; warns on missing heading anchors
+    (which may be slugification drift rather than real breakage).
+    """
+    out: list[Finding] = []
+    md_files = list(ctx.iter(".md"))
+    # Pre-build heading-slug index per resolved file path so anchor
+    # lookups are O(1) and robust to relative-path normalization.
+    slugs_by_path: dict[pathlib.Path, set[str]] = {}
+    for p, c in md_files:
+        slugs: set[str] = _doc_link_build_slugs(c)
+        slugs_by_path[p.resolve()] = slugs
+
+    for p, c in md_files:
+        rel_src = _rel(p)
+        # Markdown links: scan prose with fenced + inline code removed,
+        # so we don't false-positive on code examples.
+        prose = _DOC_LINK_FENCE_RE.sub("", c)
+        prose = _DOC_LINK_INLINE_CODE_RE.sub("", prose)
+        for m in _DOC_LINK_MD_RE.finditer(prose):
+            _doc_link_check_target(
+                p, rel_src, m.group(2), "doc-link", slugs_by_path, out
+            )
+        # Mermaid click targets: these live inside ```mermaid fences,
+        # which the prose pass above strips. Re-scan fenced blocks.
+        for block_match in _DOC_LINK_MERMAID_BLOCK_RE.finditer(c):
+            for m in _DOC_LINK_MERMAID_CLICK_RE.finditer(block_match.group(1)):
+                _doc_link_check_target(
+                    p, rel_src, m.group(1), "doc-link-mermaid",
+                    slugs_by_path, out,
+                )
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 def main() -> int:

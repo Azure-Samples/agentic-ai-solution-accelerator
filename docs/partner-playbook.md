@@ -222,12 +222,15 @@ OIDC (federated credentials not wired), and AI Search role assignment (needs
 **Goal:** move the agent quality from "it runs" to "it meets acceptance."
 
 **How:** partner refines prompts, tools, and grounding via Copilot Chat
-inside the repo. Every change is a PR. CI runs:
+inside the repo. Every change is a PR. CI runs four gates, all of
+which must pass before merge:
 
 - `scripts/accelerator-lint.py` — ~30 deterministic policy checks (AST-only,
   fast); see `accelerator.yaml` §acceptance for the policy set
 - `evals/quality/run.py` — quality evals against golden cases
 - `evals/redteam/run.py` — safety evals against the scenario's RAI cases
+- `build + type check` — backend build and typing gate wired in
+  `.github/workflows/deploy.yml`
 
 **Where the real agent instructions live:** Foundry portal. Treat the repo
 as the audit trail: every PR that edits a `prompt.py`, a tool, or an
