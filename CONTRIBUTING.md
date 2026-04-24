@@ -7,7 +7,9 @@ This accelerator is currently **internal preview**. External contributions are n
 Internal contributions (Microsoft + lighthouse partners under engagement) follow:
 
 1. Branch from `main`.
-2. Sign the Microsoft CLA (automated via CLA bot).
+2. Sign the Microsoft CLA if the portal indicates one is required —
+   a CLA bot will comment on your first PR with a link. See
+   [`.github/CLA.md`](.github/CLA.md) for the pointer doc.
 3. Follow the relevant `CODEOWNERS` for required reviewers.
 4. All PRs run pre-merge validators (see `.github/workflows/`).
 5. Schema changes require schema-steward approval.

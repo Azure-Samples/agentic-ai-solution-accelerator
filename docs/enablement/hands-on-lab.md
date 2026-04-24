@@ -366,9 +366,15 @@ quota you might need for the next run.
   `how-to-use.md` as the sequencing meta-guide. Run
   `/discover-scenario` when you're ready to turn workshop notes
   into a filled brief.
-- The partner CLA (`.github/CLA.md`) is planned later in this H
-  batch. Until then, external contributions fall under the repo's
-  existing contributor terms.
+- Contribution flow for external partners is documented at
+  [`.github/CLA.md`](../../.github/CLA.md) — short version: on your
+  first PR, a CLA bot comments with a link to
+  <https://cla.opensource.microsoft.com>; sign once there and the
+  `license/cla` status check turns green. Rely on the status check
+  and the portal for the specific repo you're contributing to
+  rather than assuming broad coverage. Partner private forks
+  (outside the `microsoft`/`Azure` orgs) are outside Microsoft's
+  CLA flow entirely; the bot only fires on upstream PRs.
 
 ---
 
