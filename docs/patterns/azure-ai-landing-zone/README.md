@@ -12,13 +12,13 @@ This pattern defines **three landing-zone tiers** the partner picks in
 artifacts for each tier; Copilot helps the partner move between tiers
 via the `/configure-landing-zone` chatmode.
 
-## Tier status (be honest)
+## Tier status
 
 | Tier | Status | What's shipped today |
 |---|---|---|
 | Tier 1 `standalone` | **GA** | `infra/main.bicep` + modules; `azd up` stands up a public-endpoint deploy with Entra-only auth + RAI + workspace diagnostics. |
-| Tier 2 `avm` | **Preview** | Four drop-in AVM exemplars in `infra/avm-reference/` (`key-vault`, `ai-search`, `container-app`, `monitor`) — each matches the hand-rolled module's param signature + outputs so the swap is `cp` without main.bicep edits. Partner declares coverage via `landing_zone.avm_services`; lint blocks if declared services lack an exemplar or are still hand-rolled when mode=avm. **Top-level network plumbing (subnet for PE, hub private-DNS zone binding) is partner-authored** — the AVM modules expose `privateEndpoints:` / `networkAcls:` knobs but the accelerator does not wire them yet (H9). Foundry stays hand-rolled (no GA AVM res module for `CognitiveServices/accounts`). Container Apps managed-environment AVM module is **orphaned** — see `infra/avm-reference/README.md` before adopting. |
-| Tier 3 `alz-integrated` | **Preview** | Subscription-scope overlay creates spoke RG + vNet + NSG + peering, with opt-in hub DNS zone vNet-links. Workload `infra/main.bicep` creates PEs + DNS zone groups for **Key Vault + AI Search + Foundry** (Foundry PE registers all three AIServices DNS suffixes: `cognitiveservices` / `openai` / `services.ai`). **The shipped Container App is NOT vNet-integrated**, so it cannot consume the private back-end endpoints as-deployed — the partner completes the app-path reachability by enlarging the workload subnet to /23 and enabling managed-env vNet integration, or by fronting an external env with App Gateway / Front Door routed through the hub firewall. See `infra/alz-overlay/README.md` "Container App reachability" for both paths. Route table to hub firewall and hub-LAW diagnostic settings are still partner-authored. |
+| Tier 2 `avm` | **Preview** | Four drop-in AVM exemplars in `infra/avm-reference/` (`key-vault`, `ai-search`, `container-app`, `monitor`) — each matches the hand-rolled module's param signature + outputs so the swap is `cp` without main.bicep edits. Partner declares coverage via `landing_zone.avm_services`; lint blocks if declared services lack an exemplar or are still hand-rolled when mode=avm. **Top-level network plumbing (subnet for PE, hub private-DNS zone binding) is partner-authored** — the AVM modules expose `privateEndpoints:` / `networkAcls:` knobs but the accelerator does not wire them inline (that's Tier 3, `alz-overlay`). Foundry stays hand-rolled (no GA AVM res module for `CognitiveServices/accounts`). Container Apps managed-environment AVM module is **orphaned** — see `infra/avm-reference/README.md` before adopting. |
+| Tier 3 `alz-integrated` | **Preview** | Subscription-scope overlay creates spoke RG + vNet + NSG + peering, with opt-in hub DNS zone vNet-links. Workload `infra/main.bicep` creates PEs + DNS zone groups for **Key Vault + AI Search + Foundry** (Foundry PE registers all three AIServices DNS suffixes: `cognitiveservices` / `openai` / `services.ai`). **The shipped Container App is NOT vNet-integrated**, so it cannot consume the private back-end endpoints as-deployed — the partner completes the app-path reachability by enlarging the workload subnet to /23 and enabling managed-env vNet integration, or by fronting an external env with App Gateway / Front Door routed through the hub firewall. See `infra/alz-overlay/README.md` "Container App reachability" for both paths. Route table to the hub firewall and hub-LAW diagnostic settings are still partner-authored. |
 
 ### "Disabled" vs. "Fully private & reachable"
 
@@ -31,7 +31,7 @@ Tier 3 today gets you partway: when the overlay outputs are wired through `azd e
 
 **The shipped Container App is NOT vNet-integrated.** The managed environment ships in Azure's default (non-vNet) mode, which means: (a) the app container cannot reach the privatized back-end PEs from inside the spoke vNet, and (b) ingress cannot be routed through the hub firewall. The partner picks one of:
 
-1. **External env + App Gateway / Front Door fronted by the hub FW** (simplest; `externalIngress: true` and public traffic traverses the hub). Requires partner to provision AGW/AFD.
+1. **External env + App Gateway / Front Door fronted by the hub firewall** (simplest; `externalIngress: true` and public traffic traverses the hub). Requires partner to provision AGW/AFD.
 2. **Internal env + vNet integration.** Partner enlarges `workloadSubnetPrefix` to `/23`, sets `externalIngress: false`, and adds `vnetConfiguration` + a PE on the managed env. The `/configure-landing-zone` chatmode walks through subnet enlargement; the PE + DNS link are authored by hand.
 
 If you set `mode: alz-integrated`, deploy, and skip the overlay output wiring, the workload will be provisioned with public access off and the PEs uncreated — services become **unreachable**. That's fail-closed by design.
@@ -56,8 +56,9 @@ zones, policy assignments, MG hierarchy)?
 
 **What it is.** A single resource group, hand-rolled Bicep modules in
 `infra/modules/`, public endpoints on Foundry and AI Search (with
-Entra-only auth + Microsoft-managed content safety filter), all the
-WAF/RAI baseline from Commit D1. `azd up` stands it up in ~15 minutes.
+Entra-only auth + Microsoft-managed content safety filter), and the
+WAF/RAI baseline (see "What's consistent across all three tiers"
+below). `azd up` stands it up in ~15 minutes.
 
 **When to use.** Self-host pilot in the partner's own subscription;
 SMB customer with no existing Azure governance; hackathon / demo
@@ -136,8 +137,8 @@ requirement.
 
 **What the partner owns.** Coordinating with the customer's CCoE for
 subscription vending, hub peering, DNS zone identity access, and MG
-placement. The accelerator gives them the Bicep scaffold and the
-checklist in `docs/customer-runbook.md`.
+placement. The accelerator provides the Bicep scaffold; `docs/customer-runbook.md`
+covers Tier 3 day-2 operations.
 
 **Files involved.**
 - `infra/alz-overlay/main.bicep` — subscription-scope deploy that
@@ -163,8 +164,9 @@ Regardless of mode, **every** tier ships with:
 - App Insights + Log Analytics diagnostics (workspace-based).
 - Key Vault with soft-delete + purge protection, RBAC-only.
 - Managed Identity end-to-end (no SPN secrets).
-- `scripts/accelerator-lint.py` GA-only SDK pins with GA exceptions in
-  `infra/.ga-exceptions.yaml`.
+- Lint check `no_preview_api_versions` in `scripts/accelerator-lint.py`
+  enforces GA-only Bicep API versions; pre-GA versions are blocked
+  unless explicitly allow-listed in `infra/.ga-exceptions.yaml`.
 
 These are WAF/RAI baseline, not landing-zone-specific — they are
 always on.
