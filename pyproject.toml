@@ -48,6 +48,22 @@ evals = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+# Tell hatchling exactly which directories to ship in the wheel. The project
+# name ("agentic-ai-solution-accelerator") doesn't match a top-level Python
+# package, so hatchling's default file-discovery heuristic fails. Nothing
+# imports `agentic_ai_solution_accelerator` as a package — `src/` is a flat
+# collection of feature modules. Listing them explicitly here unblocks the
+# editable install used by CI to bring in runtime + dev deps.
+[tool.hatch.build.targets.wheel]
+packages = [
+  "src/accelerator_baseline",
+  "src/config",
+  "src/retrieval",
+  "src/scenarios",
+  "src/tools",
+  "src/workflow",
+]
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"
