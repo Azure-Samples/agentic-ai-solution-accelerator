@@ -45,7 +45,7 @@ evals = [
 ]
 
 [build-system]
-requires = ["hatchling>=1.21"]
+requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.ruff]
