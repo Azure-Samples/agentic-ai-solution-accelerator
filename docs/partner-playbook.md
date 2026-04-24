@@ -1,0 +1,385 @@
+# Partner playbook — end-to-end delivery motion
+
+This playbook is the narrative companion to the `/delivery-guide` chatmode. It
+is written for a **Microsoft partner delivery lead** running an engagement from
+SOW to production handover using this accelerator.
+
+If this file disagrees with `docs/getting-started.md` or the chatmodes under
+`.github/chatmodes/`, those win — they are the executable surface. This doc
+exists to explain **why** the motion is shaped this way and **what "done"
+looks like** at each stage.
+
+---
+
+## The motion, in one picture
+
+```
+discover ──► scaffold ──► provision ──► iterate ──► UAT ──► handover ──► measure
+   (1)         (2)          (3)          (4)        (5)        (6)          (7)
+   │           │            │            │          │          │            │
+   │           │            │            │          │          │            └─ monthly KPI review
+   │           │            │            │          │          └─ alerting on App Insights KPI events
+   │           │            │            │          └─ acceptance thresholds in accelerator.yaml
+   │           │            │            └─ PR-gated: lint + quality evals + redteam
+   │           │            └─ azd up against a GitHub Environment (per deploy/environments.yaml)
+   │           └─ /scaffold-from-brief drives src/, infra/, evals/, telemetry, dashboards
+   └─ /discover-scenario produces docs/discovery/solution-brief.md + updates accelerator.yaml
+```
+
+Stages **1–2** are partner-facing ("vibecode with the customer"). Stages
+**3–7** are engineering execution with the customer's Azure tenant in the loop.
+
+---
+
+## What the accelerator gives you vs. what you still own
+
+This matters for scoping the SOW honestly.
+
+| Concern                      | In the accelerator                                                                 | Partner owns                                        |
+|------------------------------|-------------------------------------------------------------------------------------|-----------------------------------------------------|
+| Discovery structure          | `/discover-scenario` chatmode + `docs/discovery/solution-brief.md` template         | Customer workshop facilitation, stakeholder map     |
+| Scenario scaffold            | `/scaffold-from-brief` + `scripts/scaffold-scenario.py` + `scripts/scaffold-agent.py` | Scenario-specific prompts, tools, grounding sources |
+| Infra                        | `infra/` (AVM-based) + `azure.yaml` + `deploy/environments.yaml`                     | Customer network / private-link overlay if required |
+| CI / CD                      | `.github/workflows/{deploy,evals,lint}.yml` + `scripts/accelerator-lint.py`         | Branch protection, required reviewers               |
+| Quality + safety evals       | `evals/quality/`, `evals/redteam/`                                                  | Customer golden cases, customer-specific redteam    |
+| Agent definitions            | Bootstrap script + agent-spec docs (`docs/agent-specs/`)                            | Foundry portal instructions + tool attachment       |
+| Telemetry baseline           | `src/accelerator_baseline/` (telemetry / HITL / killswitch / cost / evals helpers)  | Customer dashboards, alerting thresholds            |
+| Landing-zone overlay         | `infra/avm-reference/` + `infra/modules/` (Tier 2 `avm`) and `infra/alz-overlay/` (Tier 3 `alz-integrated`) | Customer ALZ alignment, change control              |
+| SOW / commercial terms       | **Nothing**                                                                         | **You** — templates live in your partner practice   |
+| Customer training material   | **Nothing shipped today.** A partner-team self-paced walkthrough is planned later in this H batch as `docs/enablement/hands-on-lab.md`; customer-facing training is partner-owned. | Role-based customer training, support ops |
+
+**Call out explicitly in your SOW:** the accelerator is not a shipping product
+for the customer. It is a template a partner team customizes, deploys, and
+operates. The customer gets the deployed solution (their Azure, their data,
+their branding) — not the template itself.
+
+---
+
+## Stage 1 — Discovery
+
+**Goal:** produce a complete `docs/discovery/solution-brief.md` and update
+`accelerator.yaml` so the scaffolding step has everything it needs.
+
+**How:** run `/discover-scenario` in GitHub Copilot Chat (or any chat-mode-aware
+IDE). The chatmode walks the partner (or partner + customer live) through 7
+sections: business context, personas, measurable success criteria, ROI
+hypothesis, solution shape, constraints/risks, acceptance evals.
+
+**What "good" looks like:**
+
+- Every section filled — no `TBD` left by the time you exit the session
+- Success criteria are **numeric** (baseline → target, with %)
+- 3–6 concrete KPI event names picked — these become typed telemetry events
+  in `src/accelerator_baseline/telemetry.py` and App Insights alerts later
+- Solution pattern chosen: **supervisor-routing** (flagship default),
+  **single-agent**, or **chat-with-actioning**
+- RAI risks listed as 3–5 concrete statements — these become redteam cases
+
+**What to push back on:**
+
+- "We want it fast" → "What's the current time, and what does 'fast enough'
+  mean to the executive sponsor?"
+- "Just use AI Search" → walk through `docs/foundry-tool-catalog.md` to pick
+  the right grounding tool (File Search vs Azure AI Search vs SharePoint vs
+  Fabric — they each have different prereqs and auth stories)
+- Missing HITL gates → "Which tool calls are irreversible? Those need approval
+  thresholds, not just logging."
+
+**Deliverable:** `docs/discovery/solution-brief.md` + edits to
+`accelerator.yaml` (`solution.pattern`, `solution.hitl`,
+`solution.data_residency`, `solution.identity`, `acceptance.*`, `kpis[].name`).
+
+---
+
+## Stage 2 — Scaffold
+
+**Goal:** adapt the repo to the customer's scenario — a clean diff reviewers
+can follow.
+
+**How:** run `/scaffold-from-brief`. The chatmode is a thin wrapper over
+`scripts/scaffold-scenario.py`; it drives the CLI and then walks the partner
+through the customization steps below.
+
+**What the CLI materializes automatically** (one command,
+`python scripts/scaffold-scenario.py <scenario-id>`):
+
+- `src/scenarios/<package>/{__init__,schema,workflow,retrieval}.py`
+- `src/scenarios/<package>/agents/supervisor/{__init__,prompt,transform,validate}.py`
+- `docs/agent-specs/accel-<scenario-id>-supervisor.md`
+- `data/samples/<package>.json`
+- A `scenario:` snippet printed to stdout for the partner to paste into
+  `accelerator.yaml`
+
+**What the partner does manually after the CLI runs** (chatmode step 3):
+
+- Paste the `scenario:` snippet into `accelerator.yaml` and re-sync
+  `solution.*`, `acceptance.*`, and `kpis[]` from the brief
+- Rewrite the supervisor's `prompt.py` intro for the scenario
+- If the chosen pattern is not supervisor-routing, reshape `workflow.py` for
+  `single-agent` or `chat-with-actioning`
+- Edit `retrieval.py` to match the chosen grounding sources
+- Create `src/tools/<tool_name>.py` per side-effect tool (each wrapped in
+  `hitl.checkpoint(...)`)
+- Register KPI events in `src/accelerator_baseline/telemetry.py` and add a
+  chart per KPI in `infra/dashboards/roi-kpis.json`
+- Replace flagship golden cases in `evals/quality/golden_cases.jsonl`
+  (5+ for this scenario)
+- Add a redteam case per RAI risk in `evals/redteam/cases.jsonl`
+- Add additional worker agents with `/add-worker-agent` (or
+  `python scripts/scaffold-agent.py <agent_id> --scenario <scenario-id> --capability "<one-sentence capability>"`)
+  and a matching `docs/agent-specs/<foundry_name>.md` spec; `foundry-bootstrap.py`
+  picks them up on the next `azd up`
+
+**What "good" looks like:**
+
+- `python scripts/accelerator-lint.py` passes with **0 blocking, 0 warning**
+- `pytest tests/` passes (supervisor-DAG test stays green)
+- Agent instructions in each `prompt.py` are **placeholders** with a clear
+  TODO — the real instructions live in the Foundry portal (see
+  `docs/agent-specs/README.md`). Do **not** hardcode customer-specific
+  prompts in repo code.
+- Every worker agent has `transform.py` returning a normalized dict and
+  `validate.py` enforcing the schema. Reject any PR that skips either step.
+
+**If the pattern is single-agent or chat-with-actioning** instead of the
+flagship supervisor pattern, use `/switch-to-variant` to swap in the
+`patterns/single-agent/` or `patterns/chat-with-actioning/` scaffold.
+
+**Deliverable:** a PR-sized diff with all new files named per the scenario
+ID and the build still green.
+
+---
+
+## Stage 3 — Provision
+
+**Goal:** deploy the scaffolded solution to the customer's Azure against a
+named environment.
+
+**How:**
+
+1. `/configure-landing-zone` to pick the Azure AI Landing Zone tier and
+   update `accelerator.yaml` + `infra/` accordingly. The chatmode covers
+   three tiers:
+   - **Tier 1 — `standalone`** (default; pilot / SMB greenfield / partner
+     self-host): public endpoints, minimal infra.
+   - **Tier 2 — `avm`** (customer has a CCoE mandate for private endpoints
+     + CAF guardrails on day one): private-link + AVM-shaped modules under
+     `infra/modules/` and `infra/avm-reference/`.
+   - **Tier 3 — `alz-integrated`** (customer already has an ALZ — hub vNet,
+     shared private DNS zones, policy assignments): wires the overlay in
+     `infra/alz-overlay/` and enforces the `tier3InputGuard` in
+     `infra/main.bicep`.
+2. `/deploy-to-env <env-name>` to register a new GitHub Environment entry in
+   `deploy/environments.yaml` and scaffold the required secrets / variables
+   per `docs/getting-started.md` §Required GitHub secrets.
+3. From the customer's deployment-owner machine: `azd env new <customer>-dev`
+   then `azd up`. First deploy takes ~15 min on a clean subscription. The
+   `azd` hooks in `azure.yaml` run automatically as part of `azd up`:
+   - `preprovision` → `scripts/sync-models-from-manifest.py`
+   - `postprovision` → `scripts/foundry-bootstrap.py` **and**
+     `scripts/seed-search.py` (creates/verifies Foundry agents declared in
+     `accelerator.yaml` + seeds every index declared in
+     `scenario.retrieval.indexes[]`; the flagship scenario ships one
+     `accounts` index, scaffolded scenarios declare their own)
+4. Smoke-test the deployed endpoint — either the container URL or the SDK
+   path in `src/main.py`, depending on scenario shape.
+5. Confirm each Foundry agent appears in the portal with the placeholder
+   instructions ready for editing. Rerun `foundry-bootstrap.py` or
+   `seed-search.py` by hand only for recovery / troubleshooting — normal
+   `azd up` cycles handle both.
+
+**What "good" looks like:**
+
+- `infra/main.bicep` tags every resource with `azd-env-name` and
+  `workload=<scenarioId>-accelerator` (wired from `scenarioId` param). If
+  the customer needs additional tags (e.g. `engagement`, `costcenter`), add
+  them to the `tags` object in `infra/main.bicep` — they do **not**
+  propagate automatically from GitHub Environment variables today.
+- Managed Identity on the Container App has the RBAC pairs documented in
+  `docs/foundry-tool-catalog.md` for the tools this scenario uses.
+- `APPLICATIONINSIGHTS_CONNECTION_STRING` is populated in the container's
+  env (wired by `infra/modules/container-app.bicep`). Key Vault is
+  referenced via RBAC + MI, not via a `KEY_VAULT_URI` env var; secrets are
+  resolved at runtime by the SDK.
+- `infra/alz-overlay/` guard passes if Tier 3 is enabled (`tier3InputGuard`
+  in `infra/main.bicep` fails fast on missing inputs).
+
+**If `azd up` fails:** first place to look is `docs/getting-started.md`
+§Troubleshooting. The most common failures are model-quota (wrong region),
+OIDC (federated credentials not wired), and AI Search role assignment (needs
+**Search Index Data Contributor** + **Search Service Contributor**, not
+"Data Reader").
+
+---
+
+## Stage 4 — Iterate
+
+**Goal:** move the agent quality from "it runs" to "it meets acceptance."
+
+**How:** partner refines prompts, tools, and grounding via Copilot Chat
+inside the repo. Every change is a PR. CI runs:
+
+- `scripts/accelerator-lint.py` — ~30 deterministic policy checks (AST-only,
+  fast); see `accelerator.yaml` §acceptance for the policy set
+- `evals/quality/run.py` — quality evals against golden cases
+- `evals/redteam/run.py` — safety evals against the scenario's RAI cases
+
+**Where the real agent instructions live:** Foundry portal. Treat the repo
+as the audit trail: every PR that edits a `prompt.py`, a tool, or an
+acceptance threshold should note in its commit message what corresponding
+portal change was made (or is still pending). The `/explain-change` chatmode
+is a **read-only CI preflight** — it tells you which lint rules and evals
+will fire for the current diff; it does not write changelogs or capture
+portal edits.
+
+**What "good" looks like:**
+
+- Golden-case count > 20 by end of stage — `evals/quality/golden_cases.jsonl`
+- Redteam passes on every PR — no deferred exceptions
+- Cost per call trending toward the acceptance target (instrument via
+  `src/accelerator_baseline/cost.py`)
+- P50 / P95 latency visible in App Insights KPI events
+
+**When a worker is underperforming:** add a new case to `golden_cases.jsonl`
+showing the failure, then fix the prompt / tool in a PR. Close the loop:
+the case stays green or the PR blocks.
+
+---
+
+## Stage 5 — UAT
+
+**Goal:** customer accepts the solution against their own bar.
+
+**How:** customer runs their golden cases on the deployed dev environment.
+Partner adds each customer case to `evals/quality/golden_cases.jsonl` so it's
+permanently regression-protected. The pass bar is
+`accelerator.yaml.acceptance.*` — quality threshold, groundedness threshold,
+safety pass, P50/P95 latency, cost per call.
+
+**What "good" looks like:**
+
+- Customer signs off against the acceptance thresholds — not against vibes
+- HITL exercised end-to-end for at least one irreversible tool (e.g., CRM
+  write, email send). **The accelerator does not ship a HITL approval UI:**
+  the flagship HITL pattern (`docs/patterns/rai/README.md` §Principle 3) is
+  a partner-wired approval flow (Logic Apps, Teams adaptive card, ticketing
+  system) that the tool blocks on until the partner's approver endpoint
+  returns. `src/accelerator_baseline/hitl.py` is the checkpoint contract.
+- Killswitch flipped and verified — `src/accelerator_baseline/killswitch.py`
+- Dashboards in App Insights show the KPI events the sponsor cares about
+
+**When UAT fails:** it is almost always one of (1) grounding source coverage,
+(2) prompt specificity, or (3) tool guard strictness. The delivery-guide
+chatmode has a triage tree for each.
+
+---
+
+## Stage 6 — Production handover
+
+**Goal:** move the solution to the customer's production environment and
+hand day-2 operations over.
+
+**How:**
+
+1. `/deploy-to-env <customer>-prod` to register the prod environment
+2. `azd env new <customer>-prod`; `azd up` in prod — the `postprovision`
+   hook re-runs `foundry-bootstrap.py` and `seed-search.py` automatically
+   against the prod project + search service
+3. Wire App Insights alerting on the KPI events in `accelerator.yaml.kpis`
+   (customer-owned — the accelerator emits the events; it does not
+   auto-create alerts or dashboards beyond `infra/dashboards/roi-kpis.json`)
+4. Capture the handover artifacts — deployment URL, alert configuration,
+   the partner's HITL approver endpoint URL + runbook, killswitch procedure,
+   and the archived `docs/discovery/solution-brief.md` copy
+
+**Handover to whom:** the customer's internal owner per the SOW. If the
+partner is retaining operations, skip to stage 7. If the customer's ops
+team is taking over, the partner owns the day-2 runbook they hand over —
+the accelerator does **not** ship a customer-operations runbook today (a
+template partner-facing ops-handover doc is planned later in this H batch
+as `docs/customer-runbook.md`; until then, use your partner practice's
+existing runbook template).
+
+**What "good" looks like:**
+
+- Zero manual steps outside the documented scripts — anything that isn't in
+  a script or chatmode is a risk item in the handover
+- Customer can repro `azd up` from scratch against a new env without
+  partner assistance
+- The handover packet lists owner, SLA, alerting, and rollback — no
+  implicit knowledge
+
+---
+
+## Stage 7 — Measure
+
+**Goal:** prove value monthly against the KPIs agreed in stage 1.
+
+**How:** run the value review against `accelerator.yaml.kpis`. The App
+Insights events the scenario emits are the **only** numbers that count —
+no spreadsheets, no screenshots of runs.
+
+**What "good" looks like:**
+
+- Monthly value-review deck populated from App Insights queries, not from
+  memory
+- At least one KPI moved from baseline toward target within 30 days of go-live
+- Feedback captured back to Microsoft in this repo's Issues — both what
+  worked and what didn't. The accelerator improves only if partners file
+  issues.
+
+---
+
+## Chatmodes and scripts at a glance
+
+| When you need to…                            | Use                                                                  |
+|----------------------------------------------|----------------------------------------------------------------------|
+| Run structured discovery                     | `/discover-scenario`                                                 |
+| Adapt the repo to the brief                  | `/scaffold-from-brief`                                               |
+| Add a worker agent post-scaffold             | `/add-worker-agent`                                                  |
+| Add a tool (local Python or Foundry)         | `/add-tool`                                                          |
+| Swap from flagship to a variant pattern      | `/switch-to-variant`                                                 |
+| Choose landing-zone tier / reconfigure infra | `/configure-landing-zone`                                            |
+| Register a new GitHub Environment            | `/deploy-to-env`                                                     |
+| Preflight the current diff / see which CI checks will fire | `/explain-change`                                                    |
+| Full engagement companion                    | `/delivery-guide`                                                    |
+| Scaffold a scenario from the CLI             | `python scripts/scaffold-scenario.py <id>`                           |
+| Scaffold an agent from the CLI               | `python scripts/scaffold-agent.py <agent_id> --scenario <scenario-id> --capability "<one-liner>"` |
+| Lint the repo against policy                 | `python scripts/accelerator-lint.py`                                 |
+| Create / update Foundry agents               | `python scripts/foundry-bootstrap.py`                                |
+| Seed the AI Search index                     | `python scripts/seed-search.py`                                      |
+| Check SDK pin freshness                      | `python scripts/ga-sdk-freshness.py`                                 |
+| Enforce acceptance thresholds                | `python scripts/enforce-acceptance.py`                               |
+
+These scripts are mostly Python / Azure-SDK-based; a few utility scripts
+(e.g., `explain-change.py`, `sync-models-from-manifest.py`) shell out to
+standard developer tooling (`git`, `azd`) that the partner already has
+installed per `docs/getting-started.md` §Prerequisites.
+
+---
+
+## Escalation and feedback
+
+- Technical issues with the accelerator template → file a GitHub Issue on this
+  repo
+- Security issues → see `SECURITY.md`
+- Guidance on Foundry tool choices that aren't clearly covered in
+  `docs/foundry-tool-catalog.md` → file an Issue with the engagement's
+  `solution.pattern` and the tool under consideration
+- Engagement commercial questions → your partner practice, not this repo
+
+---
+
+## What this playbook is NOT
+
+- A replacement for Microsoft Learn. Every Foundry / Azure detail in this
+  accelerator has an authoritative Learn page — always check it when pricing,
+  regions, or GA/preview status matter.
+- A replacement for your partner practice's SOW, rate card, or staffing model.
+- A promise that `azd up` will succeed on a subscription with wrong quotas,
+  missing OIDC, or a conflicting ALZ policy. Stage 3 is iterative; the
+  getting-started troubleshooting matrix is where failures go to die.
+- A substitute for customer-specific training. A partner-team self-paced
+  walkthrough (`docs/enablement/hands-on-lab.md`) is planned later in this
+  H batch — not shipped yet. Customer end-user training is partner-owned
+  either way.

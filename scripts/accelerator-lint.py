@@ -988,7 +988,6 @@ def sdks_pinned_to_ga(ctx: Ctx) -> list[Finding]:
 _DEAD_PATHS: tuple[str, ...] = (
     "src/agents/",
     "sales_research_workflow",
-    "partner-playbook.md",
     "customization-guide.md",
     # Retired pre-D2 design idioms that still haunt doc drafts. Any of these
     # surfacing in a partner surface makes the template look half-finished.
@@ -1036,8 +1035,9 @@ def no_dead_paths(ctx: Ctx) -> list[Finding]:
     After D2 every agent lives under ``src/scenarios/<scenario>/agents/``
     and every workflow under ``src/scenarios/<scenario>/workflow.py``.
     The old ``src/agents/`` tree and the ``sales_research_workflow`` module
-    name are dead. ``docs/partner-playbook.md`` and
-    ``docs/customization-guide.md`` were deleted in D3. A Copilot-led
+    name are dead. ``docs/customization-guide.md`` was deleted in D3.
+    (``docs/partner-playbook.md`` was reintroduced for the H-batch
+    commercialization push and is no longer a dead path.) A Copilot-led
     partner following a stale reference lands in a dead path, which is
     embarrassing for a Microsoft-branded template. This rule fails if any
     of those strings appear in any reviewed file.
