@@ -1,17 +1,29 @@
 # Contributing
 
-## Scope
+This accelerator is a Microsoft-maintained template for partners
+delivering agentic AI solutions to customers on Microsoft Agent
+Framework + Azure AI Foundry. Contributions — bug reports, doc
+fixes, pattern suggestions, new reference scenarios — are welcome
+from partners and the broader community.
 
-This accelerator is currently **internal preview**. External contributions are not yet accepted.
+## Ways to contribute
 
-Internal contributions (Microsoft + lighthouse partners under engagement) follow:
+- **File an issue** for bugs, gaps, or questions:
+  [github.com/Azure-Samples/agentic-ai-solution-accelerator/issues](https://github.com/Azure-Samples/agentic-ai-solution-accelerator/issues)
+- **Open a pull request** for small fixes (typos, broken links,
+  clearer wording) directly against `main`.
+- **Propose a new reference scenario or pattern** via issue first so
+  we can align on scope before you invest in the implementation.
+
+## Pull request basics
 
 1. Branch from `main`.
 2. Sign the Microsoft CLA if the portal indicates one is required —
    a CLA bot will comment on your first PR with a link. See
    [`.github/CLA.md`](.github/CLA.md) for the pointer doc.
 3. Follow the relevant `CODEOWNERS` for required reviewers.
-4. All PRs run pre-merge validators (see `.github/workflows/`).
+4. All PRs run pre-merge validators (see `.github/workflows/`) —
+   lint, strict MkDocs build, link check. Keep them green.
 5. Schema changes require schema-steward approval.
 6. RAI-relevant changes require RAI council review.
 

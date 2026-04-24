@@ -91,8 +91,6 @@ nav:
       - Agent specs: agent-specs/README.md
       - Tool catalog: foundry-tool-catalog.md
       - Version matrix: version-matrix.md
-  - Customer ops:
-      - Day-2 runbook: customer-runbook.md
   - Patterns:
       - Reference architecture: patterns/architecture/README.md
       - WAF alignment: patterns/waf-alignment/README.md
@@ -101,12 +99,13 @@ nav:
   - Reference scenarios:
       - Customer service actioning: references/customer-service-actioning/README.md
       - RFP response: references/rfp-response/README.md
+  - Customer ops:
+      - Day-2 runbook: customer-runbook.md
   - About:
-      - Agents: about/AGENTS.md
-      - CLA: about/CLA.md
+      - Support: about/SUPPORT.md
       - Contributing: about/CONTRIBUTING.md
       - Security: about/SECURITY.md
-      - Support: about/SUPPORT.md
+      - CLA: about/CLA.md
 
 extra:
   social:

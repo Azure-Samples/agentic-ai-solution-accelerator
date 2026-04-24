@@ -2162,6 +2162,10 @@ _MKDOCS_EXCLUDED_FROM_NAV: set[str] = {
     "docs/discovery/prd-conversion-prompt.md",
     "docs/discovery/solution-brief.md",
     "docs/adr/ADR-template.md",
+    # Internal coding-agent instructions (Microsoft Agent Framework +
+    # Claude) — staged into the site for deep-link access but not
+    # surfaced in partner nav.
+    "AGENTS.md",
 }
 
 
