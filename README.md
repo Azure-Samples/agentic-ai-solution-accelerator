@@ -1,6 +1,6 @@
 # Agentic AI Solution Accelerator
 
-> 📖 **Prefer the rendered guide?** Partners should read the polished version at **<https://arush-saxena.github.io/agentic-ai-solution-accelerator/>** — same content, better navigation, persona tabs, and search. This README stays as the entry point when you've cloned the repo.
+> 📖 **Reading online?** This guide is also rendered with search, persona navigation, and working Mermaid diagrams at **<https://arush-saxena.github.io/agentic-ai-solution-accelerator/>** — share that link when pointing partners at the accelerator. The content is identical; the site is built from the markdown in this repo on every push to `main`.
 
 > **A GitHub template partners clone to get a customer-specific agentic AI deployment live in days, not months.** Full engagement motion (discovery → UAT → handover → measure) is weeks, and documented honestly below.
 
@@ -16,7 +16,7 @@
 
 **👉 Scan the full workflow first:** [`docs/partner-workflow.md`](docs/partner-workflow.md) — one-page visual of all 7 stages (discover → scaffold → provision → iterate → UAT → handover → measure) across the three responsibilities. Use it to orient yourself, then come back here and open your lane below.
 
-> **When guidance conflicts, the linked doc / chatmode wins over this README.** Full precedence chain is in [Reference material](#reference-material) below.
+> **Authority cascade:** when two sources conflict, the more specific one wins — chatmode > playbook / QUICKSTART > this README. (Pages and this README render the same markdown, so "the doc you're reading" is never the conflict; it's always the linked chatmode or playbook that supersedes.) Full chain: [Reference material](#reference-material).
 
 ### 🧭 Delivery Lead — scope, discovery, UAT, handover, value review
 - **Start with:** [`docs/partner-playbook.md`](docs/partner-playbook.md) — end-to-end 7-stage motion, SOW guidance, "what good looks like" per stage
