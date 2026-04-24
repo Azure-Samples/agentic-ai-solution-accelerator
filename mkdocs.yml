@@ -42,9 +42,6 @@ theme:
 plugins:
   - search
   - include-markdown
-  - mermaid2:
-      arguments:
-        securityLevel: 'loose'
 
 markdown_extensions:
   - admonition
@@ -59,6 +56,9 @@ markdown_extensions:
         kwds:
           case: lower
   - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite
@@ -67,7 +67,7 @@ markdown_extensions:
       custom_fences:
         - name: mermaid
           class: mermaid
-          format: !!python/name:mermaid2.fence_mermaid_custom
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
   - pymdownx.tasklist:

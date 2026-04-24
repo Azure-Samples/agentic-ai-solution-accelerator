@@ -72,16 +72,16 @@ flowchart LR
     class E1,E2,E3,E4 eng;
     class C1,C2 ops;
 
-    click D1 "discovery/how-to-use.md" "D1 first action: open the discovery kit sequence (canvas → workshop, or /ingest-prd branch)"
-    click D5 "partner-playbook.md#stage-5--uat" "D5 first action: read Stage 5 UAT sign-off criteria"
-    click D6 "handover/handover-packet-template.md" "D6 first action: open the handover packet template"
-    click D7 "partner-playbook.md#stage-7--measure" "D7 first action: Stage 7 — Measure (monthly KPI review)"
-    click E1 "../QUICKSTART.md#step-3--scaffold-the-solution-from-the-brief" "E1 first action: QUICKSTART Step 3 — Scaffold (first-timer? run hands-on-lab once first)"
-    click E2 "getting-started.md" "E2 first action: getting-started.md — setup + azd up + troubleshooting"
-    click E3 "../QUICKSTART.md#step-4--provision--deploy-to-customers-azure" "E3 first action: QUICKSTART Steps 4–5 — iterate through CI gates"
-    click E4 "partner-playbook.md#stage-5--uat" "E4 first action: Stage 5 — UAT (engineer view)"
-    click C1 "customer-runbook.md" "C1 first action: open your engagement-specific handover packet (partner-delivered); customer-runbook.md is the fallback"
-    click C2 "customer-runbook.md" "C2 first action: your handover packet for this engagement; customer-runbook.md is the fallback"
+    click D1 "discovery/how-to-use/" "D1 first action: open the discovery kit sequence (canvas → workshop, or /ingest-prd branch)"
+    click D5 "partner-playbook/#stage-5--uat" "D5 first action: read Stage 5 UAT sign-off criteria"
+    click D6 "handover/handover-packet-template/" "D6 first action: open the handover packet template"
+    click D7 "partner-playbook/#stage-7--measure" "D7 first action: Stage 7 — Measure (monthly KPI review)"
+    click E1 "QUICKSTART/#step-3--scaffold-the-solution-from-the-brief" "E1 first action: QUICKSTART Step 3 — Scaffold (first-timer? run hands-on-lab once first)"
+    click E2 "getting-started/" "E2 first action: Setup & prereqs — azd up + troubleshooting"
+    click E3 "QUICKSTART/#step-4--provision--deploy-to-customers-azure" "E3 first action: QUICKSTART Steps 4–5 — iterate through CI gates"
+    click E4 "partner-playbook/#stage-5--uat" "E4 first action: Stage 5 — UAT (engineer view)"
+    click C1 "customer-runbook/" "C1 first action: open your engagement-specific handover packet (partner-delivered); customer-runbook is the fallback"
+    click C2 "customer-runbook/" "C2 first action: your handover packet for this engagement; customer-runbook is the fallback"
 ```
 
 ---
@@ -127,4 +127,4 @@ These happen inside the stages above but aren't first-order navigation targets:
 - [`partner-playbook.md`](partner-playbook.md) — narrative companion; the 7-stage motion in prose, with "what good looks like" per stage.
 - [`../QUICKSTART.md`](../QUICKSTART.md) — 15-minute mechanics summary (for the engineer persona).
 - [`../README.md`](../README.md) — the repo-level router.
-- [`../.github/chatmodes/`](../.github/chatmodes/) — the executable surface (these win on conflict).
+- [`../.github/chatmodes/delivery-guide.chatmode.md`](../.github/chatmodes/delivery-guide.chatmode.md) — the delivery-guide entry point; other chatmodes sit alongside it and win on conflict with narrative docs.

@@ -2066,12 +2066,25 @@ def _doc_link_check_target(
         target = (src.parent / path_part).resolve()
     except (OSError, ValueError):
         return
+    # Accept MkDocs clean-URL form for mermaid click targets:
+    # "foo/bar/" (trailing slash, no .md) maps to either "foo/bar.md"
+    # or "foo/bar/index.md" in the source tree. Click directives must use
+    # the deployed URL so the click fires in the browser, but the lint
+    # check runs against source files, so fall back to the .md locations.
     if not target.exists():
-        out.append(Finding(
-            rule_prefix, "block", rel_src,
-            f"broken link: {raw} (target does not exist)"
-        ))
-        return
+        candidates = [
+            target.with_suffix(".md"),
+            target / "index.md",
+        ]
+        resolved_via_url = next((c for c in candidates if c.exists()), None)
+        if resolved_via_url is not None:
+            target = resolved_via_url
+        else:
+            out.append(Finding(
+                rule_prefix, "block", rel_src,
+                f"broken link: {raw} (target does not exist)"
+            ))
+            return
     if target.is_dir():
         return
     if anchor and target.suffix == ".md":
@@ -2110,6 +2123,10 @@ def doc_links_resolve(ctx: Ctx) -> list[Finding]:
     pages_only = {
         ROOT / "docs" / "index.md",
         ROOT / "docs" / "getting-started" / "index.md",
+        # partner-workflow.md has mermaid click targets in deployed
+        # URL form (e.g. "QUICKSTART/#..."), which only resolve after
+        # staging. Strict build validates the deployed links.
+        ROOT / "docs" / "partner-workflow.md",
     }
 
     for p, c in md_files:

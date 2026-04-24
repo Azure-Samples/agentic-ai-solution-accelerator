@@ -66,16 +66,16 @@ flowchart LR
     class E1,E2,E3,E4 eng;
     class C1,C2 ops;
 
-    click D1 "discovery/how-to-use.md" "Discovery kit — canvas → workshop (or /ingest-prd branch)"
-    click D5 "partner-playbook.md#stage-5--uat" "Stage 5 — UAT sign-off"
-    click D6 "handover/handover-packet-template.md" "Handover packet template"
-    click D7 "partner-playbook.md#stage-7--measure" "Stage 7 — Monthly value review"
-    click E1 "QUICKSTART.md#step-3--scaffold-the-solution-from-the-brief" "QUICKSTART Step 3 — Scaffold from brief"
-    click E2 "getting-started.md" "getting-started.md — prereqs + azd up + troubleshooting"
-    click E3 "QUICKSTART.md#step-4--provision--deploy-to-customers-azure" "QUICKSTART Steps 4–5 — iterate through CI gates"
-    click E4 "partner-playbook.md#stage-5--uat" "Stage 5 — Engineer UAT support"
-    click C1 "customer-runbook.md" "Customer runbook (fallback) — your handover packet supersedes it"
-    click C2 "customer-runbook.md" "Customer runbook (fallback) — your handover packet supersedes it"
+    click D1 "discovery/how-to-use/" "Discovery kit — canvas → workshop (or /ingest-prd branch)"
+    click D5 "partner-playbook/#stage-5--uat" "Stage 5 — UAT sign-off"
+    click D6 "handover/handover-packet-template/" "Handover packet template"
+    click D7 "partner-playbook/#stage-7--measure" "Stage 7 — Monthly value review"
+    click E1 "QUICKSTART/#step-3--scaffold-the-solution-from-the-brief" "QUICKSTART Step 3 — Scaffold from brief"
+    click E2 "getting-started/" "Setup & prereqs — azd up + troubleshooting"
+    click E3 "QUICKSTART/#step-4--provision--deploy-to-customers-azure" "QUICKSTART Steps 4–5 — iterate through CI gates"
+    click E4 "partner-playbook/#stage-5--uat" "Stage 5 — Engineer UAT support"
+    click C1 "customer-runbook/" "Customer runbook (fallback) — your handover packet supersedes it"
+    click C2 "customer-runbook/" "Customer runbook (fallback) — your handover packet supersedes it"
 ```
 
 ---
