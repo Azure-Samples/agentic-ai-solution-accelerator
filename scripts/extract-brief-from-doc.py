@@ -163,7 +163,7 @@ def extract_text(path: Path) -> dict[str, Any]:
             cid = _chunk_id(idx)
             chunks.append({
                 "chunk_id": cid, "type": "paragraph", "level": None,
-                "text": " ".join(l.strip() for l in p.splitlines()),
+                "text": " ".join(ln.strip() for ln in p.splitlines()),
                 "page": None,
             })
             idx += 1
@@ -347,7 +347,7 @@ def extract_pdf(path: Path) -> dict[str, Any]:
                 cid = _chunk_id(idx)
                 chunks.append({
                     "chunk_id": cid, "type": "paragraph", "level": None,
-                    "text": " ".join(l.strip() for l in p.splitlines()),
+                    "text": " ".join(ln.strip() for ln in p.splitlines()),
                     "page": page_idx,
                 })
                 idx += 1

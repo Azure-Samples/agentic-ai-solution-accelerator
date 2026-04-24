@@ -11,8 +11,6 @@ from pathlib import Path
 
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
-from openpyxl.utils import get_column_letter
-
 
 BLUE = Font(color="0000FF", name="Arial", size=11)
 BLACK = Font(color="000000", name="Arial", size=11)

@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from typing import Any
 
-
 REQUIRED_FIELDS = (
     "company_overview", "industry", "recent_news",
     "strategic_initiatives", "technology_landscape",

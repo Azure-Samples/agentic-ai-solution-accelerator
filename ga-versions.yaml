@@ -14,7 +14,7 @@ sdks:
     upper_exclusive: "2.0.0"
   azure-ai-projects:
     min: "1.0.0"
-    upper_exclusive: "2.0.0"
+    upper_exclusive: "3.0.0"
   azure-ai-agents:
     min: "1.0.0"
     upper_exclusive: "2.0.0"

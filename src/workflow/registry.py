@@ -213,7 +213,7 @@ def load_scenario(manifest_path: pathlib.Path | None = None) -> ScenarioBundle:
 
     workflow = factory(ctx)
     if not hasattr(workflow, "stream") or not callable(
-        getattr(workflow, "stream")
+        workflow.stream  # pyright: ignore[reportAttributeAccessIssue]  # checked via hasattr above
     ):
         raise ValueError(
             "workflow_factory must return an object with an async 'stream' method"
@@ -223,7 +223,7 @@ def load_scenario(manifest_path: pathlib.Path | None = None) -> ScenarioBundle:
         id=ctx.id,
         package=ctx.package,
         request_schema=ctx.request_schema,
-        workflow=workflow,
+        workflow=workflow,  # pyright: ignore[reportArgumentType]  # duck-typed BaseWorkflow; hasattr check above is the contract
         endpoint_path=ctx.endpoint_path,
         agents=ctx.agents,
         retrieval_indexes=ctx.retrieval_indexes,

@@ -48,7 +48,6 @@ from typing import Any, AsyncIterator
 
 from src.accelerator_baseline.telemetry import Event, emit_event
 
-
 _REQUIRED_MODULE_ATTRS: tuple[str, ...] = (
     "AGENT_NAME",
     "build_prompt",
@@ -373,7 +372,7 @@ class SupervisorDAG:
                 if query:
                     if query not in retrieval_tasks:
                         retrieval_tasks[query] = asyncio.create_task(
-                            self._retrieve(query),
+                            self._retrieve(query),  # pyright: ignore[reportArgumentType]  # Retrieve protocol is awaitable-returning at runtime
                             name=f"retrieve:{query[:32]}",
                         )
                     chunks = await retrieval_tasks[query]

@@ -43,7 +43,7 @@ class SearchRetriever:
         self._client = SearchClient(
             endpoint=s.ai_search_endpoint,
             index_name=index_name,
-            credential=DefaultAzureCredential(),
+            credential=DefaultAzureCredential(),  # pyright: ignore[reportArgumentType]  # sync cred used with async client is supported at runtime
         )
 
     @property

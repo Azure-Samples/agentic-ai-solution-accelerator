@@ -75,3 +75,11 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "S", "W"]
 ignore = ["S101"]  # assert-in-tests is fine
+
+[tool.ruff.lint.per-file-ignores]
+# Maintenance/tooling scripts: long structured prose in data literals (E501),
+# intentional try/except swallow in the linter itself (S110/S112), trusted
+# subprocess + URL usage on partner-run machines (S310/S603/S607).
+"scripts/*" = ["E501", "S110", "S112", "S310", "S603", "S607"]
+# Example pattern module uses SSE f-strings that don't reflow cleanly.
+"patterns/chat-with-actioning/src/chat.py" = ["E501"]

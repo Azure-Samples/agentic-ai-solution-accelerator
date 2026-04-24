@@ -13,7 +13,7 @@ Pinned in `pyproject.toml`; `ga-versions.yaml` is the manifest lint enforces dri
 | Package | Pinned range | Last validated | Latest tested | Notes |
 |---|---|---|---|---|
 | `agent-framework` | `>=1.0.0,<2.0.0` | 1.0.x |  | Microsoft Agent Framework — orchestration |
-| `azure-ai-projects` | `>=1.0.0,<2.0.0` | 1.0.x |  | Foundry projects + agents API |
+| `azure-ai-projects` | `>=1.0.0,<3.0.0` | 2.0.x |  | Foundry projects + agents API (upper raised to <3 — agent-framework-foundry requires >=2.0.0) |
 | `azure-ai-agents` | `>=1.0.0,<2.0.0` | 1.0.x |  | Foundry agent operations |
 | `azure-ai-evaluation` | `>=1.0.0,<2.0.0` | 1.0.x |  | Evals SDK |
 | `azure-identity` | `>=1.18.0,<2.0.0` | 1.18.x |  | DefaultAzureCredential, ManagedIdentityCredential |

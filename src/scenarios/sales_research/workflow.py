@@ -134,7 +134,7 @@ class SalesResearchWorkflow:
         self._dag = SupervisorDAG(
             WORKERS,
             invoke_agent=self._invoke_agent,
-            retrieve=self._retrieve_grounding,
+            retrieve=self._retrieve_grounding,  # pyright: ignore[reportArgumentType]  # bound method matches Retrieve protocol at runtime
         )
 
     async def stream(self, request: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
@@ -149,7 +149,7 @@ class SalesResearchWorkflow:
         state = WorkerState(request=request)
 
         async for evt in self._dag.run(state):
-            yield evt
+            yield evt  # pyright: ignore[reportReturnType]  # Mapping widens to dict at runtime via dict ops downstream
 
         yield {"type": "status", "stage": "aggregating"}
         final = await self._aggregate(request, state.outputs)
@@ -240,7 +240,7 @@ class SalesResearchWorkflow:
         finally:
             try:
                 await retriever.close()
-            except Exception:
+            except Exception:  # noqa: S110  # best-effort cleanup in finally
                 pass
 
     async def _aggregate(

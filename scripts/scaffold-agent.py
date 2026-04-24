@@ -544,7 +544,7 @@ def main() -> int:
         except SyntaxError as exc:
             raise ScaffoldError(
                 f"patched workflow.py failed to parse: {exc}"
-            )
+            ) from exc
 
         agent_name = _agent_foundry_name(scenario_id, agent_id)
         print(f"scaffolded agent: {agent_dir.relative_to(ROOT)}")

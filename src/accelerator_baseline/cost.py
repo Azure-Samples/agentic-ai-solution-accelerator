@@ -14,7 +14,6 @@ from dataclasses import dataclass
 
 from .telemetry import Event, emit_event
 
-
 # Rough defaults; override via env or partner's config.
 MODEL_PRICE_USD_PER_1K_TOKENS: dict[str, dict[str, float]] = {
     "gpt-5.2":   {"input": 0.005, "output": 0.015},
