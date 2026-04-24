@@ -16,6 +16,7 @@
   → [`docs/partner-playbook.md`](docs/partner-playbook.md) — end-to-end delivery motion (7 stages, SOW scoping)
   → Run `/delivery-guide` in Copilot Chat for a live walk-through
   → Discovery kit: [`docs/discovery/how-to-use.md`](docs/discovery/how-to-use.md) (read first; sequences the 5 artifacts)
+  → *Customer already gave you a PRD/BRD/spec?* Run `/ingest-prd` first to pre-draft the brief — see [`docs/discovery/how-to-use.md`](docs/discovery/how-to-use.md) §"If the customer already provided a PRD / BRD / functional spec"
 
 - 🛠️ **Do a first sandbox deploy (rehearsal)**
   → [`docs/enablement/hands-on-lab.md`](docs/enablement/hands-on-lab.md) — 7-lab walkthrough in your own sandbox subscription
@@ -28,7 +29,7 @@
   → [`docs/getting-started.md`](docs/getting-started.md) — authoritative setup + troubleshooting reference
 
 - 🏛️ **Handover to the customer ops team**
-  → [`docs/customer-runbook.md`](docs/customer-runbook.md) + your engagement-specific handover packet (endpoint URLs, HITL approver wiring, alert rules, SLAs). Partner packet wins on conflict.
+  → [`docs/customer-runbook.md`](docs/customer-runbook.md) + your engagement-specific handover packet (endpoint URLs, HITL approver wiring, alert rules, SLAs, rollback, customer-specific deviations). Template: [`docs/handover/handover-packet-template.md`](docs/handover/handover-packet-template.md). Partner packet wins on conflict.
 
 > **Wearing both hats at a small partner?** Start with `docs/partner-playbook.md` to understand the motion, then do `docs/enablement/hands-on-lab.md` for the mechanics.
 
@@ -77,6 +78,7 @@ Full walkthrough: **[QUICKSTART.md](QUICKSTART.md)**.
 
 ### 🏛️ For handover to customer ops
 - [`docs/customer-runbook.md`](docs/customer-runbook.md) — day-2 operations (monitoring, killswitch, evals re-run, model swap, secret rotation, incident, scaling). **Plus** your engagement-specific handover packet; partner packet wins on conflict.
+- [`docs/handover/handover-packet-template.md`](docs/handover/handover-packet-template.md) — template for the engagement-specific packet (environments, HITL wiring, alerts, killswitch, rollback, customer-specific deviations, SLAs, contacts).
 
 ### 📐 Reference patterns & variants
 - Architecture & compliance: [Architecture](docs/patterns/architecture/README.md) · [WAF alignment](docs/patterns/waf-alignment/README.md) · [Responsible AI](docs/patterns/rai/README.md) · [Azure AI Landing Zone](docs/patterns/azure-ai-landing-zone/README.md)

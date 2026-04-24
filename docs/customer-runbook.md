@@ -6,10 +6,12 @@ covers the operations the customer owns: monitoring, killswitch, evals
 re-run, model swap, incident response, cost tracking, and scaling.
 
 The partner's engagement-specific handover packet (endpoint URLs,
-HITL approver wiring, customer-specific alert rules, SLA details)
-complements this runbook. When the two conflict, the partner's packet
-wins — it describes the customer-specific wiring this generic runbook
-cannot.
+HITL approver wiring, customer-specific alert rules, rollback path,
+SLA details, deviations from shipped defaults) complements this
+runbook. Template lives at
+[`docs/handover/handover-packet-template.md`](handover/handover-packet-template.md).
+When the two conflict, the partner's packet wins — it describes the
+customer-specific wiring this generic runbook cannot.
 
 **Audience:** customer SRE / platform / AI-ops on-call. Assumes access
 to the Azure subscription hosting the deployment, App Insights, Azure

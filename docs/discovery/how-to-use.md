@@ -24,6 +24,56 @@ reads well but doesn't tie to measurable ROI.
    engagement isn't ready for a workshop. The canvas is a go/no-go
    gate, not a deliverable.
 
+### If the customer already provided a PRD / BRD / functional spec
+
+If the customer handed you a written spec (PRD, BRD, functional spec,
+solution design doc, etc.) **before** the workshop, you can pre-draft
+the solution brief from it instead of starting blank. This reduces
+workshop time to confirming gaps rather than building from scratch.
+
+Supported source formats: `.md`, `.txt`, `.docx`,
+text-extractable `.pdf` (scanned PDFs must be OCR'd first).
+
+Flow:
+
+1. **Run `/ingest-prd`** in Copilot Chat and give it the file path.
+   The chatmode invokes `scripts/extract-brief-from-doc.py`, maps
+   evidence to the 7-section brief schema, and writes a **draft**
+   `docs/discovery/solution-brief.md` with:
+   - A `> **STATUS: AI-extracted draft**` banner at the top.
+   - Per-section `<!-- evidence: ... -->` HTML comment blocks with a
+     verbatim quote + citation (`chunk_id`, plus `page` for PDFs) for
+     every non-TBD field.
+   - Risky fields (solution pattern, HITL gates, side-effect tools,
+     KPI event names, RAI risks, acceptance thresholds) set to `TBD`
+     unless the source contains explicit evidence — **not** inferred.
+   - A self-audit table + spot-check prompt before the draft is
+     written; answer "go" only after verifying the quoted evidence
+     against the source doc.
+2. **Review the draft** with the customer sponsor. Treat CONFIRMED
+   fields as hypotheses (the LLM read the PRD, not the customer).
+   Flag anything the PRD got wrong or that's stale.
+3. **Run the workshop** using the remaining `TBD`s as the agenda. The
+   canvas + workbook are still useful — but now they're focused on
+   gaps rather than full intake.
+4. **Run `/discover-scenario`** after the workshop (or live during
+   it). It will detect the draft banner and enter **gap-fill mode**:
+   - Asks **only** about `TBD` fields.
+   - Preserves every confirmed field byte-for-byte.
+   - On exit, strips the `STATUS: AI-extracted draft` banner **and**
+     every `<!-- evidence -->` block before copying values into
+     `accelerator.yaml` (`solution.*`, `acceptance.*`, `kpis[]`).
+5. **Quantify the hypothesis** in `roi-calculator.xlsx` once the
+   brief's §3 and §4 are final.
+
+What `/ingest-prd` does **not** do:
+- Update `accelerator.yaml`. That's `/discover-scenario` gap-fill's
+  job, after the TBDs are resolved.
+- Run `/scaffold-from-brief`. The draft banner explicitly blocks that
+  until a human has reviewed every field.
+- Replace the workshop. It replaces the blank-page phase of the
+  workshop, not the conversation with the customer sponsor.
+
 ### During the workshop
 
 2. **Discovery workbook** — the facilitator types answers into the CSV
@@ -99,3 +149,6 @@ reads well but doesn't tie to measurable ROI.
   `scaffold-scenario.py`.
 - `.github/chatmodes/discover-scenario.chatmode.md` is the chatmode
   that produces the solution brief from workshop notes or live.
+- `.github/chatmodes/ingest-prd.chatmode.md` is the chatmode that
+  pre-drafts the solution brief from a customer PRD/BRD/spec;
+  `/discover-scenario` gap-fill mode then fills the TBDs it leaves.

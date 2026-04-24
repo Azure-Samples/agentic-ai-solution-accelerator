@@ -68,6 +68,8 @@ IDE). The chatmode walks the partner (or partner + customer live) through 7
 sections: business context, personas, measurable success criteria, ROI
 hypothesis, solution shape, constraints/risks, acceptance evals.
 
+> **Customer already provided a PRD / BRD / functional spec?** Run `/ingest-prd` first to pre-draft the brief from the source doc, then `/discover-scenario` enters gap-fill mode on the remaining `TBD`s. Full flow: [`docs/discovery/how-to-use.md`](discovery/how-to-use.md) §"If the customer already provided a PRD / BRD / functional spec".
+
 **What "good" looks like:**
 
 - Every section filled — no `TBD` left by the time you exit the session
@@ -303,8 +305,9 @@ partner is retaining operations, skip to stage 7. If the customer's ops
 team is taking over, share `docs/customer-runbook.md` — the shipped
 day-2 runbook covering monitoring, killswitch, evals re-run, model swap,
 secret rotation, incident response, and scaling. Add your engagement-specific
-handover notes on top (endpoint URLs, the HITL approver runbook, customer
-contacts, SLA specifics).
+handover notes on top using [`docs/handover/handover-packet-template.md`](handover/handover-packet-template.md)
+(endpoint URLs, HITL approver runbook, alert rules, killswitch, rollback
+path, customer-specific deviations from shipped defaults, SLAs, contacts).
 
 **What "good" looks like:**
 
