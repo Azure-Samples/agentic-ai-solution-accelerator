@@ -41,6 +41,10 @@ Thumbs.db
 *.log
 logs/
 
+# MkDocs Pages build
+docs-build/
+site/
+
 infra/modules/*.json
 !infra/main.parameters.json
 infra/avm-reference/*.json

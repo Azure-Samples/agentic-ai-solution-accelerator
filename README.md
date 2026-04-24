@@ -1,5 +1,7 @@
 # Agentic AI Solution Accelerator
 
+> 📖 **Prefer the rendered guide?** Partners should read the polished version at **<https://arush-saxena.github.io/agentic-ai-solution-accelerator/>** — same content, better navigation, persona tabs, and search. This README stays as the entry point when you've cloned the repo.
+
 > **A GitHub template partners clone to get a customer-specific agentic AI deployment live in days, not months.** Full engagement motion (discovery → UAT → handover → measure) is weeks, and documented honestly below.
 
 **Flagship scenario:** Sales Research & Personalized Outreach — a supervisor agent routes a research request across specialist workers (Account Researcher, ICP/Fit Analyst, Competitive Context, Outreach Personalizer) and returns a grounded, citeable sales brief with a CRM-ready outreach draft. Human-in-the-loop gates every CRM write and every email send.

@@ -1,0 +1,116 @@
+site_name: Agentic AI Solution Accelerator
+site_description: Partner guide for delivering agentic AI solutions to SMB customers on Microsoft Agent Framework + Azure AI Foundry.
+site_url: https://arush-saxena.github.io/agentic-ai-solution-accelerator/
+repo_url: https://github.com/arush-saxena/agentic-ai-solution-accelerator
+repo_name: arush-saxena/agentic-ai-solution-accelerator
+edit_uri: edit/main/docs/
+docs_dir: docs-build
+site_dir: site
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - navigation.indexes
+    - toc.follow
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - search.suggest
+    - search.highlight
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+  - include-markdown
+  - mermaid2:
+      arguments:
+        securityLevel: 'loose'
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:mermaid2.fence_mermaid_custom
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - Overview: getting-started/index.md
+      - Setup & prereqs: getting-started.md
+      - 5-step quickstart: QUICKSTART.md
+      - Hands-on lab: enablement/hands-on-lab.md
+  - Delivery lead:
+      - Partner playbook: partner-playbook.md
+      - Discovery guide: discovery/how-to-use.md
+      - Solution brief guide: discovery/SOLUTION-BRIEF-GUIDE.md
+      - Handover template: handover/handover-packet-template.md
+  - Partner engineer:
+      - Workflow map: partner-workflow.md
+      - Architecture: architecture.md
+      - Agent specs: agent-specs/README.md
+      - Tool catalog: foundry-tool-catalog.md
+      - Version matrix: version-matrix.md
+  - Customer ops:
+      - Day-2 runbook: customer-runbook.md
+  - Patterns:
+      - Reference architecture: patterns/architecture/README.md
+      - WAF alignment: patterns/waf-alignment/README.md
+      - Responsible AI: patterns/rai/README.md
+      - Azure AI landing zone: patterns/azure-ai-landing-zone/README.md
+  - Reference scenarios:
+      - Customer service actioning: references/customer-service-actioning/README.md
+      - RFP response: references/rfp-response/README.md
+  - About:
+      - Agents: about/AGENTS.md
+      - CLA: about/CLA.md
+      - Contributing: about/CONTRIBUTING.md
+      - Security: about/SECURITY.md
+      - Support: about/SUPPORT.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/arush-saxena/agentic-ai-solution-accelerator
+
+copyright: Copyright &copy; Microsoft Corporation.

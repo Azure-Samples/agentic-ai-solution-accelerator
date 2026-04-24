@@ -2102,7 +2102,19 @@ def doc_links_resolve(ctx: Ctx) -> list[Finding]:
         slugs: set[str] = _doc_link_build_slugs(c)
         slugs_by_path[p.resolve()] = slugs
 
+    # Pages-only files use site-relative paths (QUICKSTART.md,
+    # chatmodes/..., about/...) that resolve only after the
+    # scripts/prepare-pages.py staging hook runs. Their link
+    # integrity is validated by `mkdocs build --strict`, so skip
+    # them here to avoid false positives.
+    pages_only = {
+        ROOT / "docs" / "index.md",
+        ROOT / "docs" / "getting-started" / "index.md",
+    }
+
     for p, c in md_files:
+        if p.resolve() in {f.resolve() for f in pages_only}:
+            continue
         rel_src = _rel(p)
         # Markdown links: scan prose with fenced + inline code removed,
         # so we don't false-positive on code examples.
@@ -2120,6 +2132,102 @@ def doc_links_resolve(ctx: Ctx) -> list[Finding]:
                     p, rel_src, m.group(1), "doc-link-mermaid",
                     slugs_by_path, out,
                 )
+    return out
+
+
+# ---------------------------------------------------------------------------
+# mkdocs nav integrity (M batch)
+# ---------------------------------------------------------------------------
+_MKDOCS_EXCLUDED_FROM_NAV: set[str] = {
+    # Canonical docs intentionally not in the site nav (deep-linked only,
+    # chatmodes included wholesale, or flowchart source of truth):
+    "docs/partner-workflow.md",
+    "docs/discovery/prd-conversion-prompt.md",
+    "docs/discovery/solution-brief.md",
+    "docs/adr/ADR-template.md",
+}
+
+
+@check
+def mkdocs_nav_integrity(ctx: Ctx) -> list[Finding]:
+    """Validate mkdocs.yml nav.
+
+    Blocks:
+      - nav references a file that won't exist after prepare-pages.py
+        stages docs-build/.
+    Warns:
+      - a docs/*.md or root *.md file is neither listed in nav nor in
+        _MKDOCS_EXCLUDED_FROM_NAV (drop-out detection).
+    """
+    out: list[Finding] = []
+    mk_path = ROOT / "mkdocs.yml"
+    if not mk_path.exists():
+        return out
+    text = mk_path.read_text(encoding="utf-8", errors="ignore")
+
+    # Extract nav entries — simple regex pulls every `: path.md` value
+    # from the nav: block. Good enough for our flat-ish nav.
+    nav_match = re.search(r"(?ms)^nav:\s*\n(.+?)(?=^\S|\Z)", text)
+    nav_files: set[str] = set()
+    if nav_match:
+        for m in re.finditer(r":\s*([^\s#][^\s#]*\.md)\s*$", nav_match.group(1), re.M):
+            nav_files.add(m.group(1).strip())
+
+    # These paths are relative to docs_dir (docs-build/). Map back to
+    # the canonical source path that prepare-pages.py stages from.
+    # Mapping rules mirror scripts/prepare-pages.py:
+    #   docs-build/QUICKSTART.md   <- QUICKSTART.md
+    #   docs-build/about/X.md      <- AGENTS/SECURITY/SUPPORT/CONTRIBUTING/.github/CLA
+    #   docs-build/chatmodes/X.md  <- .github/chatmodes/X.md
+    #   docs-build/X.md            <- docs/X.md
+    def staged_to_source(staged: str) -> pathlib.Path:
+        s = staged.strip()
+        if s == "QUICKSTART.md":
+            return ROOT / "QUICKSTART.md"
+        if s.startswith("about/"):
+            tail = s[len("about/"):]
+            if tail == "CLA.md":
+                return ROOT / ".github" / "CLA.md"
+            return ROOT / tail  # AGENTS.md / SECURITY.md / SUPPORT.md / CONTRIBUTING.md
+        if s.startswith("chatmodes/"):
+            return ROOT / ".github" / s
+        return ROOT / "docs" / s
+
+    for staged in sorted(nav_files):
+        src = staged_to_source(staged)
+        if not src.exists():
+            out.append(Finding(
+                "mkdocs-nav-missing", "block", "mkdocs.yml",
+                f"nav entry '{staged}' resolves to {_rel(src)} which does not exist",
+            ))
+
+    # Drop-out detection: any docs/*.md not explicitly in nav and not
+    # in the exclusion list is a warning — likely unintended.
+    nav_sources: set[str] = {_rel(staged_to_source(s)) for s in nav_files}
+    for p, _ in ctx.iter(".md"):
+        rel = _rel(p)
+        # Only check real user-facing docs tree + root-of-repo canonical docs.
+        if not (rel.startswith("docs/") or rel in {
+            "QUICKSTART.md", "README.md", "AGENTS.md", "SECURITY.md",
+            "SUPPORT.md", "CONTRIBUTING.md", ".github/CLA.md",
+        }):
+            continue
+        # README.md is the home page source — rendered from docs/index.md,
+        # not the root README — so skip it here.
+        if rel == "README.md":
+            continue
+        # docs/index.md + docs/getting-started/index.md are Pages-only
+        # landing files; mkdocs picks them up via section indexes.
+        if rel in {"docs/index.md", "docs/getting-started/index.md"}:
+            continue
+        if rel in _MKDOCS_EXCLUDED_FROM_NAV:
+            continue
+        if rel not in nav_sources:
+            out.append(Finding(
+                "mkdocs-nav-dropout", "warn", rel,
+                "file is not in mkdocs.yml nav and not in _MKDOCS_EXCLUDED_FROM_NAV",
+            ))
+
     return out
 
 
