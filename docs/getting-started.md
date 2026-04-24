@@ -1,7 +1,12 @@
 # Getting started
 
-This is the single source of truth for onboarding a partner onto the accelerator.
-If something here disagrees with README or another doc, this file wins.
+This is the authoritative reference for **setup, prereqs, secrets, and troubleshooting**. It complements — not replaces — the other partner-facing docs:
+
+- For the end-to-end delivery motion (discovery → handover → measure) see [`docs/partner-playbook.md`](../docs/partner-playbook.md).
+- For the 5-step happy-path skim, see [`QUICKSTART.md`](../QUICKSTART.md).
+- For a sandbox rehearsal before your first customer, see [`docs/enablement/hands-on-lab.md`](./enablement/hands-on-lab.md).
+
+When those docs and this one disagree on **setup mechanics** (prereqs, secrets, `azd` invocation, troubleshooting), this file wins. When they disagree on **delivery motion** (when to run discovery, how to scope an SOW, handover sequence), the playbook wins. The chatmodes in `.github/chatmodes/` win over both on the executable surface they drive.
 
 ## What you ship
 
@@ -89,26 +94,30 @@ full deploy chain.
 | `HITL_APPROVER_ENDPOINT` | Webhook URL for side-effect approvals (prod) |
 | `HITL_DEV_MODE` | Set to `1` to auto-approve in dev — never in prod |
 
-## The 15-minute path
+## Sandbox smoke-test (no customer involvement)
+
+> **This path intentionally bypasses the discovery workshop** so a partner engineer can validate prereqs + infra shape end-to-end in their own subscription. For the full partner motion (discover → scaffold → provision → iterate → UAT → handover → measure) see [`docs/partner-playbook.md`](../docs/partner-playbook.md). For a guided walkthrough of this same smoke-test with check-your-work gates, use [`docs/enablement/hands-on-lab.md`](./enablement/hands-on-lab.md) Lab 1.
 
 ```bash
-# 1. Clone the template
-gh repo create <customer>-agents --template Azure/agentic-ai-solution-accelerator --private
-cd <customer>-agents
+# 1. Clone the template into your sandbox repo
+gh repo create <you>-accel-sandbox --template Azure/agentic-ai-solution-accelerator --private
+cd <you>-accel-sandbox
 code .
 
-# 2. Authenticate to the customer subscription
-az login --tenant <customer-tenant-id>
+# 2. Authenticate to your SANDBOX subscription (not a customer subscription for the smoke-test)
+az login --tenant <your-sandbox-tenant-id>
 azd auth login
 
 # 3. Provision + deploy
-azd env new <customer>-dev
+azd env new sandbox-dev
 azd up           # ~10-15 min: Foundry + Search + KV + ACA + App Insights
 ```
 
 `azd up` returns the API URL. Hit `/healthz` to confirm the scenario loaded;
 hit the scenario's endpoint (default `/research/stream`) with a sample payload
 to run the flagship end-to-end.
+
+Cleanup when done: `azd down --purge`.
 
 ## HITL setup
 

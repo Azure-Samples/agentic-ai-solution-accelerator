@@ -5,9 +5,12 @@ is written for a **Microsoft partner delivery lead** running an engagement from
 SOW to production handover using this accelerator.
 
 If this file disagrees with `docs/getting-started.md` or the chatmodes under
-`.github/chatmodes/`, those win — they are the executable surface. This doc
-exists to explain **why** the motion is shaped this way and **what "done"
-looks like** at each stage.
+`.github/chatmodes/`, use the scoped precedence: the chatmodes win on the
+**executable surface** they drive, `docs/getting-started.md` wins on **setup
+mechanics** (prereqs, secrets, `azd` invocation, troubleshooting), and this
+playbook wins on the **delivery motion** (when to run discovery, how to scope
+an SOW, handover sequence). This doc exists to explain **why** the motion is
+shaped this way and **what "done" looks like** at each stage.
 
 ---
 

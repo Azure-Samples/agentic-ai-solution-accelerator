@@ -2,6 +2,10 @@
 
 > Partner's 5-step path from "new customer meeting" to "working agent in customer Azure."
 
+> **First time on this accelerator?** Strongly recommended to complete [`docs/enablement/hands-on-lab.md`](docs/enablement/hands-on-lab.md) in a sandbox subscription **before** your first customer-facing deployment. The happy path below assumes you've run it once end-to-end.
+
+> **Scoping an engagement or running the discovery workshop?** Read [`docs/partner-playbook.md`](docs/partner-playbook.md) for the full 7-stage motion; this QUICKSTART is the mechanics summary.
+
 ---
 
 ## Step 1 — Clone the template
@@ -17,6 +21,14 @@ VS Code opens with Copilot already configured via `.github/copilot-instructions.
 ---
 
 ## Step 2 — Run the discovery workshop
+
+> **Before running `/discover-scenario`, follow the discovery-kit sequence** (full guide: [`docs/discovery/how-to-use.md`](docs/discovery/how-to-use.md)):
+>
+> 1. **Pre-workshop** — send [`docs/discovery/use-case-canvas.md`](docs/discovery/use-case-canvas.md) to the customer sponsor. If they can't fill it in ~30 min, the engagement isn't workshop-ready.
+> 2. **Pre-workshop** — read [`docs/discovery/SOLUTION-BRIEF-GUIDE.md`](docs/discovery/SOLUTION-BRIEF-GUIDE.md) for facilitation instructions.
+> 3. **During the workshop** — capture answers live in [`docs/discovery/discovery-workbook.csv`](docs/discovery/discovery-workbook.csv) (one question per row).
+> 4. **Immediately after** — run `/discover-scenario` (below) with the filled workbook as context.
+> 5. **After the brief is filled** — quantify the hypothesis in [`docs/discovery/roi-calculator.xlsx`](docs/discovery/roi-calculator.xlsx).
 
 In Copilot Chat:
 
