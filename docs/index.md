@@ -152,6 +152,6 @@ flowchart LR
 
     ---
 
-    [GitHub repo](https://github.com/arush-saxena/agentic-ai-solution-accelerator) · [Chatmodes](chatmodes/delivery-guide.chatmode.md) · [Contributing](about/CONTRIBUTING.md)
+    [GitHub repo](https://github.com/Azure-Samples/agentic-ai-solution-accelerator) · [Chatmodes](chatmodes/delivery-guide.chatmode.md) · [Contributing](about/CONTRIBUTING.md)
 
 </div>

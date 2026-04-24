@@ -1,8 +1,8 @@
 site_name: Agentic AI Solution Accelerator
 site_description: Partner guide for delivering agentic AI solutions to SMB customers on Microsoft Agent Framework + Azure AI Foundry.
-site_url: https://arush-saxena.github.io/agentic-ai-solution-accelerator/
-repo_url: https://github.com/arush-saxena/agentic-ai-solution-accelerator
-repo_name: arush-saxena/agentic-ai-solution-accelerator
+site_url: https://azure-samples.github.io/agentic-ai-solution-accelerator/
+repo_url: https://github.com/Azure-Samples/agentic-ai-solution-accelerator
+repo_name: Azure-Samples/agentic-ai-solution-accelerator
 edit_uri: edit/main/docs/
 docs_dir: docs-build
 site_dir: site
@@ -111,6 +111,6 @@ nav:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/arush-saxena/agentic-ai-solution-accelerator
+      link: https://github.com/Azure-Samples/agentic-ai-solution-accelerator
 
 copyright: Copyright &copy; Microsoft Corporation.

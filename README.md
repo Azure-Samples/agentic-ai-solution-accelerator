@@ -1,6 +1,6 @@
 # Agentic AI Solution Accelerator
 
-> 📖 **Sharing with a partner? Send them the Pages site, not this README.** The partner-facing entry point is **<https://arush-saxena.github.io/agentic-ai-solution-accelerator/>** — search, persona navigation, and rendered Mermaid diagrams. Same markdown, better browsing. This README is what you land on inside a clone (`git clone` or `gh repo create --template`) and when poking at the source on GitHub.
+> 📖 **Sharing with a partner? Send them the Pages site, not this README.** The partner-facing entry point is **<https://azure-samples.github.io/agentic-ai-solution-accelerator/>** — search, persona navigation, and rendered Mermaid diagrams. Same markdown, better browsing. This README is what you land on inside a clone (`git clone` or `gh repo create --template`) and when poking at the source on GitHub.
 
 > **A GitHub template partners clone to get a customer-specific agentic AI deployment live in days, not months.** Full engagement motion (discovery → UAT → handover → measure) is weeks, and documented honestly below.
 

@@ -159,4 +159,4 @@ Any red light blocks merge. Green = `azd deploy` against the customer env.
 </div>
 
 !!! question "Stuck?"
-    Check the authoritative [setup & troubleshooting guide](../getting-started.md), open an issue on the [GitHub repo](https://github.com/arush-saxena/agentic-ai-solution-accelerator), or fall back to the canonical [`QUICKSTART.md`](../QUICKSTART.md) which has the same 5 steps in reference form.
+    Check the authoritative [setup & troubleshooting guide](../getting-started.md), open an issue on the [GitHub repo](https://github.com/Azure-Samples/agentic-ai-solution-accelerator), or fall back to the canonical [`QUICKSTART.md`](../QUICKSTART.md) which has the same 5 steps in reference form.
