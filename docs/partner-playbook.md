@@ -285,20 +285,23 @@ hand day-2 operations over.
 2. `azd env new <customer>-prod`; `azd up` in prod — the `postprovision`
    hook re-runs `foundry-bootstrap.py` and `seed-search.py` automatically
    against the prod project + search service
-3. Wire App Insights alerting on the KPI events in `accelerator.yaml.kpis`
-   (customer-owned — the accelerator emits the events; it does not
-   auto-create alerts or dashboards beyond `infra/dashboards/roi-kpis.json`)
+3. Wire App Insights alerting on the KPIs the engagement committed to
+   in `accelerator.yaml.kpis[]` (customer-owned — `kpis[]` carries
+   `{name, type, baseline, target}` metadata only; partners wire the
+   matching telemetry event per KPI in scenario code, and neither
+   alerts nor dashboards beyond `infra/dashboards/roi-kpis.json` are
+   auto-created)
 4. Capture the handover artifacts — deployment URL, alert configuration,
    the partner's HITL approver endpoint URL + runbook, killswitch procedure,
    and the archived `docs/discovery/solution-brief.md` copy
 
 **Handover to whom:** the customer's internal owner per the SOW. If the
 partner is retaining operations, skip to stage 7. If the customer's ops
-team is taking over, the partner owns the day-2 runbook they hand over —
-the accelerator does **not** ship a customer-operations runbook today (a
-template partner-facing ops-handover doc is planned later in this H batch
-as `docs/customer-runbook.md`; until then, use your partner practice's
-existing runbook template).
+team is taking over, share `docs/customer-runbook.md` — the shipped
+day-2 runbook covering monitoring, killswitch, evals re-run, model swap,
+secret rotation, incident response, and scaling. Add your engagement-specific
+handover notes on top (endpoint URLs, the HITL approver runbook, customer
+contacts, SLA specifics).
 
 **What "good" looks like:**
 

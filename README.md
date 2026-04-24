@@ -57,6 +57,7 @@ agentic-ai-solution-accelerator/
 │   ├── agent-specs/              per-agent Foundry bootstrap specs (flagship + candidates)
 │   ├── foundry-tool-catalog.md   when-to-use matrix for Foundry Agent Service tools (File Search, AI Search, Web Search, Grounding with Bing, Code Interpreter, Function calling, Azure Functions, OpenAPI, MCP, SharePoint, Fabric, A2A, Browser Automation, Image Generation, Computer Use)
 │   ├── partner-playbook.md       end-to-end partner motion: discover → scaffold → deploy → UAT → handover → measure
+│   ├── customer-runbook.md       day-2 ops for the customer team: monitoring, killswitch, evals re-run, model swap, secret rotation, incident, scaling
 │   ├── patterns/                 architecture · WAF · RAI
 │   └── version-matrix.md         known-good SDK pins (weekly CI validates against latest)
 ├── .github/
@@ -81,7 +82,7 @@ agentic-ai-solution-accelerator/
 | Discovery notes disconnected from code | Solution Brief drives scaffolding, evals, manifest, dashboards |
 | "Should we use single-agent or supervisor?" → guesswork | Flagship + two variants + four reference scenarios; pick-and-scaffold |
 | Compliance & WAF done at the end (if at all) | Enforced from commit 1 via `copilot-instructions.md` + CI lint + IaC content filters |
-| ROI promises are slides | KPIs in `accelerator.yaml` → typed telemetry events → live dashboards in customer Azure |
+| ROI promises are slides | KPIs declared in `accelerator.yaml.kpis[]`; partners wire a telemetry event per KPI in the scenario code, then monitor in App Insights + the shipped workbook template (`infra/dashboards/roi-kpis.json`) |
 
 ---
 
