@@ -118,6 +118,22 @@ Push back if the partner gives vague answers. Force specificity:
   | API-only / embed | "No UI. The accelerator's hosted SSE endpoint IS the deliverable. Skip the frontend discussion." |
 
   Capture the answer verbatim into the `## UX shape` section of the brief as `ux_shape: <choice>` plus a one-line rationale.
+
+  **If — and only if — the partner picked `Structured form + report`, ask two follow-up questions, one at a time, in this order:**
+
+  1. **Input fields.** Ask: *"What inputs does the end user provide? List each field + a 1-line description of what it's for. Example: `company_name` — the customer account being researched."*
+
+     Push for concrete field names (snake_case), a type per field (text, textarea, select, tags, url, number, date, file), the 1-line description, and whether it's required. Tell the partner: *"These should match your `ScenarioRequest` schema fields. If you're unsure about types, text/textarea/select/tags are the common ones — see `patterns/sales-research-frontend/src/components/ResearchForm.tsx` for examples."*
+
+     Capture into a new **`## UX inputs`** section of the brief as a Markdown table with columns `Field | Type | Description | Required`.
+
+  2. **Output sections.** Ask: *"What sections should the result report show? For each section, give a name + what it contains. Example: `Account Summary` — 2-3 sentences of firmographic context; `Key Stakeholders` — table of name/title/influence; `Outreach Suggestions` — 3 email drafts."*
+
+     Push for a section name, the content shape (a sentence describing what's rendered — prose, table, list, code), and which worker agent produces that data (or `supervisor` if it's composed). Tell the partner: *"Each section typically maps to one worker agent's output. Reference: SMB Agent Hub's Account Planner, Portfolio Planner, and NNR each use form+report but render completely different sections — pick what matters to YOUR customer's decision workflow."*
+
+     Capture into a new **`## UX output sections`** section of the brief as a Markdown table with columns `Section | Content | Source agent`.
+
+  Skip both follow-ups for the other three branches (chat, dashboard, API-only) — those stay single-question.
 - Grounding sources (SharePoint / SQL / API / blob / all of the above)
 - Side-effect tools needed (list each; name, system it writes to, reversibility)
 - HITL gates (which tools require human approval; thresholds like "any confidence < 0.8")

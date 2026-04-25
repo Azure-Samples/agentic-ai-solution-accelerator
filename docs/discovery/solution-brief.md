@@ -68,6 +68,20 @@
   - **API-only / embed** — another system calls the agent programmatically (Power Automate, n8n, partner platform). *No UI. The accelerator's hosted SSE endpoint IS the deliverable.*
 - **Rationale (one line):**
 
+## 5c. UX inputs
+*Filled only when `ux_shape` is `Structured form + report`. Each row should match a field in `src/scenarios/<pkg>/schema.py` (`ScenarioRequest`).*
+
+| Field | Type | Description | Required |
+|---|---|---|---|
+| TBD | text | TBD | yes |
+
+## 5d. UX output sections
+*Filled only when `ux_shape` is `Structured form + report`. Each section is a panel rendered by the result UI; `Source agent` is the worker whose output populates it (or `supervisor` if composed).*
+
+| Section | Content | Source agent |
+|---|---|---|
+| TBD | TBD | TBD |
+
 ## 6. Constraints & risks
 - **Data residency:** US / EU / APAC / custom
 - **Identity:** Entra ID / External ID / custom
