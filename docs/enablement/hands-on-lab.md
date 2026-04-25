@@ -58,22 +58,22 @@ the first stop when something goes wrong.
 
 ## Where you'll work
 
-You'll move between six places as you go through the lab. Every lab below opens with a **Where** line so you know which one to be in.
+You'll move between four places as you go through the lab. Every lab below opens with a **Where** line so you know which one to be in.
 
 | Where | What you do there | How to open it |
 |---|---|---|
-| **Terminal** | `azd up`, `gh repo create`, `python`, `npm`, `pytest`, `git` commands | Your normal shell (PowerShell, bash, zsh) |
-| **VS Code** | Edit files in the repo (`accelerator.yaml`, agent specs, evals, prompts) | `code .` from the terminal after `cd`-ing into the cloned repo |
-| **GitHub Copilot Chat** | Run chatmodes (`/discover-scenario`, `/add-tool`, etc.) | In VS Code: click the 💬 Chat icon in the activity bar (or `Ctrl+Alt+I`); type `/` to see the chatmode picker |
+| **VS Code** | Run all repo-local commands in the integrated terminal (`` Ctrl+` ``), edit files (`accelerator.yaml`, agent specs, evals, prompts), and talk to GitHub Copilot Chat in the right sidebar (💬 icon or `Ctrl+Alt+I`; type `/` to see chatmodes like `/discover-scenario` and `/add-tool`) | After cloning, `code .` from any shell opens it on the repo |
+| **GitHub web (github.com)** | Watch Actions runs (optional in the lab; required for the real partner motion) | Your browser, on the cloned repo |
 | **Azure portal (portal.azure.com)** | Inspect the resource group, App Insights logs and dashboards, Foundry quota | Your browser, signed into the same tenant `azd` deployed to |
 | **Foundry portal (ai.azure.com)** | Visually confirm agents (Lab 5 demonstrates that portal edits get overwritten by spec files) | Your browser → https://ai.azure.com → sign in with the same tenant → select the project named in `azd env get-values` (look for `AZURE_AI_FOUNDRY_PROJECT_NAME`) → **Agents** in the left nav |
-| **Local browser tab** | The reference frontend at `http://localhost:5173` (Lab 2) | Vite opens it after `npm run dev` in `patterns/sales-research-frontend/` |
+
+Lab 2 also has you open a local browser tab at `http://localhost:5173` for the running dev frontend — Vite opens it after `npm run dev`.
 
 ---
 
 ## Lab 1 — First deploy
 
-**Where:** Terminal for steps 1 and 3; VS Code for step 2; Azure portal (portal.azure.com → your resource group) for the **Check your work** verification.
+**Where:** VS Code (integrated terminal for the `gh` / `az` / `azd` commands; editor to confirm the repo loaded with `.github/copilot-instructions.md`); Azure portal (portal.azure.com → your resource group) for the **Check your work** verification.
 
 **Goal:** reproduce the 15-minute path end-to-end from an unmodified
 template clone.
@@ -130,7 +130,7 @@ template clone.
 
 ## Lab 2 — See it work in a browser
 
-**Where:** Terminal (for `npm install` / `npm run dev`), VS Code (for editing `.env`), and your local browser at `http://localhost:5173`.
+**Where:** VS Code (integrated terminal for `npm install` / `npm run dev`; editor for `.env`), then your browser at `http://localhost:5173` for the running frontend.
 
 **Goal:** exercise the API the way a customer will — through a browser —
 and confirm the streaming pipeline produces a usable briefing end-to-end.
@@ -242,7 +242,7 @@ Insights and trace it.
 
 ## Lab 4 — Run evals + acceptance (baseline)
 
-**Where:** Terminal (repo root). All three commands run locally against the deployed API URL.
+**Where:** VS Code's integrated terminal (repo root). All three commands run locally against the deployed API URL.
 
 **Goal:** understand the two-step eval flow.
 
@@ -287,7 +287,7 @@ this same chain.
 
 ## Lab 5 — Edit an agent's instructions the supported way
 
-**Where:** VS Code for the spec-file edit, Terminal for `azd provision`, then the **Foundry portal** for the "your manual edit got overwritten" demo. To open the Foundry portal: https://ai.azure.com → sign in with the same tenant `azd` deployed to → select the project named in `azd env get-values` (`AZURE_AI_FOUNDRY_PROJECT_NAME`) → **Agents** in the left nav → click the agent → **Instructions** tab.
+**Where:** VS Code for the spec-file edit and `azd provision` (integrated terminal), then the **Foundry portal** for the "your manual edit got overwritten" demo. To open the Foundry portal: https://ai.azure.com → sign in with the same tenant `azd` deployed to → select the project named in `azd env get-values` (`AZURE_AI_FOUNDRY_PROJECT_NAME`) → **Agents** in the left nav → click the agent → **Instructions** tab.
 
 **Goal:** understand that the Foundry portal is not the source of
 truth.
@@ -330,7 +330,7 @@ try again. The acceptance gate is the contract.
 
 ## Lab 6 — Swap the model
 
-**Where:** VS Code (to edit `accelerator.yaml`) and Terminal (for `azd provision` and the eval chain).
+**Where:** VS Code — editor to edit `accelerator.yaml`, integrated terminal for `azd provision` and the eval chain.
 
 **Goal:** do a model swap the supported way.
 
@@ -365,7 +365,7 @@ try again. The acceptance gate is the contract.
 
 ## Lab 7 — Add a side-effect tool with `/add-tool`
 
-**Where:** GitHub Copilot Chat (in VS Code) for the chatmode, VS Code for any post-generation edits and the redteam case authoring, Terminal for `accelerator-lint.py` / `pytest` / the eval chain.
+**Where:** VS Code — Copilot Chat sidebar for the chatmode, editor for any post-generation edits and the redteam case authoring, integrated terminal for `accelerator-lint.py` / `pytest` / the eval chain.
 
 **Goal:** experience the scaffolded-with-HITL contract.
 
@@ -426,7 +426,7 @@ didn't regress the scenario.
 
 ## Lab 8 — Scaffold a new scenario
 
-**Where:** GitHub Copilot Chat (in VS Code) for `/discover-scenario`, Terminal for `scaffold-scenario.py` and `accelerator-lint.py`, VS Code for pasting the printed YAML block and inspecting/editing the generated stubs.
+**Where:** VS Code — Copilot Chat sidebar for `/discover-scenario`, integrated terminal for `scaffold-scenario.py` and `accelerator-lint.py`, editor for pasting the printed YAML block and inspecting/editing the generated stubs.
 
 **Goal:** understand what `/scaffold-from-brief` actually generates
 vs what you still author.

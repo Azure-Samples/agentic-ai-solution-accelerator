@@ -14,10 +14,9 @@ This document is the authoritative reference for prereqs, secrets, and troublesh
 
 | Where | What you do here |
 |---|---|
-| **Terminal** | Install / verify `az`, `azd`, `gh`, `python`, `docker`; run `azd up` and the eval chain |
+| **VS Code** | Run installs and verify versions in the integrated terminal (`` Ctrl+` ``); run `azd up` and the eval chain there too; edit `.env` for local dev; edit `accelerator.yaml` and `infra/main.parameters.json` to override defaults |
 | **GitHub web (github.com)** | Repo → Settings → Environments → wire `AZURE_CLIENT_ID` / `AZURE_TENANT_ID` / `AZURE_SUBSCRIPTION_ID` and `AZURE_LOCATION` per environment; Settings → Secrets and variables → Actions for repo-level vars |
 | **Azure portal (portal.azure.com)** | Confirm Foundry quota in your target region (Foundry → Quotas) before `azd up`; inspect the deployed resource group and resources after |
-| **VS Code** | Edit local `.env` for development; edit `accelerator.yaml` and `infra/main.parameters.json` to override defaults |
 
 ## What you ship
 

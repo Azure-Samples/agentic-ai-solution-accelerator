@@ -64,7 +64,7 @@ their branding) — not the template itself.
 
 ## Stage 1 — Discovery
 
-**Where:** Customer workshop room (or Teams) for the conversation; **GitHub Copilot Chat** in VS Code to drive `/discover-scenario` (and `/ingest-prd` if a PRD/BRD/spec exists). The brief lands in `docs/discovery/solution-brief.md` for review in VS Code.
+**Where:** Customer workshop room (or Teams) for the conversation; **VS Code** (Copilot Chat sidebar) to drive `/discover-scenario` (and `/ingest-prd` if a PRD/BRD/spec exists). The brief lands in `docs/discovery/solution-brief.md` for review in the editor.
 
 **Goal:** produce a complete `docs/discovery/solution-brief.md` and update
 `accelerator.yaml` so the scaffolding step has everything it needs.
@@ -104,7 +104,7 @@ hypothesis, solution shape, constraints/risks, acceptance evals.
 
 ## Stage 2 — Scaffold
 
-**Where:** GitHub Copilot Chat (in VS Code) for `/scaffold-from-brief`; VS Code editor for the manual customizations (rewriting `prompt.py`, editing `accelerator.yaml`, authoring agent specs); Terminal for `python scripts/scaffold-scenario.py`, `accelerator-lint.py`, and `pytest`.
+**Where:** VS Code throughout — Copilot Chat sidebar for `/scaffold-from-brief`, editor for the manual customizations (rewriting `prompt.py`, editing `accelerator.yaml`, authoring agent specs), integrated terminal for `python scripts/scaffold-scenario.py`, `accelerator-lint.py`, and `pytest`.
 
 **Goal:** adapt the repo to the customer's scenario — a clean diff reviewers
 can follow.
@@ -168,7 +168,7 @@ ID and the build still green.
 
 ## Stage 3 — Provision
 
-**Where:** GitHub Copilot Chat (in VS Code) for `/configure-landing-zone` and `/deploy-to-env`; github.com → repo → Settings → Environments to confirm OIDC + secrets landed; Terminal (signed into the customer's Azure tenant) for `azd env new` + `azd up` and the baseline eval chain; Azure portal (portal.azure.com → resource group) to verify the deployed resources.
+**Where:** VS Code (Copilot Chat sidebar for `/configure-landing-zone` and `/deploy-to-env`; integrated terminal — signed into the customer's Azure tenant — for `azd env new` + `azd up` and the baseline eval chain); github.com → repo → Settings → Environments to confirm OIDC + secrets landed; Azure portal (portal.azure.com → resource group) to verify the deployed resources.
 
 **Goal:** deploy the scaffolded solution to the customer's Azure against a
 named environment.
@@ -241,7 +241,7 @@ OIDC (federated credentials not wired), and AI Search role assignment (needs
 
 ## Stage 4 — Iterate
 
-**Where:** GitHub Copilot Chat (in VS Code) for prompt / tool / grounding edits and `/explain-change` preflights; Terminal for `git push`; github.com → repo → Pull requests / Actions to watch the four CI gates; Azure portal → App Insights for latency and KPI signals between PRs.
+**Where:** VS Code (Copilot Chat sidebar for prompt / tool / grounding edits and `/explain-change` preflights; integrated terminal for `git push`); github.com → repo → Pull requests / Actions to watch the four CI gates; Azure portal → App Insights for latency and KPI signals between PRs.
 
 **Goal:** move the agent quality from "it runs" to "it meets acceptance."
 
@@ -288,7 +288,7 @@ partner-wired on top.
 
 ## Stage 5 — UAT
 
-**Where:** Customer-facing sessions (browser → deployed UI for the customer's golden cases); VS Code to add each customer case to `evals/quality/golden_cases.jsonl`; Terminal to re-run the eval chain; Azure portal → App Insights for the dashboards the sponsor walks through at sign-off.
+**Where:** Customer-facing sessions (browser → deployed UI for the customer's golden cases); VS Code (editor to add each customer case to `evals/quality/golden_cases.jsonl`, integrated terminal to re-run the eval chain); Azure portal → App Insights for the dashboards the sponsor walks through at sign-off.
 
 **Goal:** customer accepts the solution against their own bar.
 
@@ -318,7 +318,7 @@ chatmode has a triage tree for each.
 
 ## Stage 6 — Production handover
 
-**Where:** GitHub Copilot Chat (`/deploy-to-env <customer-short-name>-prod`); Terminal for `azd env new` + `azd up` against prod; Azure portal → App Insights for alert wiring; VS Code to fill in `docs/handover/handover-packet-template.md`; live customer ops handover meeting (Teams + screen share) to walk the packet, runbook, killswitch, and approvers.
+**Where:** VS Code (Copilot Chat sidebar for `/deploy-to-env <customer-short-name>-prod`; integrated terminal for `azd env new` + `azd up` against prod; editor to fill in `docs/handover/handover-packet-template.md`); Azure portal → App Insights for alert wiring; live customer ops handover meeting (Teams + screen share) to walk the packet, runbook, killswitch, and approvers.
 
 **Goal:** move the solution to the customer's production environment and
 hand day-2 operations over.

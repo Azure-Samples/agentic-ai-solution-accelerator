@@ -40,7 +40,7 @@ text-extractable `.pdf` (scanned PDFs must be OCR'd first).
 Flow:
 
 1. **Run `/ingest-prd`** in Copilot Chat and give it the file path.
-   - **Where:** GitHub Copilot Chat (in VS Code) — point Copilot at the PRD/BRD file already in your repo or a local path.
+   - **Where:** GitHub Copilot Chat sidebar in VS Code — point Copilot at the PRD/BRD file already in your repo or a local path.
    The chatmode invokes `scripts/extract-brief-from-doc.py`, maps
    evidence to the 7-section brief schema, and writes a **draft**
    `docs/discovery/solution-brief.md` with:
@@ -96,7 +96,7 @@ What `/ingest-prd` does **not** do:
    It does **not** touch `scenario:` — that comes from
    `/scaffold-from-brief` + `scripts/scaffold-scenario.py` in the
    scaffold stage.
-   - **Where:** GitHub Copilot Chat (in VS Code).
+   - **Where:** GitHub Copilot Chat sidebar in VS Code.
 
 4. **ROI calculator** — open `roi-calculator.xlsx`, fill blue cells on
    the `Inputs` sheet with numbers from brief Section 3 + Section 4. Read the `ROI`
