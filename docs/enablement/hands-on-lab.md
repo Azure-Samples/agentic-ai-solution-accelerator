@@ -1,13 +1,13 @@
 # Hands-on lab — first deployment walkthrough
 
-Self-paced lab for a **partner engineer** new to the agentic AI
-solution accelerator. After finishing, you'll be comfortable enough
+**Sandbox rehearsal** for a **partner engineer** new to the agentic AI
+solution accelerator. Recommended **before your first customer-facing engagement**; not required per customer (returning engineers skip straight to `QUICKSTART.md`). After finishing, you'll be comfortable enough
 with the template to run a real customer engagement against it.
 
 This is not training for the customer's end users — that's partner-owned,
 separately. And it's not a substitute for reading `docs/getting-started/setup-and-prereqs.md`
 (the authoritative prereqs + troubleshooting) or `QUICKSTART.md` (the
-seven-step partner motion). The lab walks you through the same surface area
+eight-step partner motion). The lab walks you through the same surface area
 with check-your-work gates so you catch misunderstandings in a sandbox,
 not in front of a customer.
 

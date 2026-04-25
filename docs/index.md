@@ -45,12 +45,12 @@ hide:
 1. [Scaffold from brief](../QUICKSTART.md#step-3--scaffold-the-solution-from-the-brief) — `/scaffold-from-brief` (first time? run hands-on-lab)
 2. [Preflight](../QUICKSTART.md#step-4--preflight-landing-zone--github-environment) — `/configure-landing-zone` + `/deploy-to-env` (tier choice + GitHub Environment + OIDC)
 3. [Provision customer Azure](getting-started/setup-and-prereqs.md) — `azd up` → Foundry · Search · KV · ACA
-4. [Iterate with Copilot](../QUICKSTART.md#step-6--iterate-with-copilot-ship-through-ci-gates) — PRs gated by lint + evals + redteam
+4. [Iterate with Copilot](../QUICKSTART.md#step-7--iterate-with-copilot-ship-through-ci-gates) — PRs gated by lint + evals + redteam
 5. UAT support — eval tuning · HITL wiring · fixes
 6. [Ship a UI](../patterns/sales-research-frontend/README.md) — fork the React/Vite SSE starter for the customer demo
 7. Agent instructions live in [`docs/agent-specs/`](agent-specs/README.md) — edit the markdown, not Python
 
-→ [**Start here: Quickstart**](../QUICKSTART.md)
+→ [**Start here: Orientation**](getting-started/index.md) — routes you to Setup → Lab → Quickstart (first customer) or straight to Quickstart (returning).
 </div>
 
 <div class="role-card ops" markdown>
@@ -87,12 +87,12 @@ hide:
 
     **You own:** scaffold, provision, iterate, acceptance evals, UAT support, engagement handover artifacts.
 
-    - **Start with:** [seven-step quickstart](getting-started/index.md) — mechanics from clone to customer deploy.
+    - **Start with:** [Orientation](getting-started/index.md) — chooses your path (first customer: Setup → Lab → Quickstart; returning: straight to Quickstart).
     - **Then run:** `/scaffold-from-brief` once a solution brief exists.
     - **Also use:** [Setup & prereqs](getting-started/setup-and-prereqs.md) (authoritative `azd up` troubleshooting) · [Hands-on lab](enablement/hands-on-lab.md)
 
     !!! warning "First customer engagement? Run the hands-on-lab first"
-        The [7-lab sandbox](enablement/hands-on-lab.md) rehearses every chatmode + `azd up` + PR gates against a throwaway subscription. Skipping this is the #1 cause of avoidable first-engagement incidents.
+        The [8-lab sandbox](enablement/hands-on-lab.md) rehearses every chatmode + `azd up` + PR gates against a throwaway subscription. Skipping this is the #1 cause of avoidable first-engagement incidents.
 
     !!! success "Done when"
         Acceptance evals (quality + redteam) pass in the customer's environment **and** handover artifacts — repo access, runbook, approver rota, killswitch drill notes — are delivered to customer ops.

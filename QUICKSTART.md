@@ -1,6 +1,6 @@
 # QUICKSTART — Deploy an Agentic AI Solution in ~15 minutes
 
-> Partner's path from "new customer meeting" to "working agent in customer Azure," in seven steps (six on the happy path; the baseline gate at 5b takes ~5 minutes more).
+> Partner's path from "new customer meeting" to "working agent in customer Azure," in **eight steps**. This is the **per-customer deployment** path; if it's your first time on this accelerator, do [Setup & prereqs](docs/getting-started/setup-and-prereqs.md) (one-time) and [`docs/enablement/hands-on-lab.md`](docs/enablement/hands-on-lab.md) (sandbox rehearsal) before Step 1.
 
 > **Before you start:** Step 5 authenticates against the customer's Azure tenant (`az login --tenant <customer-tenant-id>` + `azd up`), so confirm two things first — you have the rights to create resources in that tenant, and the customer has approved the expected `azd up` cost. Re-read this note before Step 5; the rest of the steps are local.
 
@@ -119,7 +119,7 @@ Before `azd up`, make two decisions and wire one piece of OIDC plumbing. These t
 
 ## Step 5 — Provision + deploy to customer's Azure
 
-**Where:** VS Code's integrated terminal (`` Ctrl+` ``), signed into the customer's Azure tenant. The deployed API URL prints in the terminal at the end of `azd up` — keep it open; you'll reuse it in Step 5b.
+**Where:** VS Code's integrated terminal (`` Ctrl+` ``), signed into the customer's Azure tenant. The deployed API URL prints in the terminal at the end of `azd up` — keep it open; you'll reuse it in Step 6.
 
 > **Authoring agent instructions.** Agent system instructions live in
 > `docs/agent-specs/<agent>.md` under the `## Instructions` heading —
@@ -143,11 +143,11 @@ azd up
 
 ---
 
-## Step 5b — Establish the acceptance baseline
+## Step 6 — Establish the acceptance baseline
 
 **Where:** VS Code's integrated terminal (repo root). Use the same terminal session as Step 5 so the API URL is still on screen.
 
-Before you start iterating, run the acceptance chain once against the freshly deployed flagship. The numbers it produces are the engagement's **known-good starting point**: every PR in Step 6 has to clear this same bar.
+Before you start iterating, run the acceptance chain once against the freshly deployed flagship. The numbers it produces are the engagement's **known-good starting point**: every PR in Step 7 has to clear this same bar.
 
 ```bash
 # Replace <api-url> with the URL azd up printed in Step 5
@@ -162,7 +162,7 @@ Capture the output (a screenshot or `enforce-acceptance.py > baseline.txt` in th
 
 ---
 
-## Step 6 — Iterate with Copilot; ship through CI gates
+## Step 7 — Iterate with Copilot; ship through CI gates
 
 **Where:** VS Code (Copilot Chat sidebar for the agent edits, integrated terminal for `git push`), then GitHub web (github.com → your repo → Pull requests / Actions) to watch CI.
 
@@ -188,11 +188,11 @@ Any red light blocks merge. Green = `azd deploy` against customer env.
 
 ---
 
-## Step 7 — Ship a UI
+## Step 8 — Ship a UI
 
 **Where:** VS Code — edit the React + Vite + TypeScript starter under `patterns/sales-research-frontend/` in the editor; run `npm install` / `npm run dev` / `swa deploy` from the integrated terminal.
 
-Steps 1–6 give you a working SSE API. To put a UI in front of it for your
+Steps 1–7 give you a working SSE API. To put a UI in front of it for your
 customer, fork the [frontend pattern](patterns/sales-research-frontend/README.md) —
 a minimal React + Vite + TypeScript starter that consumes `/research/stream`
 and is deployable to Azure Static Web Apps. It's reference material, not a
