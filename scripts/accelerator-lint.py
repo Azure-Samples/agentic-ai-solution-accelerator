@@ -2212,6 +2212,14 @@ def mkdocs_nav_integrity(ctx: Ctx) -> list[Finding]:
             return ROOT / tail  # AGENTS.md / SECURITY.md / SUPPORT.md / CONTRIBUTING.md
         if s.startswith("chatmodes/"):
             return ROOT / ".github" / s
+        # Pattern READMEs may live at repo root (patterns/<id>/README.md) or
+        # under docs/patterns/. Check the repo-root location first; fall
+        # through to docs/ otherwise. prepare-pages.py stages root-level
+        # pattern READMEs into docs-build/patterns/<id>/README.md.
+        if s.startswith("patterns/"):
+            root_candidate = ROOT / s
+            if root_candidate.exists():
+                return root_candidate
         return ROOT / "docs" / s
 
     for staged in sorted(nav_files):

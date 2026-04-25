@@ -53,7 +53,7 @@ Chatmodes in `.github/chatmodes/` (they drive the executable surface) → `docs/
 [Architecture](docs/patterns/architecture/README.md) · [WAF alignment](docs/patterns/waf-alignment/README.md) · [Responsible AI](docs/patterns/rai/README.md) · [Azure AI Landing Zone](docs/patterns/azure-ai-landing-zone/README.md)
 
 ### 🔀 Scenario variants (candidate patterns, not drop-ins)
-[single-agent](patterns/single-agent/README.md) · [chat-with-actioning](patterns/chat-with-actioning/README.md)
+[single-agent](patterns/single-agent/README.md) · [chat-with-actioning](patterns/chat-with-actioning/README.md) · [sales-research-frontend](patterns/sales-research-frontend/README.md) (reference UI)
 
 ### 📚 Reference scenarios (walkthroughs)
 [customer-service-actioning](docs/references/customer-service-actioning/README.md) · [rfp-response](docs/references/rfp-response/README.md)
@@ -84,7 +84,8 @@ agentic-ai-solution-accelerator/
 │   └── redteam/                  XPIA + jailbreak + brief-specific RAI cases
 ├── patterns/
 │   ├── single-agent/             variant: when orchestration isn't needed
-│   └── chat-with-actioning/      variant: conversational front-end with tools
+│   ├── chat-with-actioning/      variant: conversational front-end with tools
+│   └── sales-research-frontend/  reference UI starter (React + Vite + TS) for /research/stream
 ├── docs/
 │   ├── getting-started/         orientation + setup-and-prereqs (authoritative)
 │   ├── partner-playbook.md       end-to-end partner motion (7 stages)

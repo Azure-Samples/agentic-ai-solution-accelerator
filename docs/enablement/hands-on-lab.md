@@ -338,6 +338,60 @@ vs what you still author.
 
 ---
 
+## Lab 8 — Wire the UI
+
+**Goal:** put a browser front-end in front of the API you just deployed
+so the workflow stops being "a curl command" and starts feeling like a
+product the customer can click through.
+
+The accelerator ships a reference frontend at
+`patterns/sales-research-frontend/` — a minimal React + Vite + TypeScript
+starter that consumes `POST /research/stream` directly. It is intentionally
+plain: no auth, no state persistence, no UI framework. The customer's real
+UX is the partner's value-add; this lab just proves the wiring.
+
+**Steps:**
+
+1. Grab the deployed API URL from `azd up`'s final output (or
+   `azd env get-values | Select-String AZURE_CONTAINER_APP_URL`). You want
+   the base URL — the pattern appends `/research/stream` itself.
+2. From the repo root:
+
+   ```bash
+   cd patterns/sales-research-frontend
+   cp .env.example .env
+   # edit .env: VITE_API_BASE_URL=<deployed-api-url>
+   npm install
+   npm run dev
+   ```
+
+3. Open `http://localhost:5173`. The form is pre-filled with sensible
+   defaults — click **Run research** and watch the streaming viewer light
+   up with `status`, `partial`, and `final` events as the supervisor DAG
+   executes. The result panel renders the aggregated briefing; toggle
+   **Show raw JSON** to inspect the structured output.
+
+**Check your work:**
+
+- Every event in the live stream maps to one yielded dict from
+  `SalesResearchWorkflow.stream` (see `src/scenarios/sales_research/workflow.py`)
+  or from the underlying `SupervisorDAG` (see `src/workflow/supervisor.py`).
+  If a new event type appears in the stream that the UI doesn't recognise,
+  add it to the `StreamEvent` union in `src/types/research.ts` and to the
+  `describe()` switch in `StreamingViewer.tsx`.
+- The final panel renders fields from the supervisor's
+  `transform_response` (`src/scenarios/sales_research/agents/supervisor/transform.py`).
+  If you customise the briefing shape for the customer, update
+  `ResearchBriefing` and `ResultPanel.tsx` together.
+
+**Going further:** see `patterns/sales-research-frontend/README.md` for the
+SWA deploy flow (`swa deploy ./dist`) and the customisation map. For a real
+customer engagement, plan auth (Entra ID via easy-auth on Container Apps or
+App Gateway), state persistence, and an actual HITL approval surface before
+the UI is customer-facing.
+
+---
+
 ## Cleanup
 
 ```bash

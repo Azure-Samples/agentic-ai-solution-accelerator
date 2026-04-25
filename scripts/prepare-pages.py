@@ -76,6 +76,9 @@ def rewrites_for_docs_tree(depth: int) -> list[tuple[re.Pattern[str], str]]:
         _md(r"SUPPORT\.md", "about/SUPPORT.md"),
         _md(r"CONTRIBUTING\.md", "about/CONTRIBUTING.md"),
         _md(r"docs/", ""),
+        # Repo-root pattern READMEs (e.g. patterns/sales-research-frontend/)
+        # are staged into docs-build/patterns/<id>/README.md by prepare-pages.
+        _md(r"patterns/", "patterns/"),
         _md(r"\.github/chatmodes/", "chatmodes/"),
         _md(r"\.github/CLA\.md", "about/CLA.md"),
     ]
@@ -335,6 +338,26 @@ def stage() -> None:
         for cm in CHATMODES_SRC.glob("*.md"):
             wrapped = wrap_chatmode_for_pages(cm.read_text(encoding="utf-8"), cm.name)
             (chatmodes_dst / cm.name).write_text(wrapped, encoding="utf-8")
+
+    # Stage the sales-research-frontend pattern README so the published
+    # nav entry resolves. Sibling pattern READMEs (single-agent /
+    # chat-with-actioning) are not staged into Pages today, so rewrite
+    # those links to absolute GitHub URLs; the architecture deep-dive is
+    # staged under docs/, so rewrite that to the staged path.
+    frontend_pattern = REPO_ROOT / "patterns" / "sales-research-frontend" / "README.md"
+    if frontend_pattern.exists():
+        frontend_rules: list[tuple[re.Pattern[str], str]] = [
+            (re.compile(r"\]\(\.\./single-agent/README\.md"),
+             "](https://github.com/Azure-Samples/agentic-ai-solution-accelerator/blob/main/patterns/single-agent/README.md"),
+            (re.compile(r"\]\(\.\./chat-with-actioning/README\.md"),
+             "](https://github.com/Azure-Samples/agentic-ai-solution-accelerator/blob/main/patterns/chat-with-actioning/README.md"),
+            (re.compile(r"\]\(\.\./\.\./docs/patterns/architecture/README\.md"),
+             "](../architecture/README.md"),
+        ]
+        if stage_file(frontend_pattern,
+                      STAGE / "patterns" / "sales-research-frontend" / "README.md",
+                      frontend_rules):
+            rewritten += 1
 
     total_md = sum(1 for _ in STAGE.rglob("*.md"))
     print(f"Staged {total_md} markdown files into {STAGE.relative_to(REPO_ROOT)}/")

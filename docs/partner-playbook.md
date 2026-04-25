@@ -252,6 +252,13 @@ portal edits.
 showing the failure, then fix the prompt / tool in a PR. Close the loop:
 the case stays green or the PR blocks.
 
+**Building the customer-facing UI:** the accelerator API is headless. Start
+from [`patterns/sales-research-frontend/`](../patterns/sales-research-frontend/README.md)
+— a minimal React + Vite + TypeScript starter that consumes `/research/stream`
+and deploys to Azure Static Web Apps. Fork it as the baseline for your
+customer's UX work; auth, branding, and any HITL approval surfaces are
+partner-wired on top.
+
 ---
 
 ## Stage 5 — UAT

@@ -44,6 +44,30 @@ Code pointers:
 
 ---
 
+## Frontend layer (partner-built)
+
+The accelerator stops at the API. The UI a customer actually clicks is the
+**partner's value-add** — bespoke UX, auth, branding, and any approval
+surfaces are out of scope for the template.
+
+To shorten the runway, a reference UI starter ships at
+[`patterns/sales-research-frontend/`](../../../patterns/sales-research-frontend/README.md):
+React + Vite + TypeScript, consumes `POST /research/stream` directly via the
+Fetch + ReadableStream SSE pattern, deploys to Azure Static Web Apps. It is
+deliberately minimal (no auth, no state persistence, no framework lock-in)
+so partners can fork-and-customise rather than rip out opinions.
+
+```
+   browser  ──HTTPS──►  Static Web App  ──HTTPS──►  Container Apps (FastAPI)
+                                                         │
+                                                         └─► Foundry / Search / KV
+```
+
+The pattern is **not built or tested in CI** — it's reference material the
+partner lifts into their own pipeline once they've customised it.
+
+---
+
 ## Invariants the lint enforces
 
 `scripts/accelerator-lint.py` is the authoritative contract. Partners must not violate:

@@ -112,6 +112,21 @@ Any red light blocks merge. Green = `azd deploy` against customer env.
 
 ---
 
+## Step 6 (optional) — Ship a UI
+
+Steps 1–5 give you a working SSE API. To put a UI in front of it for your
+customer, fork the [frontend pattern](patterns/sales-research-frontend/README.md) —
+a minimal React + Vite + TypeScript starter that consumes `/research/stream`
+and is deployable to Azure Static Web Apps. It's reference material, not a
+finished product: the customer's real UX is the partner's value-add.
+
+If your customer already has an internal portal or Power Platform surface,
+the same pattern shows how to call the SSE endpoint from any client; lift
+`src/services/researchClient.ts` and the `StreamEvent` types in
+`src/types/research.ts` into their codebase.
+
+---
+
 ## Need a different shape?
 
 The variants below are **candidate patterns** (documented in `patterns/<variant>/README.md`), not drop-in packages. Run `/switch-to-variant` for a walkthrough of re-authoring the scenario under `src/scenarios/<new-id>/`:

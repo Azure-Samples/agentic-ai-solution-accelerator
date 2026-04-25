@@ -95,6 +95,7 @@ nav:
       - WAF alignment: patterns/waf-alignment/README.md
       - Responsible AI: patterns/rai/README.md
       - Azure AI landing zone: patterns/azure-ai-landing-zone/README.md
+      - Sales research frontend: patterns/sales-research-frontend/README.md
   - Reference scenarios:
       - Customer service actioning: references/customer-service-actioning/README.md
       - RFP response: references/rfp-response/README.md
