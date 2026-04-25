@@ -54,6 +54,17 @@ not work around a broken local environment. The troubleshooting
 matrix in `docs/getting-started/setup-and-prereqs.md` ("Troubleshooting — top 5") is
 the first stop when something goes wrong.
 
+> **Lab-only scope.** Other sections of `docs/getting-started/setup-and-prereqs.md`
+> — GitHub Environment-scoped secrets (`AZURE_CLIENT_ID` / `TENANT_ID` /
+> `SUBSCRIPTION_ID` / `AZURE_LOCATION`), repo-level `EVALS_API_URL`,
+> `HITL_APPROVER_ENDPOINT`, multi-environment `deploy/environments.yaml`,
+> and private-network (`enablePrivateLink`) setup — apply to the
+> **production / customer motion** in `QUICKSTART.md`, not this lab. The lab
+> runs `azd up` locally against a sandbox subscription (`azd auth login`
+> covers auth), runs evals locally against the deployed API URL, and uses a
+> single `lab-dev` environment on Tier 1 standalone. You'll meet those
+> sections during your first real customer deploy.
+
 ---
 
 ## Where you'll work
