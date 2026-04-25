@@ -111,7 +111,7 @@ full deploy chain.
 ```bash
 # 1. Clone the template into your sandbox repo
 # Replace <your-handle> with any short name (e.g., contoso → contoso-accel-sandbox)
-gh repo create <your-handle>-accel-sandbox --template Azure-Samples/agentic-ai-solution-accelerator --private
+gh repo create <your-handle>-accel-sandbox --template Azure-Samples/agentic-ai-solution-accelerator --private --clone
 cd <your-handle>-accel-sandbox
 code .
 

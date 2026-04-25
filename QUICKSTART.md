@@ -34,7 +34,7 @@ You'll move between three places as you go through this guide. Every step below 
 
 ```bash
 # Replace <customer-short-name> with your customer's short name (e.g., contoso, fabrikam)
-gh repo create <customer-short-name>-agents --template Azure-Samples/agentic-ai-solution-accelerator --private
+gh repo create <customer-short-name>-agents --template Azure-Samples/agentic-ai-solution-accelerator --private --clone
 cd <customer-short-name>-agents
 code .
 ```

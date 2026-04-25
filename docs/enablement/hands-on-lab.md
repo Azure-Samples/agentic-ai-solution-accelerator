@@ -82,7 +82,7 @@ template clone.
 
    ```bash
    # Replace <your-handle> with any short name (e.g., contoso-lab-accel becomes from <your-handle>=contoso)
-   gh repo create <your-handle>-lab-accel --template Azure-Samples/agentic-ai-solution-accelerator --private
+   gh repo create <your-handle>-lab-accel --template Azure-Samples/agentic-ai-solution-accelerator --private --clone
    cd <your-handle>-lab-accel
    code .
    ```
