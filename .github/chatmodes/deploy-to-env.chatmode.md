@@ -1,18 +1,18 @@
 ---
-description: Wire up a new Azure environment (partner dev, staging, or customer-scoped subscription) so `deploy.yml` can target it without a repo fork. Walks through the manifest entry, GitHub Environment, OIDC federated credential, and first dispatch run.
+description: Wires up a new Azure environment (partner dev, staging, or customer-scoped subscription) so `deploy.yml` can target it without a repo fork. Covers the manifest entry, GitHub Environment, OIDC federated credential, and first dispatch run.
 tools: ['codebase', 'editFiles', 'search', 'runCommands']
 ---
 
 # /deploy-to-env — add a BYO-Azure environment to this template
 
-Use this when a partner wants to deploy the accelerator to a **new Azure environment** — their own staging subscription, a specific customer's subscription, or a regional clone — **without forking the repo**. Everything routes through `deploy/environments.yaml` plus GitHub Environments; no `deploy.yml` edits needed for routine new envs.
+Use this when deploying the accelerator to a **new Azure environment** — a partner staging subscription, a specific customer's subscription, or a regional clone — **without forking the repo**. Everything routes through `deploy/environments.yaml` plus GitHub Environments; no `deploy.yml` edits needed for routine new envs.
 
 ## When NOT to use this
 - Routine infra tweaks to an existing env → edit `infra/*.bicep` and re-run `azd up -e <existing-env>`.
 - Cross-tenant customer deploys via Azure Lighthouse / ARM delegation → out of scope for this chatmode; a separate bootstrap.
 - Forking the repo for a customer who wants the source code → also out of scope.
 
-## Inputs to ask the partner
+## Inputs to gather
 1. **Env name** (lowercase, `[a-z][a-z0-9-]{1,30}`, e.g. `staging`, `customera-prod`, `emea-dev`).
 2. **Azure region** (e.g. `eastus2`, `westeurope`) — will be the GitHub `vars.AZURE_LOCATION` for the new env.
 3. **Target Azure subscription id + tenant id** — will be the new env's `secrets.AZURE_SUBSCRIPTION_ID` and `secrets.AZURE_TENANT_ID`.
@@ -91,4 +91,4 @@ If `resolve-env` fails with "environment '<name>' not found", Step 1 wasn't save
 - Never hand-edit `deploy.yml` to add envs. The manifest + resolve-env pattern is the contract.
 - Never commit secrets. Never set `AZURE_ENV_NAME` in any GitHub variable/secret — the manifest is the single source of truth.
 - If the customer needs deploys from *their* repo (not this one), that's a separate bootstrap (out of scope).
-- The default-env-on-push behavior applies only to `default_env` in the manifest. If you flip `default_env` to a prod-like env, confirm the partner actually wants merges to main to auto-deploy there.
+- The default-env-on-push behavior applies only to `default_env` in the manifest. If `default_env` is flipped to a prod-like env, confirm the engagement actually wants merges to main to auto-deploy there.

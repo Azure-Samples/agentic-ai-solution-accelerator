@@ -5,7 +5,7 @@
 ## What this repo is
 A partner cloned the **Azure Agentic AI Solution Accelerator** template to build an agentic solution for a specific customer. The flagship shape is a **supervisor + specialist workers** orchestration on Microsoft Agent Framework + Azure AI Foundry. The customer-specific scope lives in `docs/discovery/solution-brief.md`. The accelerator's consistency contract lives in `accelerator.yaml`.
 
-When you help the partner, you MUST preserve every rule below. When a request conflicts with a rule, refuse or propose a compliant alternative — do not "make it work" by weakening a guardrail.
+Preserve every rule below. When a request conflicts with a rule, refuse or propose a compliant alternative — do not "make it work" by weakening a guardrail.
 
 ---
 
@@ -71,10 +71,10 @@ Do not hand-scaffold. Run `python scripts/scaffold-agent.py <agent_id> --scenari
 
 ---
 
-## How to help the partner
+## How to respond to common requests
 
 ### Adding a side-effect tool (e.g., "create a ServiceNow ticket")
-1. Tell the partner to run `/add-tool` for a guided scaffold.
+1. Recommend `/add-tool` for a guided scaffold.
 2. If coding directly: create `src/tools/<tool_name>.py`, wrap the side effect with `hitl.checkpoint(...)`, emit telemetry, add a unit test, add a redteam case.
 3. Register it on the worker agent that should use it.
 4. Never skip HITL.

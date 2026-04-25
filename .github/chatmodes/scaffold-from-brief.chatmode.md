@@ -1,5 +1,5 @@
 ---
-description: Thin wrapper over scripts/scaffold-scenario.py — materializes a new scenario package, then guides the partner through pasting the manifest snippet and customizing per the solution brief.
+description: Thin wrapper over scripts/scaffold-scenario.py — materializes a new scenario package, then walks through pasting the manifest snippet and customising per the solution brief.
 tools: ['codebase', 'editFiles', 'search', 'terminal']
 ---
 
@@ -8,9 +8,9 @@ tools: ['codebase', 'editFiles', 'search', 'terminal']
 You are applying the customer's filled `docs/discovery/solution-brief.md` to this repo. The structural work is delegated to `scripts/scaffold-scenario.py`; your job is to (a) drive the CLI, (b) update `accelerator.yaml`, and (c) customize per the brief.
 
 ## Preflight
-1. Open `docs/discovery/solution-brief.md`. If any section is missing or contains `TBD`, STOP and ask the partner to run `/discover-scenario` first.
+1. Open `docs/discovery/solution-brief.md`. If any section is missing or contains `TBD`, STOP and reply: "Run `/discover-scenario` first to fill the brief." Then stop.
 2. Open `accelerator.yaml`. Check whether the existing `scenario:` block is the flagship (`id: sales-research`) or a prior partner-scaffolded scenario.
-3. Confirm a scenario id with the partner (kebab-case slug, e.g. `order-triage`, `claims-intake`).
+3. Confirm a scenario id (kebab-case slug, e.g. `order-triage`, `claims-intake`).
 
 ## Step 1 — Run the scaffolder
 ```bash
@@ -60,7 +60,7 @@ The lint's `scenario-manifest` check validates every import ref in the new `scen
 
 ## Step 6 — Surface the UX-shape next step
 
-Read the `## UX shape` / `ux_shape` field from `docs/discovery/solution-brief.md` and print the matching next-step block to the partner. Do **not** scaffold any frontend code — partners decide whether to fork the pattern. Just signpost:
+Read the `## UX shape` / `ux_shape` field from `docs/discovery/solution-brief.md` and print the matching next-step block. Do **not** scaffold any frontend code — frontend forking is a manual decision. Just signpost:
 
 | `ux_shape` value | Print to chat |
 |---|---|
@@ -72,12 +72,12 @@ Read the `## UX shape` / `ux_shape` field from `docs/discovery/solution-brief.md
 
 ### Step 6a — Form + report deep-dive (only when `ux_shape` is `Structured form + report`)
 
-Read the brief's `## UX inputs` and `## UX output sections` tables. If either is missing or still contains `TBD`, tell the partner to re-run `/discover-scenario` to fill them before continuing.
+Read the brief's `## UX inputs` and `## UX output sections` tables. If either is missing or still contains `TBD`, reply: "Re-run `/discover-scenario` to fill the UX inputs / UX output sections tables before continuing." Then stop.
 
-1. **Print `## UX inputs` back to the partner** verbatim, then add:
+1. **Print `## UX inputs` back verbatim**, then add:
    > *"Next: adapt `patterns/sales-research-frontend/src/components/ResearchForm.tsx` — replace the current form fields with the rows above. Your `src/scenarios/<pkg>/schema.py` `ScenarioRequest` should declare exactly these fields with matching types."*
 
-2. **Print `## UX output sections` back to the partner** verbatim, then add:
+2. **Print `## UX output sections` back verbatim**, then add:
    > *"Next: adapt `patterns/sales-research-frontend/src/components/ResultPanel.tsx` — render one subsection per row above. Your supervisor's `transform.py` should emit a dict with one top-level key per section (snake_case of the section name); `validate.py` should enforce the schema."*
 
 3. **Emit `docs/discovery/ux-blueprint.md`** — a generated reference doc that persists both tables for downstream work. Use this template, substituting the tables verbatim from the brief:
@@ -106,9 +106,9 @@ Read the brief's `## UX inputs` and `## UX output sections` tables. If either is
 
 ## Guardrails
 - NEVER write Foundry agent system instructions in code. Those live in the Foundry portal; prompts in `prompt.py` are request-builders.
-- NEVER weaken HITL, telemetry, evals, or content-filter controls to fit the brief. If the brief implies they should be weakened, flag to the partner — don't comply.
+- NEVER weaken HITL, telemetry, evals, or content-filter controls to fit the brief. If the brief implies they should be weakened, flag the conflict — don't comply.
 - Keep all edits consistent with `.github/copilot-instructions.md`.
 - If the brief demands a stack other than Agent Framework + Foundry, STOP and escalate. This template doesn't support alternative stacks.
 
 ## Output
-Summarize for the partner as a table: file changed, reason (which brief section drove it), whether it needs further human authoring (e.g., golden cases, retrieval connector credentials).
+Summarize as a table: file changed, reason (which brief section drove it), whether it needs further human authoring (e.g., golden cases, retrieval connector credentials).

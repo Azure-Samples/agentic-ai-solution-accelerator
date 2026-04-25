@@ -9,19 +9,19 @@ You are drafting `docs/discovery/solution-brief.md` from a customer's PRD, BRD, 
 
 ## Inputs
 
-Ask the partner one question:
+Ask one question:
 > **"Paste the path to the customer document, or paste its full text. Supported file types: .md, .txt, .docx, text-extractable .pdf."**
 
 ## Step 1 — Extract the source
 
-- If the partner gave a **file path** (inside or outside the repo), run:
+- If the input is a **file path** (inside or outside the repo), run:
   ```bash
   python scripts/extract-brief-from-doc.py <path>
   ```
   The script prints JSON with `format`, `total_chars`, `headings_index`, and `chunks`. Read the JSON in full — every chunk has a `chunk_id` you will cite later.
-- If the partner **pasted text**: treat each blank-line-separated block as a chunk with id `c001`, `c002`, …; there is no `page`; headings are lines you recognize (markdown `#`, or numbered / ALL-CAPS lines).
-- If the script exits with `"error": "no_extractable_text"` (scanned PDF), tell the partner to export the doc to .docx or run OCR, then stop.
-- If the script exits with `"error": "missing_dependency"`, tell the partner to run `pip install -e .` from the repo root, then stop.
+- If the input is **pasted text**: treat each blank-line-separated block as a chunk with id `c001`, `c002`, …; there is no `page`; headings are lines you recognize (markdown `#`, or numbered / ALL-CAPS lines).
+- If the script exits with `"error": "no_extractable_text"` (scanned PDF), reply: "The PDF is scanned — export the doc to .docx or run OCR, then re-run /ingest-prd." Then stop.
+- If the script exits with `"error": "missing_dependency"`, reply: "Run `pip install -e .` from the repo root, then re-run /ingest-prd." Then stop.
 
 ## Step 2 — Map evidence to brief fields
 
@@ -83,7 +83,7 @@ Before you write anything to disk, print to chat:
 Then ask:
 > **"Spot-check: I'll quote three random non-TBD fields with their citations. Can you verify these against the source document before I write the brief?"**
 
-Pick 3 random rows from the evidence table and print them. Wait for the partner's "go / fix X / stop." Only proceed on explicit "go."
+Pick 3 random rows from the evidence table and print them. Wait for an explicit "go / fix X / stop." Only proceed on explicit "go."
 
 ## Step 4 — Write the draft brief
 
@@ -107,13 +107,13 @@ Write `docs/discovery/solution-brief.md` with:
 
 ## Step 5 — Close out
 
-Tell the partner, verbatim:
+Reply verbatim:
 
 > "Draft brief written to `docs/discovery/solution-brief.md` with a STATUS banner at the top. I left **N** required fields as `TBD`. Next step: run `/discover-scenario` — it will detect the draft banner, enter gap-fill mode, and ask you only about the TBDs (preserving every field I already filled). Then it updates `accelerator.yaml` and strips the banner + evidence blocks. Only after that is it safe to run `/scaffold-from-brief`."
 
 ## Style
 
-- One document ingested per session. If the partner has multiple source docs, concatenate them before running the script or run `/ingest-prd` once per doc and merge by hand.
+- One document ingested per session. If there are multiple source docs, concatenate them before running the script or run `/ingest-prd` once per doc and merge by hand.
 - Never write the brief until step 3's spot-check returned "go."
 - Never infer. Never soften "the source doesn't say" into a filled field.
 - If the source contradicts itself (e.g., two different target latency numbers), flag the contradiction in chat and leave the field `TBD`.

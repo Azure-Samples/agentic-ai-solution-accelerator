@@ -7,7 +7,7 @@ tools: ['codebase', 'editFiles', 'search']
 
 Use this for any tool that writes, sends, mutates external state, or triggers destructive actions. If the tool is read-only, you probably don't need this — just add a retriever under `src/retrieval/`.
 
-## Ask the partner
+## Inputs to gather
 1. **Tool name** (snake_case, e.g., `crm_create_contact`)
 2. **External system** (e.g., Salesforce, ServiceNow, Dynamics, SMTP)
 3. **Operation** (verb + object, e.g., "create Contact in Salesforce")

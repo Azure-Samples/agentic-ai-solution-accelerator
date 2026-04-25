@@ -12,9 +12,9 @@ Use this when the brief or a follow-on requirement introduces a capability no cu
 ## Preconditions
 - The solution uses the `supervisor-routing` pattern (check `accelerator.yaml.solution.pattern`).
 - The target scenario exists under `src/scenarios/<scenario>/` and its `workflow.py` declares `WORKERS: dict[str, WorkerSpec] = { ... }` in the canonical single-form shape. (The flagship `sales-research` scenario is the reference.)
-- The new worker has a clear, one-sentence capability. If you can't write that sentence, push back on the partner to clarify — don't scaffold fuzziness.
+- The new worker has a clear, one-sentence capability. If you can't write that sentence, push back to clarify — don't scaffold fuzziness.
 
-## Ask the partner
+## Inputs to gather
 1. **Agent id** (snake_case, e.g. `pricing_calculator`, `risk_scoring`)
 2. **Scenario id** (kebab-case — matches `accelerator.yaml.scenario.id`, e.g. `sales-research`)
 3. **One-sentence capability** (used by the supervisor router; quoted verbatim into the YAML snippet)
