@@ -84,10 +84,9 @@ template clone.
    # Replace <your-handle> with any short name (e.g., contoso-lab-accel becomes from <your-handle>=contoso)
    gh repo create <your-handle>-lab-accel --template Azure-Samples/agentic-ai-solution-accelerator --private --clone
    cd <your-handle>-lab-accel
-   code -r .
    ```
 
-   > `code -r .` reuses the current VS Code window and re-roots it onto the cloned repo. If you're running from a standalone shell (not VS Code's integrated terminal), use `code .` to open a fresh window instead.
+   Then load the folder into your current VS Code window via **File → Open Folder** (`Ctrl+K Ctrl+O` on Windows/Linux, `Cmd+K Cmd+O` on macOS) and pick `<your-handle>-lab-accel`. If you're running these commands from a standalone shell instead, `code <your-handle>-lab-accel` opens it in a fresh window.
 
 2. In VS Code, confirm Copilot Chat loads the repo's `.github/copilot-instructions.md`
    (you'll see it referenced in the chat sidebar). If it doesn't,
