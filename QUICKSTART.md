@@ -73,7 +73,20 @@ Commit the scaffolded changes. CI lint now runs; it will flag anything missing.
 
 ---
 
-## Step 4 — Provision + deploy to customer's Azure
+## Step 4 — Preflight: landing zone + GitHub Environment
+
+Before `azd up`, make two decisions and wire one piece of OIDC plumbing. These take 5–15 minutes and prevent the most common first-deploy failures.
+
+```
+/configure-landing-zone     # pick standalone | avm | alz-integrated; updates accelerator.yaml + infra/
+/deploy-to-env <env-name>   # registers the GitHub Environment, wires OIDC, scopes secrets
+```
+
+`/configure-landing-zone` walks you through the tier decision (Tier 1 standalone for pilots / SMB; Tier 2 `avm` for private endpoints; Tier 3 `alz-integrated` for an existing customer ALZ hub). `/deploy-to-env` adds the env to `deploy/environments.yaml`, creates the matching GitHub Environment, and wires the OIDC federated credential so CI can deploy without a service-principal secret. Skip this and your first PR will fail auth.
+
+---
+
+## Step 5 — Provision + deploy to customer's Azure
 
 > **Authoring agent instructions.** Agent system instructions live in
 > `docs/agent-specs/<agent>.md` under the `## Instructions` heading —
@@ -95,7 +108,7 @@ azd up
 
 ---
 
-## Step 5 — Iterate with Copilot; ship through CI gates
+## Step 6 — Iterate with Copilot; ship through CI gates
 
 In VS Code, just talk to Copilot:
 
@@ -119,9 +132,9 @@ Any red light blocks merge. Green = `azd deploy` against customer env.
 
 ---
 
-## Step 6 (optional) — Ship a UI
+## Step 7 (optional) — Ship a UI
 
-Steps 1–5 give you a working SSE API. To put a UI in front of it for your
+Steps 1–6 give you a working SSE API. To put a UI in front of it for your
 customer, fork the [frontend pattern](patterns/sales-research-frontend/README.md) —
 a minimal React + Vite + TypeScript starter that consumes `/research/stream`
 and is deployable to Azure Static Web Apps. It's reference material, not a

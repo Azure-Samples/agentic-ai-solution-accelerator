@@ -43,11 +43,12 @@ hide:
 *Builds, ships, supports*
 
 1. [Scaffold from brief](../QUICKSTART.md#step-3--scaffold-the-solution-from-the-brief) — `/scaffold-from-brief` (first time? run hands-on-lab)
-2. [Provision customer Azure](getting-started/setup-and-prereqs.md) — `azd up` → Foundry · Search · KV · ACA
-3. [Iterate with Copilot](../QUICKSTART.md#step-4--provision--deploy-to-customers-azure) — PRs gated by lint + evals + redteam
-4. UAT support — eval tuning · HITL wiring · fixes
-5. [Ship a UI](../patterns/sales-research-frontend/README.md) — fork the React/Vite SSE starter for the customer demo
-6. Agent instructions live in [`docs/agent-specs/`](agent-specs/README.md) — edit the markdown, not Python
+2. [Preflight](../QUICKSTART.md#step-4--preflight-landing-zone--github-environment) — `/configure-landing-zone` + `/deploy-to-env` (tier choice + GitHub Environment + OIDC)
+3. [Provision customer Azure](getting-started/setup-and-prereqs.md) — `azd up` → Foundry · Search · KV · ACA
+4. [Iterate with Copilot](../QUICKSTART.md#step-6--iterate-with-copilot-ship-through-ci-gates) — PRs gated by lint + evals + redteam
+5. UAT support — eval tuning · HITL wiring · fixes
+6. [Ship a UI](../patterns/sales-research-frontend/README.md) — fork the React/Vite SSE starter for the customer demo
+7. Agent instructions live in [`docs/agent-specs/`](agent-specs/README.md) — edit the markdown, not Python
 
 → [**Start here: Quickstart**](../QUICKSTART.md)
 </div>

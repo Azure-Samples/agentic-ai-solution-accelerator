@@ -26,8 +26,8 @@
 - **✅ Done when:** customer sponsor signs off at UAT (Stage 5), handover packet is delivered with a named owner and date (Stage 6), and the first monthly value review is on the calendar (Stage 7).
 
 ### 🛠️ Partner Engineer — scaffold, deploy, iterate, UAT support
-- **Start with:** [`QUICKSTART.md`](QUICKSTART.md) — the 5-step mechanics summary from clone to customer deploy
-- **Then run:** `/scaffold-from-brief` once a solution brief exists (engineer's interactive equivalent of the lead's `/delivery-guide`)
+- **Start with:** [`QUICKSTART.md`](QUICKSTART.md) — clone → discover → scaffold → **preflight (`/configure-landing-zone` + `/deploy-to-env`)** → `azd up` → iterate
+- **Then run:** `/scaffold-from-brief` once a solution brief exists (engineer's interactive companion)
 - **Also use:** [`docs/getting-started/setup-and-prereqs.md`](docs/getting-started/setup-and-prereqs.md) (authoritative setup, prereqs, `azd up` troubleshooting) · [`docs/enablement/hands-on-lab.md`](docs/enablement/hands-on-lab.md) (7-lab sandbox rehearsal — **strongly recommended before your first customer-facing deployment**)
 - **✅ Done when:** acceptance evals (quality + redteam) pass in the customer's environment and the handover artifacts — repo access, runbook, approver rota, killswitch drill notes — are delivered to customer ops.
 

@@ -50,7 +50,8 @@ flowchart LR
     subgraph PE["🛠️ Partner Engineer"]
         direction LR
         E1["<b>2. Scaffold from brief</b><br/>/scaffold-from-brief<br/><i>first time: run hands-on-lab</i>"]
-        E2["<b>3. Provision customer Azure</b><br/>azd up → Foundry · Search · KV · ACA"]
+        EP["<b>3a. Preflight</b><br/>/configure-landing-zone<br/>/deploy-to-env (OIDC + env)"]
+        E2["<b>3b. Provision customer Azure</b><br/>azd up → Foundry · Search · KV · ACA"]
         E3["<b>4. Iterate with Copilot</b><br/>PRs gated by lint + evals + redteam"]
         E4["<b>5. UAT support</b><br/>eval tuning · HITL wiring · fixes"]
     end
@@ -62,7 +63,7 @@ flowchart LR
     end
 
     D1 --> E1
-    E1 --> E2 --> E3 --> E4
+    E1 --> EP --> E2 --> E3 --> E4
     E4 --> D5
     D5 --> D6 --> C1
     C1 --> C2
@@ -70,7 +71,7 @@ flowchart LR
     C2 -. new feature / expansion request .-> D1
 
     class D1,D5,D6,D7 lead;
-    class E1,E2,E3,E4 eng;
+    class E1,EP,E2,E3,E4 eng;
     class C1,C2 ops;
 
     click D1 "../discovery/how-to-use/" "D1 first action: open the discovery kit sequence (canvas → workshop, or /ingest-prd branch)"
@@ -78,8 +79,9 @@ flowchart LR
     click D6 "../handover/handover-packet-template/" "D6 first action: open the handover packet template"
     click D7 "../partner-playbook/#stage-7--measure" "D7 first action: Stage 7 — Measure (monthly KPI review)"
     click E1 "../QUICKSTART/#step-3--scaffold-the-solution-from-the-brief" "E1 first action: QUICKSTART Step 3 — Scaffold (first-timer? run hands-on-lab once first)"
+    click EP "../QUICKSTART/#step-4--preflight-landing-zone--github-environment" "Preflight: pick a landing-zone tier and wire the GitHub Environment + OIDC before azd up"
     click E2 "../getting-started/setup-and-prereqs/" "E2 first action: Setup & prereqs — azd up + troubleshooting"
-    click E3 "../QUICKSTART/#step-4--provision--deploy-to-customers-azure" "E3 first action: QUICKSTART Steps 4–5 — iterate through CI gates"
+    click E3 "../QUICKSTART/#step-6--iterate-with-copilot-ship-through-ci-gates" "E3 first action: QUICKSTART Step 6 — iterate through CI gates"
     click E4 "../partner-playbook/#stage-5--uat" "E4 first action: Stage 5 — UAT (engineer view)"
     click C1 "../customer-runbook/" "C1 first action: open your engagement-specific handover packet (partner-delivered); customer-runbook is the fallback"
     click C2 "../customer-runbook/" "C2 first action: your handover packet for this engagement; customer-runbook is the fallback"
@@ -95,8 +97,9 @@ Each row states **why this step matters**. "Authority" is the doc that owns the 
 |---|---|---|---|---|---|
 | D1 | Delivery Lead | Scope + discover | Decides whether the engagement is workshop-ready, produces the solution brief + ROI hypothesis that drives everything downstream. Supports both blank-start (canvas → workshop) and PRD-in-hand (`/ingest-prd` pre-drafts, `/discover-scenario` gap-fills). | [Stage 1](partner-playbook.md#stage-1--discovery) | [`discovery/how-to-use.md`](discovery/how-to-use.md) |
 | E1 | Partner Engineer | Scaffold from brief | `/scaffold-from-brief` turns the brief into working code — prompts, tools, retrieval, HITL, evals, manifest. | [Stage 2](partner-playbook.md#stage-2--scaffold) | [`QUICKSTART.md` Step 3](../QUICKSTART.md#step-3--scaffold-the-solution-from-the-brief) · **first time only:** run [`enablement/hands-on-lab.md`](enablement/hands-on-lab.md) once before your first customer engagement |
+| EP | Partner Engineer | Preflight (landing zone + GitHub Environment) | `/configure-landing-zone` picks the tier (`standalone` / `avm` / `alz-integrated`); `/deploy-to-env` registers the GitHub Environment and wires the OIDC federated credential so CI can deploy without secrets. Skipping this is the #1 cause of first-deploy auth failures. | [Stage 3](partner-playbook.md#stage-3--provision) | [`QUICKSTART.md` Step 4](../QUICKSTART.md#step-4--preflight-landing-zone--github-environment) |
 | E2 | Partner Engineer | Provision customer Azure | `azd up` provisions Foundry + Search + KV + ACA + App Insights in the **customer's** subscription with MI. No keys. | [Stage 3](partner-playbook.md#stage-3--provision) | [`getting-started/setup-and-prereqs.md`](getting-started/setup-and-prereqs.md) |
-| E3 | Partner Engineer | Iterate with Copilot | Every change goes through PRs that lint + quality evals + redteam must pass. Keeps HITL + RAI invariants intact. | [Stage 4](partner-playbook.md#stage-4--iterate) | [`QUICKSTART.md` Steps 4–5](../QUICKSTART.md#step-4--provision--deploy-to-customers-azure) |
+| E3 | Partner Engineer | Iterate with Copilot | Every change goes through PRs that lint + quality evals + redteam must pass. Keeps HITL + RAI invariants intact. | [Stage 4](partner-playbook.md#stage-4--iterate) | [`QUICKSTART.md` Step 6](../QUICKSTART.md#step-6--iterate-with-copilot-ship-through-ci-gates) |
 | E4 | Partner Engineer | UAT support | Engineer is on-call for eval tuning, HITL approver wiring, and scenario fixes while customer runs UAT against acceptance evals. | [Stage 5](partner-playbook.md#stage-5--uat) | [`partner-playbook.md` §Stage 5](partner-playbook.md#stage-5--uat) |
 | D5 | Delivery Lead | UAT sign-off | Customer sponsor walks the acceptance evals, approves production deploy. Gate before handover. | [Stage 5](partner-playbook.md#stage-5--uat) | [`partner-playbook.md` §Stage 5](partner-playbook.md#stage-5--uat) |
 | D6 | Delivery Lead | Handover meeting | Formal session with customer ops — walk the packet + runbook, confirm approvers, test killswitch, hand over alerts. | [Stage 6](partner-playbook.md#stage-6--production-handover) | [`handover/handover-packet-template.md`](handover/handover-packet-template.md) |
