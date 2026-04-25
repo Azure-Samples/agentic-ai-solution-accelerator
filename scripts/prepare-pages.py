@@ -100,12 +100,22 @@ def apply_rewrites(text: str, rules: list[tuple[re.Pattern[str], str]]) -> str:
 # unreadable on the published site even with aggressive CSS overrides.
 # The committed SVG sits next to the markdown and is copied into the
 # staged tree by the asset mirror loop below.
+#
+# To add a new pre-rendered diagram:
+#   1. Edit the source mermaid block in the markdown.
+#   2. Re-render with @mermaid-js/mermaid-cli into docs/<name>.svg.
+#   3. Add (source path → (svg basename, alt text)) below.
 MERMAID_TO_SVG: dict[str, tuple[str, str]] = {
     # source path (relative to docs/) -> (svg basename, alt text)
     "partner-workflow.md": (
         "partner-workflow.svg",
         "Partner workflow swim-lane diagram: Delivery Lead, Partner "
         "Engineer, and Customer Ops across the seven playbook stages.",
+    ),
+    "index.md": (
+        "index-workflow.svg",
+        "Partner delivery workflow: Delivery Lead, Partner Engineer, "
+        "and Customer Ops across the seven playbook stages.",
     ),
 }
 
@@ -114,14 +124,15 @@ _MERMAID_BLOCK_RE = re.compile(r"```mermaid\r?\n.*?\r?\n```", re.DOTALL)
 
 def replace_mermaid_with_svg(text: str, svg_name: str, alt: str) -> str:
     """Swap the first ```mermaid``` fence for an <img> wrapped in a
-    horizontally scrollable div so the diagram renders at intrinsic
-    width on narrow viewports."""
+    horizontally scrollable div. The SVG is rendered TB (tall/portrait)
+    so it fits a typical Material content column at width: 100%; the
+    overflow-x guard catches any future wider variants gracefully."""
     replacement = (
         f'<div style="overflow-x: auto; max-width: 100%; '
-        f'-webkit-overflow-scrolling: touch;">\n'
+        f'-webkit-overflow-scrolling: touch; padding: 0.5rem 0;">\n'
         f'  <img src="{svg_name}" alt="{alt}" '
-        f'style="max-width: none; width: 100%; min-width: 1400px; '
-        f'height: auto; display: block;" />\n'
+        f'style="width: 100%; max-width: 900px; height: auto; '
+        f'display: block; margin: 0 auto;" />\n'
         f'</div>\n'
     )
     return _MERMAID_BLOCK_RE.sub(replacement, text, count=1)
@@ -204,7 +215,27 @@ def stage_file(src: Path, dst: Path, rules: list[tuple[re.Pattern[str], str]]) -
         pass
     if rel_key and rel_key in MERMAID_TO_SVG:
         svg_name, alt = MERMAID_TO_SVG[rel_key]
+        if not _MERMAID_BLOCK_RE.search(updated):
+            raise RuntimeError(
+                f"{rel_key} is registered for SVG swap but contains no "
+                f"```mermaid fence. Update MERMAID_TO_SVG or restore the block."
+            )
+        if not (DOCS_SRC / svg_name).exists():
+            raise RuntimeError(
+                f"{rel_key} maps to {svg_name} but docs/{svg_name} is missing. "
+                f"Re-render with @mermaid-js/mermaid-cli."
+            )
         updated = replace_mermaid_with_svg(updated, svg_name, alt)
+    elif _MERMAID_BLOCK_RE.search(updated):
+        # Any other staged file containing a mermaid block: fail strict so
+        # we don't silently regress on the client-side-render readability
+        # bug. Add the file to MERMAID_TO_SVG and pre-render an SVG.
+        raise RuntimeError(
+            f"{rel_key or src} contains a ```mermaid fence but is not "
+            f"registered in MERMAID_TO_SVG. Pre-render an SVG and add it "
+            f"to the registry — client-side mermaid is unreadable in "
+            f"Material's content column on narrow viewports."
+        )
     dst.write_text(updated, encoding="utf-8")
     return updated != original
 

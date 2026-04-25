@@ -34,7 +34,7 @@ table is the source of truth.
 
 ```mermaid
 %%{init: {'theme':'base','themeVariables':{'fontSize':'16px'},'flowchart':{'nodeSpacing':50,'rankSpacing':80,'htmlLabels':true,'curve':'basis'}}}%%
-flowchart LR
+flowchart TB
     classDef lead fill:#E1F0FF,stroke:#1F6FEB,color:#0B3D91,stroke-width:1px;
     classDef eng  fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20,stroke-width:1px;
     classDef ops  fill:#FFF3E0,stroke:#EF6C00,color:#4E342E,stroke-width:1px;
