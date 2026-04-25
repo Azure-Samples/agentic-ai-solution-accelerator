@@ -95,45 +95,88 @@ def apply_rewrites(text: str, rules: list[tuple[re.Pattern[str], str]]) -> str:
 
 
 # Files whose mermaid blocks should be replaced with a pre-rendered SVG at
-# stage time. Client-side mermaid render in Material for MkDocs constrains
-# the SVG to the content column, which makes wide swim-lane diagrams
-# unreadable on the published site even with aggressive CSS overrides.
-# The committed SVG sits next to the markdown and is copied into the
-# staged tree by the asset mirror loop below.
+# stage time. The committed SVG is *inlined* into the staged markdown
+# (not referenced via <img>) because:
+#   - <img>-embedded SVGs are not interactive — browsers do not honour
+#     <a xlink:href> links inside them, so node-click navigation breaks.
+#   - Inlining preserves the <a xlink:href> wrappers emitted by mmdc
+#     when rendered with --securityLevel loose, keeping every node
+#     clickable on the published page.
+#
+# Trade-off: HTML payload grows by ~SVG size (~30 KB), one-time per page
+# load. Acceptable for navigation-critical diagrams.
 #
 # To add a new pre-rendered diagram:
 #   1. Edit the source mermaid block in the markdown.
-#   2. Re-render with @mermaid-js/mermaid-cli into docs/<name>.svg.
-#   3. Add (source path → (svg basename, alt text)) below.
+#   2. Re-render with @mermaid-js/mermaid-cli (with -c config containing
+#      {"securityLevel":"loose"}) into docs/assets/diagrams/<name>.svg.
+#   3. Add (source path → (svg path under docs/, alt text)) below.
 MERMAID_TO_SVG: dict[str, tuple[str, str]] = {
-    # source path (relative to docs/) -> (svg basename, alt text)
+    # source path (relative to docs/) -> (svg path relative to docs/, alt text)
     "partner-workflow.md": (
-        "partner-workflow.svg",
+        "assets/diagrams/partner-workflow.svg",
         "Partner workflow swim-lane diagram: Delivery Lead, Partner "
         "Engineer, and Customer Ops across the seven playbook stages.",
-    ),
-    "index.md": (
-        "index-workflow.svg",
-        "Partner delivery workflow: Delivery Lead, Partner Engineer, "
-        "and Customer Ops across the seven playbook stages.",
     ),
 }
 
 _MERMAID_BLOCK_RE = re.compile(r"```mermaid\r?\n.*?\r?\n```", re.DOTALL)
+_SVG_XML_DECL_RE = re.compile(r"<\?xml[^?]*\?>\s*", re.IGNORECASE)
+_SVG_DOCTYPE_RE = re.compile(r"<!DOCTYPE[^>]*>\s*", re.IGNORECASE)
+_SVG_OPEN_TAG_RE = re.compile(r"<svg\b[^>]*>", re.IGNORECASE)
+_SVG_WIDTH_ATTR_RE = re.compile(r'\swidth="[^"]*"', re.IGNORECASE)
+_SVG_STYLE_ATTR_RE = re.compile(r'\sstyle="[^"]*"', re.IGNORECASE)
+_SVG_VIEWBOX_RE = re.compile(r'viewBox="[\d.\s\-]+"', re.IGNORECASE)
 
 
-def replace_mermaid_with_svg(text: str, svg_name: str, alt: str) -> str:
-    """Swap the first ```mermaid``` fence for an <img> wrapped in a
-    horizontally scrollable div. The SVG is rendered TB (tall/portrait)
-    so it fits a typical Material content column at width: 100%; the
-    overflow-x guard catches any future wider variants gracefully."""
+def _normalise_inline_svg(svg_text: str, alt: str) -> str:
+    """Strip XML/doctype prologue and force the <svg> root to render at
+    its natural pixel width so wide swim-lane diagrams keep readable
+    type. The wrapping div provides horizontal scroll on narrow
+    viewports."""
+    svg_text = _SVG_XML_DECL_RE.sub("", svg_text, count=1)
+    svg_text = _SVG_DOCTYPE_RE.sub("", svg_text, count=1)
+
+    open_match = _SVG_OPEN_TAG_RE.search(svg_text)
+    if not open_match:
+        raise RuntimeError("inlined SVG has no <svg> root element")
+
+    open_tag = open_match.group(0)
+    natural_width = None
+    vb = _SVG_VIEWBOX_RE.search(open_tag)
+    if vb:
+        parts = vb.group(0).split('"')[1].split()
+        if len(parts) == 4:
+            try:
+                natural_width = float(parts[2])
+            except ValueError:
+                natural_width = None
+
+    new_open = _SVG_WIDTH_ATTR_RE.sub("", open_tag)
+    new_open = _SVG_STYLE_ATTR_RE.sub("", new_open)
+    width_px = f"{int(natural_width)}px" if natural_width else "100%"
+    inject = (
+        f' width="{width_px}" '
+        f'style="max-width: none; height: auto; display: block;" '
+        f'role="img" aria-label="{alt}"'
+    )
+    new_open = new_open[:-1] + inject + ">"
+    return svg_text.replace(open_tag, new_open, 1)
+
+
+def replace_mermaid_with_svg(text: str, svg_rel: str, alt: str) -> str:
+    """Inline the pre-rendered SVG inside a horizontally scrollable
+    wrapper. Inlining (vs an <img>) preserves the SVG's interactive
+    <a xlink:href> node links emitted by mmdc --securityLevel loose."""
+    svg_path = DOCS_SRC / svg_rel
+    svg_text = svg_path.read_text(encoding="utf-8")
+    inlined = _normalise_inline_svg(svg_text, alt)
     replacement = (
-        f'<div style="overflow-x: auto; max-width: 100%; '
-        f'-webkit-overflow-scrolling: touch; padding: 0.5rem 0;">\n'
-        f'  <img src="{svg_name}" alt="{alt}" '
-        f'style="width: 100%; max-width: 900px; height: auto; '
-        f'display: block; margin: 0 auto;" />\n'
-        f'</div>\n'
+        '<div class="workflow-diagram" style="overflow-x: auto; '
+        'max-width: 100%; -webkit-overflow-scrolling: touch; '
+        'padding: 0.5rem 0;">\n'
+        f"{inlined}\n"
+        "</div>\n"
     )
     return _MERMAID_BLOCK_RE.sub(replacement, text, count=1)
 
@@ -214,18 +257,18 @@ def stage_file(src: Path, dst: Path, rules: list[tuple[re.Pattern[str], str]]) -
     except ValueError:
         pass
     if rel_key and rel_key in MERMAID_TO_SVG:
-        svg_name, alt = MERMAID_TO_SVG[rel_key]
+        svg_rel, alt = MERMAID_TO_SVG[rel_key]
         if not _MERMAID_BLOCK_RE.search(updated):
             raise RuntimeError(
                 f"{rel_key} is registered for SVG swap but contains no "
                 f"```mermaid fence. Update MERMAID_TO_SVG or restore the block."
             )
-        if not (DOCS_SRC / svg_name).exists():
+        if not (DOCS_SRC / svg_rel).exists():
             raise RuntimeError(
-                f"{rel_key} maps to {svg_name} but docs/{svg_name} is missing. "
+                f"{rel_key} maps to {svg_rel} but docs/{svg_rel} is missing. "
                 f"Re-render with @mermaid-js/mermaid-cli."
             )
-        updated = replace_mermaid_with_svg(updated, svg_name, alt)
+        updated = replace_mermaid_with_svg(updated, svg_rel, alt)
     elif _MERMAID_BLOCK_RE.search(updated):
         # Any other staged file containing a mermaid block: fail strict so
         # we don't silently regress on the client-side-render readability

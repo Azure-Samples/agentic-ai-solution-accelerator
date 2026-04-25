@@ -1,7 +1,7 @@
 /* Let Mermaid diagrams render at natural size; scroll horizontally if too wide.
    Material for MkDocs otherwise constrains the SVG to the content column,
    shrinking wide flowcharts (e.g. /partner-workflow/) to unreadable text.
-   Note: the partner-workflow page ships a pre-rendered SVG via
+   Note: the partner-workflow page ships a pre-rendered SVG inlined via
    scripts/prepare-pages.py because client-side mermaid still fights these
    overrides on some viewports; the rules below remain a defensive layer
    for any other mermaid blocks. */
@@ -30,3 +30,35 @@
   font-size: 15px !important;
   line-height: 1.35 !important;
 }
+
+/* Inlined pre-rendered diagrams (e.g. /partner-workflow/). The wrapping
+   div provides horizontal scroll; let the SVG stretch to its natural
+   pixel width inside the scroll container. */
+.md-typeset .workflow-diagram {
+  text-align: left;
+}
+.md-typeset .workflow-diagram svg {
+  max-width: none !important;
+  height: auto !important;
+}
+
+/* Home page "Pick your lane" role cards. Three lanes (Lead / Engineer /
+   Ops) replace the embedded swim-lane diagram on /. */
+.role-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+.role-card {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  background: var(--md-default-bg-color);
+}
+.role-card.lead { border-left: 4px solid #1F6FEB; }
+.role-card.eng  { border-left: 4px solid #2E7D32; }
+.role-card.ops  { border-left: 4px solid #EF6C00; }
+.role-card ol { margin: 0.5rem 0 1rem 1.25rem; padding: 0; }
+.role-card ol li { margin-bottom: 0.35rem; font-size: 0.92rem; line-height: 1.4; }
+.role-card p:last-child a { font-weight: 600; }

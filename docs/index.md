@@ -12,9 +12,9 @@ hide:
 **Stack:** Microsoft Agent Framework · Azure AI Foundry · Azure AI Search · Managed Identity · Key Vault · Container Apps · Application Insights · `azd` for infra.
 
 !!! tip "New here? Start in three moves"
-    1. **Scan the workflow below** — one picture shows all 7 stages across the three lanes (Lead / Engineer / Ops).
-    2. **Pick your lane** in the tabs further down — each one tells you the first action and how you know you're done.
-    3. **Open the Getting started guide** when you're ready to act: [5-step quickstart →](getting-started/index.md)
+    1. **Pick your lane** in the role cards below — Lead, Engineer, or Ops.
+    2. **Open the linked first action** for your lane and follow it top-to-bottom.
+    3. **Want the full picture?** The [workflow map](partner-workflow.md) shows all 7 stages across the three lanes as a clickable swim-lane diagram.
 
 [:material-rocket-launch: Get started](getting-started/index.md){ .md-button .md-button--primary }
 [:material-book-open-page-variant: Partner playbook](partner-playbook.md){ .md-button }
@@ -22,65 +22,51 @@ hide:
 
 ---
 
-## The workflow at a glance
+## Pick your lane
 
-Click any node to jump to its first-action doc.
+<div class="role-cards" markdown>
 
-```mermaid
-flowchart TB
-    classDef lead fill:#E1F0FF,stroke:#1F6FEB,color:#0B3D91,stroke-width:1px;
-    classDef eng  fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20,stroke-width:1px;
-    classDef ops  fill:#FFF3E0,stroke:#EF6C00,color:#4E342E,stroke-width:1px;
+<div class="role-card lead" markdown>
+**👤 Delivery Lead**
+*Owns the engagement end-to-end*
 
-    subgraph DL["👤 Delivery Lead"]
-        direction LR
-        D1["<b>1. Scope + discover</b><br/>canvas → workshop<br/><i>or</i> /ingest-prd → gap-fill"]
-        D5["<b>5. UAT sign-off</b><br/>customer sponsor<br/>walks acceptance evals"]
-        D6["<b>6. Handover meeting</b><br/>walk packet + runbook<br/>with customer ops"]
-        D7["<b>7. Monthly value review</b><br/>ROI KPIs vs hypothesis"]
-    end
+1. [Scope + discover](discovery/how-to-use.md) — canvas → workshop, or `/ingest-prd` → gap-fill
+2. UAT sign-off — review acceptance evals with customer sponsor
+3. [Handover meeting](handover/handover-packet-template.md) — walk packet + runbook
+4. [Monthly value review](partner-playbook.md#stage-7--measure) — ROI KPIs vs hypothesis
 
-    subgraph PE["🛠️ Partner Engineer"]
-        direction LR
-        E1["<b>2. Scaffold from brief</b><br/>/scaffold-from-brief<br/><i>first time: run hands-on-lab</i>"]
-        E2["<b>3. Provision customer Azure</b><br/>azd up → Foundry · Search · KV · ACA"]
-        E3["<b>4. Iterate with Copilot</b><br/>PRs gated by lint + evals + redteam"]
-        E4["<b>5. UAT support</b><br/>eval tuning · HITL wiring · fixes"]
-    end
+→ [**Start here: Partner playbook**](partner-playbook.md)
+</div>
 
-    subgraph CO["🏛️ Customer Ops"]
-        direction LR
-        C1["<b>6. Receive handover packet</b><br/>endpoint URLs · HITL approvers<br/>alerts · rollback · SLAs"]
-        C2["<b>7. Ongoing day-2 ops</b><br/>monitor · killswitch · eval re-run<br/>secret rotation · model swap"]
-    end
+<div class="role-card eng" markdown>
+**🛠️ Partner Engineer**
+*Builds, ships, supports*
 
-    D1 --> E1
-    E1 --> E2 --> E3 --> E4
-    E4 --> D5
-    D5 --> D6 --> C1
-    C1 --> C2
-    C2 -. usage signal .-> D7
-    C2 -. new feature / expansion request .-> D1
+1. [Scaffold from brief](QUICKSTART.md#step-3--scaffold-the-solution-from-the-brief) — `/scaffold-from-brief` (first time? run hands-on-lab)
+2. [Provision customer Azure](getting-started/setup-and-prereqs.md) — `azd up` → Foundry · Search · KV · ACA
+3. [Iterate with Copilot](QUICKSTART.md#step-4--provision--deploy-to-customers-azure) — PRs gated by lint + evals + redteam
+4. UAT support — eval tuning · HITL wiring · fixes
 
-    class D1,D5,D6,D7 lead;
-    class E1,E2,E3,E4 eng;
-    class C1,C2 ops;
+→ [**Start here: Quickstart**](QUICKSTART.md)
+</div>
 
-    click D1 "discovery/how-to-use/" "Discovery kit — canvas → workshop (or /ingest-prd branch)"
-    click D5 "partner-playbook/#stage-5--uat" "Stage 5 — UAT sign-off"
-    click D6 "handover/handover-packet-template/" "Handover packet template"
-    click D7 "partner-playbook/#stage-7--measure" "Stage 7 — Monthly value review"
-    click E1 "QUICKSTART/#step-3--scaffold-the-solution-from-the-brief" "QUICKSTART Step 3 — Scaffold from brief"
-    click E2 "getting-started/" "Setup & prereqs — azd up + troubleshooting"
-    click E3 "QUICKSTART/#step-4--provision--deploy-to-customers-azure" "QUICKSTART Steps 4–5 — iterate through CI gates"
-    click E4 "partner-playbook/#stage-5--uat" "Stage 5 — Engineer UAT support"
-    click C1 "customer-runbook/" "Customer runbook (fallback) — your handover packet supersedes it"
-    click C2 "customer-runbook/" "Customer runbook (fallback) — your handover packet supersedes it"
-```
+<div class="role-card ops" markdown>
+**🏛️ Customer Ops**
+*Owns day-2 ops after handover*
+
+1. Receive [handover packet](handover/handover-packet-template.md) — endpoint URLs · approvers · alerts · SLAs
+2. [Day-2 ops](customer-runbook.md) — monitor · killswitch · eval re-run · secret rotation · model swap
+
+→ [**Start here: Customer runbook**](customer-runbook.md)
+</div>
+
+</div>
+
+<small>Want the full visual? See the [workflow map](partner-workflow.md) — same content, swim-lane diagram, clickable nodes.</small>
 
 ---
 
-## Pick your lane
+## Pick your lane (in depth)
 
 === "🧭 Delivery Lead"
 
