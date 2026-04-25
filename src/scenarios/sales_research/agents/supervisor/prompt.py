@@ -23,7 +23,7 @@ def build_prompt(request: dict[str, Any]) -> str:
         "- competitive_play: copy from competitive_context output, "
         "preserving all sub-fields (competitors with stance + evidence + "
         "evidence_urls, differentiators, likely_objections, "
-        "talking_points, cloud_footprint_signals, battlecard_refs).\n"
+        "talking_points, cloud_footprint_signals, competitor_refs).\n"
         "- recommended_outreach: copy from outreach_personalizer output "
         "(subject, body_markdown, primary_cta, personalization_anchors).\n"
         "- next_steps: 3 concrete actions for the seller.\n"

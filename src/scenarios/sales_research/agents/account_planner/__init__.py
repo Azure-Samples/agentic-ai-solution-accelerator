@@ -1,10 +1,9 @@
 """Account Planner agent — grounded account research + opportunity framing.
 
-Reference: SMB Agent Hub ``account_planner`` agent. We anchor to that
-functional contract (grounded company profile, strategic initiatives,
-buying-committee) so partners see a credible reference, not a toy. The
-agent's runtime instructions live in Azure AI Foundry portal; this module
-only shapes I/O (prompt / transform / validate).
+Produces a grounded company profile, strategic initiatives, and
+buying-committee details with citations. The agent's runtime
+instructions live in Azure AI Foundry portal; this module only shapes
+I/O (prompt / transform / validate).
 """
 from .prompt import build_prompt
 from .transform import transform_response

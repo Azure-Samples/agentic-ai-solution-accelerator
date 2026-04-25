@@ -7,10 +7,9 @@ def build_prompt(request: dict[str, Any]) -> str:
     profile = request["account_profile"]
     icp = request["icp_definition"]
     return (
-        "Score the account against our Ideal Customer Profile and surface the "
-        "grounded signals behind your judgment. Mirror the IO shape of the "
-        "SMB Agent Hub nnr_agent + portfolio_planner: fit + tier + grounded "
-        "signal evidence + data gaps.\n\n"
+        "Score the account against our Ideal Customer Profile and surface "
+        "the grounded signals behind your judgment. Produce: fit + tier + "
+        "grounded signal evidence + data gaps.\n\n"
         "Grounding rules:\n"
         "- Every fit_reason, fit_risk, and signal_evidence entry MUST be "
         "grounded in a specific fact from the account profile. Cite the "
@@ -19,9 +18,9 @@ def build_prompt(request: dict[str, Any]) -> str:
         "signal needed to judge fit is missing, list it in data_gaps.\n"
         "- nnr_indicators are directional proxies, not numbers. Each is "
         "one of: strong | moderate | weak | unknown.\n"
-        "- tier_recommendation follows portfolio_planner conventions: "
-        "tier-1 (strategic pursue), tier-2 (active qualify), tier-3 "
-        "(nurture cadence), watchlist (monitor only).\n\n"
+        "- tier_recommendation: tier-1 (strategic pursue), tier-2 "
+        "(active qualify), tier-3 (nurture cadence), watchlist "
+        "(monitor only).\n\n"
         f"ICP definition:\n{icp}\n\n"
         f"Account profile:\n{profile}\n\n"
         "Return strict JSON with: fit_score (0..100), fit_reasons (<=3), "

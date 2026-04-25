@@ -1,8 +1,8 @@
 """ICP Fit Analyst — scores account against seller's ICP.
 
-Reference: SMB Agent Hub ``nnr_agent`` + ``portfolio_planner`` (opportunity
-qualification + tiering logic). Kept lean here; the full Agent Hub NNR
-sizing model is out of scope for the flagship.
+Produces opportunity qualification plus a tier recommendation. Kept
+lean here; partners who need richer scoring (dollar sizing, territory
+logic) extend or replace this worker.
 """
 from .prompt import build_prompt
 from .transform import transform_response

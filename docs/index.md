@@ -42,14 +42,14 @@ hide:
 **🛠️ Partner Engineer**
 *Builds, ships, supports*
 
-1. [Scaffold from brief](QUICKSTART.md#step-3--scaffold-the-solution-from-the-brief) — `/scaffold-from-brief` (first time? run hands-on-lab)
+1. [Scaffold from brief](../QUICKSTART.md#step-3--scaffold-the-solution-from-the-brief) — `/scaffold-from-brief` (first time? run hands-on-lab)
 2. [Provision customer Azure](getting-started/setup-and-prereqs.md) — `azd up` → Foundry · Search · KV · ACA
-3. [Iterate with Copilot](QUICKSTART.md#step-4--provision--deploy-to-customers-azure) — PRs gated by lint + evals + redteam
+3. [Iterate with Copilot](../QUICKSTART.md#step-4--provision--deploy-to-customers-azure) — PRs gated by lint + evals + redteam
 4. UAT support — eval tuning · HITL wiring · fixes
 5. [Ship a UI](../patterns/sales-research-frontend/README.md) — fork the React/Vite SSE starter for the customer demo
 6. Agent instructions live in [`docs/agent-specs/`](agent-specs/README.md) — edit the markdown, not Python
 
-→ [**Start here: Quickstart**](QUICKSTART.md)
+→ [**Start here: Quickstart**](../QUICKSTART.md)
 </div>
 
 <div class="role-card ops" markdown>
@@ -140,6 +140,6 @@ hide:
 
     ---
 
-    [GitHub repo](https://github.com/Azure-Samples/agentic-ai-solution-accelerator) · [Chatmodes](chatmodes/delivery-guide.chatmode.md) · [Contributing](about/CONTRIBUTING.md)
+    [GitHub repo](https://github.com/Azure-Samples/agentic-ai-solution-accelerator) · [Chatmodes](../.github/chatmodes/delivery-guide.chatmode.md) · [Contributing](../CONTRIBUTING.md)
 
 </div>

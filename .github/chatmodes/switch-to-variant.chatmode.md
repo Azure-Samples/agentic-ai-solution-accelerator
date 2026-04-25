@@ -15,7 +15,7 @@ Use this when the brief or customer feedback indicates the current pattern is ov
 ## Actions by target
 
 ### → single-agent
-The `single-agent` variant is documented in `patterns/single-agent/README.md` as a candidate pattern; it is not yet materialized as a drop-in package. To switch today:
+The `single-agent` variant is documented in `patterns/single-agent/README.md`. It is a manual re-authoring walkthrough, not a drop-in package. To switch:
 1. Author a new scenario package under `src/scenarios/<new-scenario>/` with a single agent (use `scripts/scaffold-scenario.py <id>` — it emits the three-layer supervisor shape; drop the remaining workers).
 2. Move flagship workers' domain knowledge into the single agent's `prompt.py` as composition.
 3. Keep one or two most-used tools; drop the rest.
@@ -24,7 +24,7 @@ The `single-agent` variant is documented in `patterns/single-agent/README.md` as
 6. Update the flagship diagram in `docs/patterns/architecture/README.md` to match the new shape (or replace it with a single-agent diagram).
 
 ### → chat-with-actioning
-The `chat-with-actioning` variant is documented in `patterns/chat-with-actioning/README.md` as a candidate pattern; it is not yet materialized as a drop-in package. To switch today:
+The `chat-with-actioning` variant is documented in `patterns/chat-with-actioning/README.md`. It is a manual re-authoring walkthrough, not a drop-in package. To switch:
 1. Author a new scenario package with a conversation loop and tool-backed workers.
 2. Wire session/thread state (`agent_framework` thread management).
 3. Set `accelerator.yaml.solution.pattern: chat-with-actioning`.

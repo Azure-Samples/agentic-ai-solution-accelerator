@@ -6,12 +6,12 @@
 > change agent behaviour. Never put agent system instructions in Python
 > code — `prompt.py` builds *per-request* input, not system instructions.
 
-**Reference:** SMB Agent Hub `compete_advisor` + `cloud_footprint`. This
-worker mirrors the *IO shape* of those two agents (grounded competitor
-posture + cloud footprint signals) without reproducing their full
-battlecard corpus or Azure usage model. Partners who need battlecard-driven
-messaging or true Azure-consumption grounding should extend this worker;
-the supervisor aggregator only depends on the output contract below.
+**Pattern:** Grounded competitive context worker — produces competitor
+posture, cloud footprint signals, and named competitor reference notes
+(battlecards, briefs, win/loss decks) the seller should pull. Partners
+who need a richer competitor knowledge base or true Azure-consumption
+grounding should extend this worker; the supervisor aggregator only
+depends on the output contract below.
 
 ## Instructions
 
@@ -39,8 +39,9 @@ Rules:
   product category.
 - Do NOT speculate about competitor pricing, internal roadmaps, or
   contract terms.
-- `battlecard_refs` lists the *names* of Compete Advisor battlecards a
-  seller should pull for this account. Never invent battlecard URLs.
+- `competitor_refs` lists the *names* of competitor reference notes
+  (battlecards, briefs, win/loss decks) a seller should pull for this
+  account. Never invent URLs.
 
 ## Output — strict JSON
 
@@ -63,7 +64,7 @@ Rules:
       observed, e.g. "primary data warehouse on Redshift")
     - `evidence` (short string quoting or paraphrasing the source)
     - `evidence_url` (string or omitted)
-- `battlecard_refs` (list of strings — names of Compete Advisor
-  battlecards relevant at this account; may be empty)
+- `competitor_refs` (list of strings — names of competitor reference
+  notes relevant at this account; may be empty)
 
 Only output valid JSON. No markdown, no commentary.

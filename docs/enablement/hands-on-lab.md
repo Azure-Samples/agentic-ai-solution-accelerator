@@ -107,10 +107,15 @@ template clone.
 App Insights events.
 
 1. Send a sample request to the flagship endpoint (default
-   `/research/stream`). The exact payload shape is in
-   `src/scenarios/sales_research/` — read the scenario code; the
-   lab deliberately does not hand you a curl snippet because
-   partners must learn to read the scenario contract.
+   `/research/stream`). The payload shape is defined by
+   `ResearchRequest` in `src/scenarios/sales_research/schema.py` —
+   read the schema for the canonical fields. A minimal call looks like:
+
+   ```bash
+   curl -N -X POST "$API_URL/research/stream" \
+     -H "Content-Type: application/json" \
+     -d '{"company_name":"Contoso","seller_intent":"Discovery call","persona":"VP of Operations"}'
+   ```
 
 2. In App Insights → Logs, run:
 
@@ -315,10 +320,10 @@ vs what you still author.
    syntactically valid and the supervisor spec ships with a
    generic baseline. But the `prompt.py`, `transform.py`,
    `validate.py`, and `retrieval.py` are minimal placeholders —
-   **read them**, then build them out: tighten the supervisor
+   read them, then build them out: tighten the supervisor
    spec for your domain, add worker agents with
    `scripts/scaffold-agent.py`, author retrieval schema, and
-   author golden + redteam cases. Don't ship a scaffold.
+   author golden + redteam cases before deploying to a customer.
 
 **Check your work:**
 

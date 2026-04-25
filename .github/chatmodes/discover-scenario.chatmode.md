@@ -129,7 +129,7 @@ Push back if the partner gives vague answers. Force specificity:
 
   2. **Output sections.** Ask: *"What sections should the result report show? For each section, give a name + what it contains. Example: `Account Summary` — 2-3 sentences of firmographic context; `Key Stakeholders` — table of name/title/influence; `Outreach Suggestions` — 3 email drafts."*
 
-     Push for a section name, the content shape (a sentence describing what's rendered — prose, table, list, code), and which worker agent produces that data (or `supervisor` if it's composed). Tell the partner: *"Each section typically maps to one worker agent's output. Reference: SMB Agent Hub's Account Planner, Portfolio Planner, and NNR each use form+report but render completely different sections — pick what matters to YOUR customer's decision workflow."*
+     Push for a section name, the content shape (a sentence describing what's rendered — prose, table, list, code), and which worker agent produces that data (or `supervisor` if it's composed). Tell the partner: *"Each section typically maps to one worker agent's output. Pick what matters to YOUR customer's decision workflow — different domains render completely different sections (account brief vs. ticket triage vs. claims summary), so don't try to copy a structure verbatim from somewhere else."*
 
      Capture into a new **`## UX output sections`** section of the brief as a Markdown table with columns `Section | Content | Source agent`.
 

@@ -60,7 +60,7 @@ Copilot reads the filled brief and customizes the repo. The **Lands in** column 
 | Brief field → | Lands in (flagship paths shown; `src/scenarios/<id>/` for custom scenarios) |
 |---|---|
 | Problem + persona | `src/scenarios/sales_research/agents/supervisor/prompt.py` system prompt |
-| Solution shape | Keep flagship OR run `/switch-to-variant` for a walkthrough of re-authoring under `patterns/single-agent` or `patterns/chat-with-actioning` (candidate patterns, not drop-ins) |
+| Solution shape | Keep flagship OR run `/switch-to-variant` for a walkthrough of re-authoring under `patterns/single-agent` or `patterns/chat-with-actioning` (manual re-authoring walkthroughs, not drop-ins) |
 | Grounding sources | `src/retrieval/ai_search.py` (scenario-agnostic client) + scenario-specific index schema at `src/scenarios/sales_research/retrieval.py` + `infra/modules/ai-search.bicep` |
 | Side-effect tools | New files under `src/tools/` with HITL scaffolding |
 | HITL gates | `src/accelerator_baseline/hitl.py` rules |
@@ -75,12 +75,12 @@ Commit the scaffolded changes. CI lint now runs; it will flag anything missing.
 
 ## Step 4 — Provision + deploy to customer's Azure
 
-> **Authoring agent instructions — load-bearing tip, easy to miss.** Agent
-> system instructions live in `docs/agent-specs/<agent>.md` under the
-> `## Instructions` heading — **edit those Markdown files, not Python.** On
-> `azd up`, `scripts/foundry-bootstrap.py` syncs each spec verbatim to the
-> Foundry portal. `prompt.py` is for *per-request* input construction only;
-> the lint and chatmodes both enforce this.
+> **Authoring agent instructions.** Agent system instructions live in
+> `docs/agent-specs/<agent>.md` under the `## Instructions` heading —
+> edit those Markdown files, not Python. On `azd up`,
+> `scripts/foundry-bootstrap.py` syncs each spec verbatim to the
+> Foundry portal. `prompt.py` is for *per-request* input construction
+> only.
 
 ```bash
 az login --tenant <customer-tenant-id>
@@ -136,7 +136,7 @@ the same pattern shows how to call the SSE endpoint from any client; lift
 
 ## Need a different shape?
 
-The variants below are **candidate patterns** (documented in `patterns/<variant>/README.md`), not drop-in packages. Run `/switch-to-variant` for a walkthrough of re-authoring the scenario under `src/scenarios/<new-id>/`:
+The variants below are **manual re-authoring walkthroughs** (documented in `patterns/<variant>/README.md`), not drop-in packages. Run `/switch-to-variant` for a guided walkthrough of re-authoring the scenario under `src/scenarios/<new-id>/`:
 
 - **Simpler** than supervisor-routing? `/switch-to-variant` → pick `single-agent`.
 - **Conversational** front-end? `/switch-to-variant` → pick `chat-with-actioning`.
@@ -147,5 +147,5 @@ The variants below are **candidate patterns** (documented in `patterns/<variant>
 - `docs/getting-started/setup-and-prereqs.md` — authoritative prereqs, secrets, troubleshooting
 - `docs/discovery/SOLUTION-BRIEF-GUIDE.md` — how to run the workshop
 - `docs/version-matrix.md` — known-good SDK pins
-- `docs/agent-specs/README.md` — per-agent system instructions and Agent Hub references
+- `docs/agent-specs/README.md` — per-agent system instructions and bootstrap mechanics
 - Issues in this repo — intake for feedback and new patterns

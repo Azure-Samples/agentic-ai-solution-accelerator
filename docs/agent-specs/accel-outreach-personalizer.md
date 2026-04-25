@@ -6,11 +6,11 @@
 > change agent behaviour. Never put agent system instructions in Python
 > code — `prompt.py` builds *per-request* input, not system instructions.
 
-**Reference:** none — no analog in the Agent Hub reference set used by this
-flagship (Account Planner, Portfolio Planner, Zero Trust, Cloud Footprint,
-Compete Advisor, NNR Agent). Kept as a scenario-specific side-effect
-worker so the flagship exercises the HITL + tool-invocation path. Partners
-can delete this worker if their scenario has no outreach step.
+**Pattern:** Outreach personalizer — scenario-specific side-effect
+worker that drafts a personalised email and invokes the HITL-gated
+tools (`crm_write_contact`, `send_email`). Kept so the flagship
+exercises the full HITL + tool-invocation path. Partners can delete
+this worker if their scenario has no outreach step.
 
 ## Instructions
 

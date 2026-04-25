@@ -76,9 +76,9 @@ def transform_response(raw: str | dict[str, Any]) -> dict[str, Any]:
             if cleaned is not None:
                 cloud_signals.append(cleaned)
 
-    battlecards_raw = data.get("battlecard_refs", [])
-    battlecards = [b for b in battlecards_raw if isinstance(b, str) and b.strip()] \
-        if isinstance(battlecards_raw, list) else []
+    refs_raw = data.get("competitor_refs", [])
+    competitor_refs = [b for b in refs_raw if isinstance(b, str) and b.strip()] \
+        if isinstance(refs_raw, list) else []
 
     return {
         "competitors": competitors,
@@ -86,5 +86,5 @@ def transform_response(raw: str | dict[str, Any]) -> dict[str, Any]:
         "likely_objections": list(data.get("likely_objections", []))[:3],
         "talking_points": list(data.get("talking_points", [])),
         "cloud_footprint_signals": cloud_signals,
-        "battlecard_refs": battlecards,
+        "competitor_refs": competitor_refs,
     }

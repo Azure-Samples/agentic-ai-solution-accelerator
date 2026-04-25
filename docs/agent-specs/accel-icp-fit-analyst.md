@@ -6,12 +6,11 @@
 > change agent behaviour. Never put agent system instructions in Python
 > code — `prompt.py` builds *per-request* input, not system instructions.
 
-**Reference:** SMB Agent Hub `nnr_agent` + `portfolio_planner`. This worker
-mirrors the *IO shape* of those two agents (grounded fit signals + a tier
-recommendation) without reproducing their full scoring models. Partners who
-need true NNR dollar sizing or Portfolio Planner territory logic should
-replace or extend this worker — the supervisor and downstream aggregator do
-not depend on the specific scoring mechanics, only on the output contract.
+**Pattern:** ICP fit analyst — grounded fit signals plus a tier
+recommendation. Partners who need a richer scoring model (dollar
+sizing, territory logic, propensity models) should replace or extend
+this worker; the supervisor and downstream aggregator depend only on
+the output contract below, not on specific scoring mechanics.
 
 ## Instructions
 
@@ -34,9 +33,9 @@ Rules:
   rather than guess.
 - `nnr_indicators` are directional proxies, not precise numbers. Each
   indicator is one of: `strong`, `moderate`, `weak`, `unknown`.
-- `tier_recommendation` follows Portfolio Planner conventions (tier-1 =
-  strategic pursue, tier-2 = active qualify, tier-3 = nurture cadence,
-  watchlist = monitor only).
+- `tier_recommendation` is one of: `tier-1` (strategic pursue),
+  `tier-2` (active qualify), `tier-3` (nurture cadence), `watchlist`
+  (monitor only).
 
 ## Output — strict JSON
 

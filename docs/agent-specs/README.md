@@ -8,8 +8,8 @@ The flagship scenario (Sales Research & Personalised Outreach) ships with five F
 |---|---|---|---|
 | [`accel-sales-research-supervisor`](accel-sales-research-supervisor.md) | Orchestrator — routes the scenario across the four workers and composes their outputs | Composed account research + outreach payload | No tools of its own; downstream tool calls inherit each worker's HITL policy |
 | [`accel-account-planner`](accel-account-planner.md) | Builds the account brief: company, segment, signals, decision-makers | Structured account profile (citations required) | Read-only retrieval; no HITL |
-| [`accel-icp-fit-analyst`](accel-icp-fit-analyst.md) | Scores ICP fit + maps to portfolio plays (NNR + portfolio-planner equivalent) | Fit score + recommended play | Read-only retrieval; no HITL |
-| [`accel-competitive-context`](accel-competitive-context.md) | Surfaces competitive context + cloud footprint (compete-advisor + cloud-footprint equivalent) | Competitive notes + footprint signals | Read-only retrieval; no HITL |
+| [`accel-icp-fit-analyst`](accel-icp-fit-analyst.md) | Scores ICP fit + maps to a tier recommendation | Fit score + recommended play | Read-only retrieval; no HITL |
+| [`accel-competitive-context`](accel-competitive-context.md) | Surfaces competitive context + cloud footprint signals | Competitive notes + footprint signals | Read-only retrieval; no HITL |
 | [`accel-outreach-personalizer`](accel-outreach-personalizer.md) | Drafts the personalised outreach + invokes side-effect tools (CRM write, send email) | Outreach copy + tool-call results | **HITL required on every side-effect tool** (`crm_write_contact`, `send_email` use `HITL_POLICY = "always"`) |
 
 Use the per-agent files below for the actual system instructions; everything else on this page is bootstrap mechanics.
@@ -27,7 +27,7 @@ project at `azd up` / `azd postprovision` time.
 ```markdown
 # Agent: <agent_name>
 
-**Reference:** <SMB Agent Hub equivalent, if any>
+**Pattern:** <one-line description of what shape this agent fills>
 
 ## Instructions
 <system instructions the agent runs with>
@@ -51,15 +51,8 @@ Do NOT reference these `.md` files at runtime. Do NOT import from them.
 
 ## Flagship agents (5)
 
-| Agent name                             | Agent Hub reference (partner set)        |
-|----------------------------------------|------------------------------------------|
-| `accel-sales-research-supervisor`      | none (orchestration primitive)           |
-| `accel-account-planner`                | `account_planner`                        |
-| `accel-icp-fit-analyst`                | `nnr_agent` + `portfolio_planner`        |
-| `accel-competitive-context`            | `compete_advisor` + `cloud_footprint`    |
-| `accel-outreach-personalizer`          | none (scenario-specific side-effect worker) |
-
-The partner-cited reference set is: Account Planner, Portfolio Planner,
-Zero Trust, Cloud Footprint, Compete Advisor, NNR Agent. Zero Trust is not
-used by this flagship (different scenario); it remains a candidate for a
-future pattern variant.
+The flagship ships one supervisor plus four workers. Each agent's
+`.md` file in this directory is the source of truth for its
+instructions; the table at the top of this page is the partner-facing
+summary. Add new agents to a scaffolded scenario with
+`python scripts/scaffold-agent.py` (writes a matching spec stub).

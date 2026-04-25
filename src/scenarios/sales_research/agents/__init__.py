@@ -1,16 +1,18 @@
 """Agent registry — imports all flagship agents so the workflow can discover them.
 
-Worker functional contracts are anchored to SMB Agent Hub agents from the
-partner's reference set — only those actually used by this flagship:
+Worker functional contracts are documented in
+``docs/agent-specs/accel-*.md``:
 
-    account_planner       ← Agent Hub account_planner
-    icp_fit_analyst       ← Agent Hub nnr_agent + portfolio_planner
-    competitive_context   ← Agent Hub compete_advisor + cloud_footprint
+    account_planner       — accel-account-planner
+    icp_fit_analyst       — accel-icp-fit-analyst
+    competitive_context   — accel-competitive-context
+    outreach_personalizer — accel-outreach-personalizer
+    supervisor            — accel-sales-research-supervisor
 
-Supervisor is the orchestration primitive (pattern, not a specific Agent
-Hub worker). Outreach Personalizer has no direct analog in the cited set
-and is kept as a scenario-specific side-effect worker so the flagship can
-exercise the HITL + tool-invocation path end-to-end.
+The supervisor is the orchestration primitive (plan → delegate →
+aggregate). Outreach Personalizer is a scenario-specific side-effect
+worker, kept so the flagship exercises the HITL + tool-invocation
+path end-to-end.
 
 The flagship stays lean (5 agents) so the *pattern* — supervisor +
 grounded retrieval + parallel workers + HITL + aggregator — is obvious.

@@ -105,7 +105,7 @@ inherits from AVM's opinions.
   standalone (`az bicep build`) and documents which hand-rolled module
   in `infra/modules/` it replaces. Foundry intentionally excluded.
 - `infra/modules/*.bicep` — partner replaces selected modules with AVM
-  references during vibecoding via `/configure-landing-zone`.
+  references via `/configure-landing-zone` when migrating to Tier 2.
 - `accelerator.yaml` → `landing_zone.mode: avm` **and**
   `landing_zone.avm_services: [key-vault, ...]` listing the services
   actually migrated (lint asserts the list matches reality).

@@ -84,7 +84,7 @@ Add a new agent by running `python scripts/scaffold-agent.py <agent_id> --scenar
 ## References
 - Onboarding: `docs/getting-started/setup-and-prereqs.md`
 - Discovery guide: `docs/discovery/SOLUTION-BRIEF-GUIDE.md`
-- Agent specs (Foundry bootstrap + Agent Hub references): `docs/agent-specs/README.md`
+- `docs/agent-specs/README.md` — per-agent system instructions and bootstrap mechanics
 - Patterns: `docs/patterns/{architecture,rai,waf-alignment}/README.md`
 - Version matrix: `docs/version-matrix.md`
 - Scenario catalog: `docs/references/`

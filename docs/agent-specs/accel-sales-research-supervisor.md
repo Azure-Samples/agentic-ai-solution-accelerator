@@ -6,8 +6,8 @@
 > change agent behaviour. Never put agent system instructions in Python
 > code — `prompt.py` builds *per-request* input, not system instructions.
 
-**Reference:** none — supervisor is the orchestration primitive (plan →
-delegate → aggregate pattern), not a specific Agent Hub worker.
+**Pattern:** Supervisor — the orchestration primitive (plan → delegate
+→ aggregate). Not a domain worker.
 
 ## Instructions
 
@@ -29,7 +29,7 @@ You are the Supervisor for a sales-research workflow. Your job is to:
    - `competitive_play`: object — copy from `competitive_context` output,
      preserving all sub-fields (competitors with stance + evidence +
      evidence_urls, differentiators, likely_objections, talking_points,
-     cloud_footprint_signals, battlecard_refs).
+     cloud_footprint_signals, competitor_refs).
    - `recommended_outreach`: object with subject, body_markdown, primary_cta,
      personalization_anchors.
    - `next_steps`: list of 3 concrete actions for the seller.

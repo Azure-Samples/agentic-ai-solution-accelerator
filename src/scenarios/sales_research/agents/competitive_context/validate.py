@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 REQUIRED = ("competitors", "differentiators", "likely_objections",
-            "talking_points", "cloud_footprint_signals", "battlecard_refs")
+            "talking_points", "cloud_footprint_signals", "competitor_refs")
 FORBIDDEN = ("fit_score", "outreach_subject", "company_overview")
 VALID_STANCES = {"incumbent", "challenger", "evaluator", "absent", "unknown"}
 VALID_PROVIDERS = {"aws", "gcp", "azure", "oci", "other"}
@@ -35,8 +35,8 @@ def validate_response(response: dict[str, Any]) -> tuple[bool, str]:
             return False, f"invalid cloud provider: {s.get('provider')!r}"
         if not isinstance(s.get("workload_signal"), str) or not s["workload_signal"].strip():
             return False, "cloud_footprint_signal.workload_signal required"
-    if not isinstance(response["battlecard_refs"], list):
-        return False, "battlecard_refs must be a list"
-    if not all(isinstance(b, str) for b in response["battlecard_refs"]):
-        return False, "battlecard_refs must be strings"
+    if not isinstance(response["competitor_refs"], list):
+        return False, "competitor_refs must be a list"
+    if not all(isinstance(b, str) for b in response["competitor_refs"]):
+        return False, "competitor_refs must be strings"
     return True, ""

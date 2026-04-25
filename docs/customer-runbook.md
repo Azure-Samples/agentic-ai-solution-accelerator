@@ -232,11 +232,11 @@ ships rough defaults for `gpt-5.2` and `gpt-5-mini`. The shipped
 template default deployment is `gpt-4o-mini` (from
 `infra/main.parameters.json`), which is **not** in that price table.
 
-Crucially, `cost.call` telemetry **does not fire by default in the
-shipped flagship** — the emitter `record_call_cost(agent,
+Crucially, `cost.call` telemetry is **not emitted by the shipped
+flagship** — the emitter `record_call_cost(agent,
 UsageSample(model, input_tokens, output_tokens))` is exported from
-`src/accelerator_baseline/cost.py` but is not invoked anywhere in
-the flagship workflow. To get cost signal in production a partner
+`src/accelerator_baseline/cost.py` but is not invoked from the
+flagship workflow. To get cost signal in production a partner
 must do **both**:
 
 1. Wire `record_call_cost(...)` into the Foundry call site so the
