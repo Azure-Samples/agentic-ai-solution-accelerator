@@ -30,8 +30,10 @@ hooks:
       shell: pwsh
       run: |
         $ErrorActionPreference = 'Stop'
+        if (Get-Command py.exe -ErrorAction SilentlyContinue) { $py = 'py'; $pyArgs = @('-3') } else { $py = 'python'; $pyArgs = @() }
         Write-Host "[preprovision] syncing accelerator.yaml models block -> azd env..."
-        python scripts/sync-models-from-manifest.py
+        & $py @pyArgs scripts/sync-models-from-manifest.py
+        if ($LASTEXITCODE -ne 0) { throw "[preprovision] sync-models failed (exit $LASTEXITCODE)" }
   postprovision:
     posix:
       shell: sh
@@ -46,10 +48,13 @@ hooks:
       shell: pwsh
       run: |
         $ErrorActionPreference = 'Stop'
+        if (Get-Command py.exe -ErrorAction SilentlyContinue) { $py = 'py'; $pyArgs = @('-3') } else { $py = 'python'; $pyArgs = @() }
         Write-Host "[postprovision] creating/verifying Foundry agents..."
-        python scripts/foundry-bootstrap.py
+        & $py @pyArgs scripts/foundry-bootstrap.py
+        if ($LASTEXITCODE -ne 0) { throw "[postprovision] foundry-bootstrap failed (exit $LASTEXITCODE)" }
         Write-Host "[postprovision] creating/seeding AI Search 'accounts' index..."
-        python scripts/seed-search.py
+        & $py @pyArgs scripts/seed-search.py
+        if ($LASTEXITCODE -ne 0) { throw "[postprovision] seed-search failed (exit $LASTEXITCODE)" }
         Write-Host "[postprovision] done. Run 'azd deploy' to push the agent."
   postdeploy:
     shell: sh
