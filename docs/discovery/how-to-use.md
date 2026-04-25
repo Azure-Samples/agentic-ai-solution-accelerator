@@ -25,6 +25,7 @@ reads well but doesn't tie to measurable ROI.
    scoping call. If the sponsor can't fill it in ~30 minutes, the
    engagement isn't ready for a workshop. The canvas is a go/no-go
    gate, not a deliverable.
+   - **Where:** sponsor's editor of choice (Word, Notion, Google Doc, or VS Code) — async. The shipped `use-case-canvas.md` is a Markdown template; fork it per engagement.
 
 ### If the customer already provided a PRD / BRD / functional spec
 
@@ -39,6 +40,7 @@ text-extractable `.pdf` (scanned PDFs must be OCR'd first).
 Flow:
 
 1. **Run `/ingest-prd`** in Copilot Chat and give it the file path.
+   - **Where:** GitHub Copilot Chat (in VS Code) — point Copilot at the PRD/BRD file already in your repo or a local path.
    The chatmode invokes `scripts/extract-brief-from-doc.py`, maps
    evidence to the 7-section brief schema, and writes a **draft**
    `docs/discovery/solution-brief.md` with:
@@ -82,6 +84,7 @@ What `/ingest-prd` does **not** do:
    live. One question per row keeps the conversation disciplined. The
    workbook is *scaffolding*; it gets replaced by the solution brief
    after the session.
+   - **Where:** customer workshop room (or Teams) for the conversation; VS Code or Excel for the facilitator typing into `discovery-workbook.csv`.
 
 ### Immediately after
 
@@ -93,6 +96,7 @@ What `/ingest-prd` does **not** do:
    It does **not** touch `scenario:` — that comes from
    `/scaffold-from-brief` + `scripts/scaffold-scenario.py` in the
    scaffold stage.
+   - **Where:** GitHub Copilot Chat (in VS Code).
 
 4. **ROI calculator** — open `roi-calculator.xlsx`, fill blue cells on
    the `Inputs` sheet with numbers from brief Section 3 + Section 4. Read the `ROI`
@@ -101,6 +105,7 @@ What `/ingest-prd` does **not** do:
    `accelerator.yaml:kpis` schema. The block is a copy guide, not
    paste-ready — Excel does not expand cell addresses into text when
    copied.
+   - **Where:** Excel (or compatible — Numbers, LibreOffice Calc); the file lives at `docs/discovery/roi-calculator.xlsx` in the repo.
 
 ### Before scaffolding
 

@@ -8,6 +8,17 @@ This is the authoritative reference for **setup, prereqs, secrets, and troublesh
 
 When those docs and this one disagree on **setup mechanics** (prereqs, secrets, `azd` invocation, troubleshooting), this file wins. When they disagree on **delivery motion** (when to run discovery, how to scope an SOW, handover sequence), the playbook wins. The chatmodes in `.github/chatmodes/` win over both on the executable surface they drive.
 
+## Where you'll work
+
+This document is the authoritative reference for prereqs, secrets, and troubleshooting — most of it is something you'll *configure* (Terminal for CLI installs, GitHub web for environment secrets, Azure portal for quota). The QUICKSTART and hands-on-lab carry the same orientation table for the partner motion itself.
+
+| Where | What you do here |
+|---|---|
+| **Terminal** | Install / verify `az`, `azd`, `gh`, `python`, `docker`; run `azd up` and the eval chain |
+| **GitHub web (github.com)** | Repo → Settings → Environments → wire `AZURE_CLIENT_ID` / `AZURE_TENANT_ID` / `AZURE_SUBSCRIPTION_ID` and `AZURE_LOCATION` per environment; Settings → Secrets and variables → Actions for repo-level vars |
+| **Azure portal (portal.azure.com)** | Confirm Foundry quota in your target region (Foundry → Quotas) before `azd up`; inspect the deployed resource group and resources after |
+| **VS Code** | Edit local `.env` for development; edit `accelerator.yaml` and `infra/main.parameters.json` to override defaults |
+
 ## What you ship
 
 A partner clone of this template deploys a working agentic AI solution into the
@@ -135,6 +146,14 @@ Two modes:
   runtime `POST`s to when an action needs approval. The webhook is responsible
   for holding the checkpoint and returning an approve/reject decision. Simple
   shapes: a Slack/Teams bot, a Logic App, or a custom dashboard.
+
+**Where you set these depends on the environment:**
+
+| Where you're running | Where to set `HITL_*` |
+|---|---|
+| Local dev (running `uvicorn` or `python -m src.main` against your sandbox) | `.env` file in the repo root (loaded by `load_settings()`). `HITL_DEV_MODE=1` lives here only. |
+| Sandbox `azd up` (manual deploy from your machine) | `azd env set HITL_APPROVER_ENDPOINT "<url>"` so it's persisted in `.azure/<env-name>/.env` and injected into the Container App. Never `azd env set HITL_DEV_MODE 1` for a deployed environment. |
+| CI deploys (`deploy.yml` against a GitHub Environment) | github.com → repo → Settings → Environments → `<env>` → Environment secrets. Add `HITL_APPROVER_ENDPOINT` there; the workflow forwards it into `azd env set` before `azd up`. |
 
 Failures to reach the approver are treated as rejections (fail-closed).
 

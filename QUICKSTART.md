@@ -16,7 +16,23 @@
 
 ---
 
+## Where you'll work
+
+You'll move between five places as you go through this guide. Every step below opens with a **Where** line so you know which one to be in.
+
+| Where | What you do there | How to open it |
+|---|---|---|
+| **Terminal** | `azd up`, `gh repo create`, `python`, `npm`, `git` commands | Your normal shell (PowerShell, bash, zsh) |
+| **VS Code** | Edit files in the repo (`accelerator.yaml`, agent specs, `solution-brief.md`) | `code .` from the terminal after `cd`-ing into the cloned repo |
+| **GitHub Copilot Chat** | Run chatmodes (`/discover-scenario`, `/scaffold-from-brief`, `/configure-landing-zone`, `/deploy-to-env`, `/add-tool`, `/explain-change`, `/delivery-guide`) | In VS Code: click the 💬 Chat icon in the activity bar (or `Ctrl+Alt+I`); type `/` to see the chatmode picker |
+| **GitHub web (github.com)** | Configure repo Settings → Environments (secrets + OIDC), open PRs, watch Actions runs | Your browser, on the cloned repo |
+| **Azure portal (portal.azure.com)** | Inspect the resource group, Foundry quota, Application Insights logs and dashboards | Your browser, signed into the customer's tenant |
+
+---
+
 ## Step 1 — Clone the template
+
+**Where:** Terminal, then VS Code (the `code .` line launches VS Code on the cloned repo).
 
 ```bash
 # Replace <customer-short-name> with your customer's short name (e.g., contoso, fabrikam)
@@ -36,6 +52,8 @@ VS Code opens with Copilot already configured via `.github/copilot-instructions.
 ---
 
 ## Step 2 — Run the discovery workshop
+
+**Where:** GitHub Copilot Chat (in VS Code). The use-case canvas and discovery workbook are partner-fillable templates you handle in your usual editor before this step.
 
 > **Full discovery sequence** (canvas → facilitation guide → workbook → `/discover-scenario` → ROI calc, plus the `/ingest-prd` branch when a PRD/BRD/spec exists) lives in [`docs/discovery/how-to-use.md`](docs/discovery/how-to-use.md). **Read it before running the chatmode** — the five artifacts have a fixed order and the workshop-readiness gate sits upstream.
 
@@ -59,6 +77,8 @@ The brief is the **single source of truth** for the engagement. Every downstream
 ---
 
 ## Step 3 — Scaffold the solution from the brief
+
+**Where:** GitHub Copilot Chat (in VS Code). The chatmode writes files into the open repo; review the diff in VS Code's Source Control panel afterwards.
 
 ```
 /scaffold-from-brief
@@ -86,6 +106,8 @@ Commit the scaffolded changes. CI lint now runs; it will flag anything missing.
 
 ## Step 4 — Preflight: landing zone + GitHub Environment
 
+**Where:** GitHub Copilot Chat (in VS Code) for both chatmodes. `/deploy-to-env` will also have you confirm settings on github.com → your repo → Settings → Environments at the end.
+
 Before `azd up`, make two decisions and wire one piece of OIDC plumbing. These take 5–15 minutes and prevent the most common first-deploy failures.
 
 ```
@@ -98,6 +120,8 @@ Before `azd up`, make two decisions and wire one piece of OIDC plumbing. These t
 ---
 
 ## Step 5 — Provision + deploy to customer's Azure
+
+**Where:** Terminal, signed into the customer's Azure tenant. The deployed API URL prints to the terminal at the end of `azd up` — keep that window open; you'll reuse it in Step 5b.
 
 > **Authoring agent instructions.** Agent system instructions live in
 > `docs/agent-specs/<agent>.md` under the `## Instructions` heading —
@@ -123,6 +147,8 @@ azd up
 
 ## Step 5b — Establish the acceptance baseline
 
+**Where:** Terminal (repo root). Use the same shell session as Step 5 so the API URL is still on screen.
+
 Before you start iterating, run the acceptance chain once against the freshly deployed flagship. The numbers it produces are the engagement's **known-good starting point**: every PR in Step 6 has to clear this same bar.
 
 ```bash
@@ -139,6 +165,8 @@ Capture the output (a screenshot or `enforce-acceptance.py > baseline.txt` in th
 ---
 
 ## Step 6 — Iterate with Copilot; ship through CI gates
+
+**Where:** GitHub Copilot Chat (in VS Code) for the agent edits, then Terminal for the git push, then GitHub web (github.com → your repo → Pull requests / Actions) to watch CI.
 
 In VS Code, just talk to Copilot:
 
@@ -163,6 +191,8 @@ Any red light blocks merge. Green = `azd deploy` against customer env.
 ---
 
 ## Step 7 — Ship a UI
+
+**Where:** Terminal (for `npm install` / `npm run dev` / `swa deploy`) and VS Code (for editing the React + Vite + TypeScript starter under `patterns/sales-research-frontend/`).
 
 Steps 1–6 give you a working SSE API. To put a UI in front of it for your
 customer, fork the [frontend pattern](patterns/sales-research-frontend/README.md) —
