@@ -1,14 +1,32 @@
 /* Let Mermaid diagrams render at natural size; scroll horizontally if too wide.
    Material for MkDocs otherwise constrains the SVG to the content column,
-   shrinking wide flowcharts (e.g. /partner-workflow/) to unreadable text. */
+   shrinking wide flowcharts (e.g. /partner-workflow/) to unreadable text.
+   Note: the partner-workflow page ships a pre-rendered SVG via
+   scripts/prepare-pages.py because client-side mermaid still fights these
+   overrides on some viewports; the rules below remain a defensive layer
+   for any other mermaid blocks. */
 .md-typeset .mermaid {
-  text-align: center;
+  text-align: left;
   overflow-x: auto;
   max-width: 100%;
+  padding: 0.5rem 0;
 }
 
-.md-typeset .mermaid svg {
+/* Mermaid sets inline style="max-width:100%" plus width/height attrs on
+   the rendered SVG. Force intrinsic width via !important on every axis. */
+.md-typeset .mermaid svg,
+.md-typeset .mermaid > svg,
+.md-typeset pre.mermaid svg {
   max-width: none !important;
-  height: auto;
-  min-width: 800px;
+  width: auto !important;
+  height: auto !important;
+  min-width: 1400px !important;
+}
+
+/* Keep node and edge labels readable inside any mermaid diagram. */
+.md-typeset .mermaid svg .nodeLabel,
+.md-typeset .mermaid svg .edgeLabel,
+.md-typeset .mermaid svg foreignObject div {
+  font-size: 15px !important;
+  line-height: 1.35 !important;
 }

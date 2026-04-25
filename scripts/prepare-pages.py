@@ -94,6 +94,39 @@ def apply_rewrites(text: str, rules: list[tuple[re.Pattern[str], str]]) -> str:
     return text
 
 
+# Files whose mermaid blocks should be replaced with a pre-rendered SVG at
+# stage time. Client-side mermaid render in Material for MkDocs constrains
+# the SVG to the content column, which makes wide swim-lane diagrams
+# unreadable on the published site even with aggressive CSS overrides.
+# The committed SVG sits next to the markdown and is copied into the
+# staged tree by the asset mirror loop below.
+MERMAID_TO_SVG: dict[str, tuple[str, str]] = {
+    # source path (relative to docs/) -> (svg basename, alt text)
+    "partner-workflow.md": (
+        "partner-workflow.svg",
+        "Partner workflow swim-lane diagram: Delivery Lead, Partner "
+        "Engineer, and Customer Ops across the seven playbook stages.",
+    ),
+}
+
+_MERMAID_BLOCK_RE = re.compile(r"```mermaid\r?\n.*?\r?\n```", re.DOTALL)
+
+
+def replace_mermaid_with_svg(text: str, svg_name: str, alt: str) -> str:
+    """Swap the first ```mermaid``` fence for an <img> wrapped in a
+    horizontally scrollable div so the diagram renders at intrinsic
+    width on narrow viewports."""
+    replacement = (
+        f'<div style="overflow-x: auto; max-width: 100%; '
+        f'-webkit-overflow-scrolling: touch;">\n'
+        f'  <img src="{svg_name}" alt="{alt}" '
+        f'style="max-width: none; width: 100%; min-width: 1400px; '
+        f'height: auto; display: block;" />\n'
+        f'</div>\n'
+    )
+    return _MERMAID_BLOCK_RE.sub(replacement, text, count=1)
+
+
 _FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*\n?", re.DOTALL)
 _DESCRIPTION_RE = re.compile(r"^description:\s*(.+?)\s*$", re.MULTILINE)
 
@@ -163,6 +196,15 @@ def stage_file(src: Path, dst: Path, rules: list[tuple[re.Pattern[str], str]]) -
     dst.parent.mkdir(parents=True, exist_ok=True)
     original = src.read_text(encoding="utf-8")
     updated = apply_rewrites(original, rules)
+    # Special-case: pre-rendered SVG swap for selected wide diagrams.
+    rel_key = None
+    try:
+        rel_key = str(src.relative_to(DOCS_SRC)).replace("\\", "/")
+    except ValueError:
+        pass
+    if rel_key and rel_key in MERMAID_TO_SVG:
+        svg_name, alt = MERMAID_TO_SVG[rel_key]
+        updated = replace_mermaid_with_svg(updated, svg_name, alt)
     dst.write_text(updated, encoding="utf-8")
     return updated != original
 
