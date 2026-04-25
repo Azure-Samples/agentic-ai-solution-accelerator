@@ -1,0 +1,9 @@
+# Minimal dependencies for the repo-local azd hook venv.
+# Keep shared version bounds aligned with pyproject.toml.
+
+azure-ai-projects>=1.0.0,<3.0.0
+azure-identity>=1.18.0,<2.0.0
+azure-search-documents>=11.5.0,<12.0.0
+azure-mgmt-cognitiveservices>=13.5.0,<14.0.0
+pydantic>=2.9.0,<3.0.0
+pyyaml>=6.0.2,<7.0.0

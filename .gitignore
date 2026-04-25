@@ -21,6 +21,7 @@ build/
 
 # azd
 .azure/
+.azd-hooks/
 
 # Baseline artifacts — partner-repo-local state
 .baseline/snapshots/

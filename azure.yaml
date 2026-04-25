@@ -24,42 +24,50 @@ hooks:
       shell: sh
       run: |
         set -e
-        if command -v python3 >/dev/null 2>&1; then PY=python3; else PY=python; fi
+        if [ ! -f .azd-hooks/.ready ] || [ ! -x .azd-hooks/.venv/bin/python ]; then
+          echo "[preprovision] hook environment not initialized. Run: sh scripts/setup-hooks.sh"
+          exit 1
+        fi
         echo "[preprovision] syncing accelerator.yaml models block -> azd env..."
-        "$PY" scripts/sync-models-from-manifest.py
+        .azd-hooks/.venv/bin/python scripts/sync-models-from-manifest.py
     windows:
       shell: pwsh
       run: |
         $ErrorActionPreference = 'Stop'
-        $py = (& "$PWD\scripts\find-python.ps1").Trim()
-        if (-not $py) { throw "[preprovision] could not resolve a Python 3 interpreter (see scripts/find-python.ps1 output above)" }
-        Write-Host "[preprovision] using Python: $py"
+        if (-not (Test-Path ".azd-hooks\.ready") -or -not (Test-Path ".azd-hooks\.venv\Scripts\python.exe")) {
+          throw "[preprovision] hook environment not initialized. Run: pwsh -File scripts/setup-hooks.ps1"
+        }
+        Write-Host "[preprovision] using repo-local hook venv: .azd-hooks\.venv"
         Write-Host "[preprovision] syncing accelerator.yaml models block -> azd env..."
-        & $py scripts/sync-models-from-manifest.py
+        & .azd-hooks\.venv\Scripts\python.exe scripts/sync-models-from-manifest.py
         if ($LASTEXITCODE -ne 0) { throw "[preprovision] sync-models failed (exit $LASTEXITCODE)" }
   postprovision:
     posix:
       shell: sh
       run: |
         set -e
-        if command -v python3 >/dev/null 2>&1; then PY=python3; else PY=python; fi
+        if [ ! -f .azd-hooks/.ready ] || [ ! -x .azd-hooks/.venv/bin/python ]; then
+          echo "[postprovision] hook environment not initialized. Run: sh scripts/setup-hooks.sh"
+          exit 1
+        fi
         echo "[postprovision] creating/verifying Foundry agents..."
-        "$PY" scripts/foundry-bootstrap.py
+        .azd-hooks/.venv/bin/python scripts/foundry-bootstrap.py
         echo "[postprovision] creating/seeding AI Search 'accounts' index..."
-        "$PY" scripts/seed-search.py
+        .azd-hooks/.venv/bin/python scripts/seed-search.py
         echo "[postprovision] done. Run 'azd deploy' to push the agent."
     windows:
       shell: pwsh
       run: |
         $ErrorActionPreference = 'Stop'
-        $py = (& "$PWD\scripts\find-python.ps1").Trim()
-        if (-not $py) { throw "[postprovision] could not resolve a Python 3 interpreter (see scripts/find-python.ps1 output above)" }
-        Write-Host "[postprovision] using Python: $py"
+        if (-not (Test-Path ".azd-hooks\.ready") -or -not (Test-Path ".azd-hooks\.venv\Scripts\python.exe")) {
+          throw "[postprovision] hook environment not initialized. Run: pwsh -File scripts/setup-hooks.ps1"
+        }
+        Write-Host "[postprovision] using repo-local hook venv: .azd-hooks\.venv"
         Write-Host "[postprovision] creating/verifying Foundry agents..."
-        & $py scripts/foundry-bootstrap.py
+        & .azd-hooks\.venv\Scripts\python.exe scripts/foundry-bootstrap.py
         if ($LASTEXITCODE -ne 0) { throw "[postprovision] foundry-bootstrap failed (exit $LASTEXITCODE)" }
         Write-Host "[postprovision] creating/seeding AI Search 'accounts' index..."
-        & $py scripts/seed-search.py
+        & .azd-hooks\.venv\Scripts\python.exe scripts/seed-search.py
         if ($LASTEXITCODE -ne 0) { throw "[postprovision] seed-search failed (exit $LASTEXITCODE)" }
         Write-Host "[postprovision] done. Run 'azd deploy' to push the agent."
   postdeploy:

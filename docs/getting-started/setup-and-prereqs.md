@@ -33,11 +33,26 @@ You will need:
 | Tool | Why |
 |------|-----|
 | Azure subscription (Contributor) | `azd up` creates resources here |
-| Azure CLI `>= 2.60` | fallback for targeted `az` calls |
-| Azure Developer CLI (`azd`) `>= 1.11` | one-shot provision + deploy |
+| Azure CLI `>= 2.55` | fallback for targeted `az` calls |
+| Azure Developer CLI (`azd`) `>= 1.10` | one-shot provision + deploy |
 | GitHub CLI (`gh`) `>= 2.50` | repo bootstrap + secrets |
-| Python `3.11` | backend, evals, lint, bootstrap |
+| Git | template clone + branch work |
+| PowerShell 7 *(Windows only)* | required because Windows `azd` hooks run with `pwsh` |
+| Python `3.11+` | repo-local hook venv for `azd` hooks |
 | Docker or Podman *(optional)* | only needed for local container builds; `azd up` uses ACR remote build by default |
+
+Python contract:
+
+- **Windows:** install **CPython 3.11+** from python.org or winget. `py -3.11` or `py -3.12` must work.
+- **macOS/Linux:** `python3 --version` must be `>= 3.11`.
+- The accelerator does **not** support Conda / Microsoft Store / scoop as the primary partner path for `azd` hooks.
+
+Before your first `azd up` in a fresh clone, initialize the repo-local hook environment:
+
+- **Windows:** `pwsh -File scripts/setup-hooks.ps1`
+- **macOS/Linux:** `sh scripts/setup-hooks.sh`
+
+`setup-hooks` creates `.azd-hooks/.venv` and installs the minimal Python deps used by the `preprovision` / `postprovision` hooks. If your org blocks PyPI, configure `PIP_INDEX_URL`, `PIP_TRUSTED_HOST`, and proxy settings before running it.
 
 Model quota: the accelerator deploys a `GlobalStandard` Azure OpenAI model
 (default `gpt-5-mini`, 30k TPM — see `infra/main.bicep` params `modelName`,
@@ -115,11 +130,17 @@ gh repo create <your-handle>-accel-sandbox --template Azure-Samples/agentic-ai-s
 cd <your-handle>-accel-sandbox
 code .
 
-# 2. Authenticate to your SANDBOX subscription (not a customer subscription for the smoke-test)
+# 2. Initialize the repo-local hook environment (required once per clone)
+# Windows:
+#   pwsh -File scripts/setup-hooks.ps1
+# macOS/Linux:
+#   sh scripts/setup-hooks.sh
+
+# 3. Authenticate to your SANDBOX subscription (not a customer subscription for the smoke-test)
 az login --tenant <your-sandbox-tenant-id>
 azd auth login
 
-# 3. Provision + deploy
+# 4. Provision + deploy
 azd env new sandbox-dev
 azd up           # ~10-15 min: Foundry + Search + KV + ACA + App Insights
 ```
@@ -278,25 +299,29 @@ disabled public access when requested) won't fight you.
 
 ## Troubleshooting — top 5
 
-1. **`preflight: model deployment 'gpt-5-mini' not found`** — the Foundry
+1. **`hook environment not initialized` / `py not found` / `python3 too old`** — run the one-time hook bootstrap for this clone:
+   - Windows: `pwsh -File scripts/setup-hooks.ps1`
+   - macOS/Linux: `sh scripts/setup-hooks.sh`
+   On Windows, this path requires **PowerShell 7** and **CPython via `py -3.11` or `py -3.12`**. If your org blocks PyPI, configure `PIP_INDEX_URL` / proxy settings first.
+2. **`preflight: model deployment 'gpt-5-mini' not found`** — the Foundry
    bootstrap (`scripts/foundry-bootstrap.py`) runs after `azd up` and verifies
    the deployment exists. If you changed `modelDeploymentName` or the region
    lacks quota, re-run `azd up` after fixing `infra/main.parameters.json` or
    requesting a quota increase for `GlobalStandard <model>`.
-2. **`preflight: has no RAI (content filter) policy bound`** — Bicep attaches
+3. **`preflight: has no RAI (content filter) policy bound`** — Bicep attaches
    the default policy; if it drifted (portal edit, partial deploy), re-run
    `azd up` so the ARM deployment reapplies. The lint rule
    `content_filter_attached` catches this at template-edit time.
-3. **`scenario_manifest_valid: module:attr does not resolve`** — the
+4. **`scenario_manifest_valid: module:attr does not resolve`** — the
    `scenario:` block in `accelerator.yaml` points at an import path the lint
    can't find. Verify the file exists under `src/<package path>/<module>.py`
    and the attribute is defined at module scope (the lint walks the AST; no
    import is attempted, so side-effect errors in the module don't hide the
    real issue).
-4. **`secrets-doc` lint failure** — a workflow added a `secrets.NEW_NAME` or
+5. **`secrets-doc` lint failure** — a workflow added a `secrets.NEW_NAME` or
    `vars.NEW_NAME` reference, but no entry was added to the tables above.
    Add it before merging.
-5. **`azd up` completes but no API_URL emitted** — the bicep outputs
+6. **`azd up` completes but no API_URL emitted** — the bicep outputs
    (`API_URL` or `SERVICE_API_URI`) are empty. Confirm the Container App
    deployment succeeded in the Azure portal; the most common cause is the
    image build failing silently in an earlier `azd up` run. `azd deploy`
