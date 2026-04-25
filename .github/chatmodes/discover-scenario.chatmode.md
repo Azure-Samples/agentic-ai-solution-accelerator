@@ -102,6 +102,22 @@ Push back if the partner gives vague answers. Force specificity:
 ### 5. Solution shape
 - Recommend one of: **supervisor-routing** (flagship default; multiple specialists + aggregation + HITL), **single-agent** (one agent + retrieval + 1–2 tools), **chat-with-actioning** (conversational UX with tools)
 - Explain your recommendation based on their answers. Let them override.
+- **UX shape** — ask exactly one focused question after the agent-pattern decision and before HITL gates:
+  > *"What kind of customer-facing UX does this solution need? Pick one:*
+  > - *Structured form + report — user fills a form, agent produces a structured briefing/analysis*
+  > - *Chat — multi-turn conversational UX*
+  > - *Dashboard / viewer — agent output renders inside the customer's existing app*
+  > - *API-only / embed — another system calls the agent programmatically (Power Automate, n8n, partner platform)"*
+
+  Map the answer to next-step guidance and surface it back to the partner immediately:
+  | Choice | Guidance to read aloud |
+  |---|---|
+  | Structured form + report | "Recommended: fork `patterns/sales-research-frontend/` as your starter. Adapt the form to your scenario's request schema." |
+  | Chat | "No chat UI pattern shipped yet. The `chat-with-actioning` backend pattern supports this shape — you'll build the UI on top (or use any chat UI framework)." |
+  | Dashboard / viewer | "No UI pattern needed from the accelerator — consume the SSE endpoint directly from your customer's app." |
+  | API-only / embed | "No UI. The accelerator's hosted SSE endpoint IS the deliverable. Skip the frontend discussion." |
+
+  Capture the answer verbatim into the `## UX shape` section of the brief as `ux_shape: <choice>` plus a one-line rationale.
 - Grounding sources (SharePoint / SQL / API / blob / all of the above)
 - Side-effect tools needed (list each; name, system it writes to, reversibility)
 - HITL gates (which tools require human approval; thresholds like "any confidence < 0.8")
@@ -125,7 +141,7 @@ Derived from section 3 and section 6. Produce concrete thresholds:
 1. **If you ran in gap-fill mode, follow the gap-fill write-back steps above instead of this section.**
 2. Write the filled brief to `docs/discovery/solution-brief.md` (overwrite the template).
 3. Update `accelerator.yaml` — copy:
-   - Section 5 → `solution.pattern`, `solution.hitl`
+   - Section 5 → `solution.pattern`, `solution.hitl`, and the `ux_shape` value into the `## UX shape` section of the brief (no `accelerator.yaml` field — the brief is canonical for downstream chatmodes)
    - Section 6 → `solution.data_residency`, `solution.identity`
    - Section 7 → `acceptance.*` thresholds
    - Section 4 KPI names → `kpis[].name` (leave baseline/target numbers for the partner to fill)

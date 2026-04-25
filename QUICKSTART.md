@@ -75,6 +75,13 @@ Commit the scaffolded changes. CI lint now runs; it will flag anything missing.
 
 ## Step 4 — Provision + deploy to customer's Azure
 
+> **Authoring agent instructions — load-bearing tip, easy to miss.** Agent
+> system instructions live in `docs/agent-specs/<agent>.md` under the
+> `## Instructions` heading — **edit those Markdown files, not Python.** On
+> `azd up`, `scripts/foundry-bootstrap.py` syncs each spec verbatim to the
+> Foundry portal. `prompt.py` is for *per-request* input construction only;
+> the lint and chatmodes both enforce this.
+
 ```bash
 az login --tenant <customer-tenant-id>
 azd auth login

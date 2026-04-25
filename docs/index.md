@@ -47,6 +47,7 @@ hide:
 3. [Iterate with Copilot](QUICKSTART.md#step-4--provision--deploy-to-customers-azure) — PRs gated by lint + evals + redteam
 4. UAT support — eval tuning · HITL wiring · fixes
 5. [Ship a UI](../patterns/sales-research-frontend/README.md) — fork the React/Vite SSE starter for the customer demo
+6. Agent instructions live in [`docs/agent-specs/`](agent-specs/README.md) — edit the markdown, not Python
 
 → [**Start here: Quickstart**](QUICKSTART.md)
 </div>

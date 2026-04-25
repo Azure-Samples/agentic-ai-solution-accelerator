@@ -1,5 +1,11 @@
 # Agent: accel-icp-fit-analyst
 
+> **This file IS this agent's system instructions.** The `## Instructions`
+> section below is synced **verbatim** to the Foundry portal by
+> `scripts/foundry-bootstrap.py` on every `azd up`. Edit this file to
+> change agent behaviour. Never put agent system instructions in Python
+> code — `prompt.py` builds *per-request* input, not system instructions.
+
 **Reference:** SMB Agent Hub `nnr_agent` + `portfolio_planner`. This worker
 mirrors the *IO shape* of those two agents (grounded fit signals + a tier
 recommendation) without reproducing their full scoring models. Partners who

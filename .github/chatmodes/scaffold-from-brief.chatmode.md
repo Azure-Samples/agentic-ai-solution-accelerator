@@ -57,6 +57,18 @@ python scripts/accelerator-lint.py
 ```
 The lint's `scenario-manifest` check AST-validates every import ref in the new `scenario:` block; `agents-three-layer` verifies the package's `agents/` directory contains complete three-layer agents.
 
+## Step 6 — Surface the UX-shape next step
+
+Read the `## UX shape` / `ux_shape` field from `docs/discovery/solution-brief.md` and print the matching next-step block to the partner. Do **not** scaffold any frontend code — partners decide whether to fork the pattern. Just signpost:
+
+| `ux_shape` value | Print to chat |
+|---|---|
+| **Structured form + report** | "Next step (frontend starter): `cd patterns/sales-research-frontend && cp -r . ../../my-frontend && cd ../../my-frontend && npm install`. Then adapt the form fields to your scenario's request schema." |
+| **Chat** | "No chat UI pattern shipped yet. The `chat-with-actioning` backend pattern supports this shape — build the UI on top (or use any chat UI framework). Consume `/<scenario>/stream` from your client." |
+| **Dashboard / viewer** | "No UI work in this repo. Have the customer's existing app consume the SSE endpoint at `/<scenario>/stream` — see `patterns/sales-research-frontend/src/services/researchClient.ts` for a reference SSE client to lift." |
+| **API-only / embed** | "No UI. The hosted SSE endpoint at `/<scenario>/stream` IS the deliverable. Hand the URL + auth scheme to the integrating system (Power Automate, n8n, partner platform)." |
+| TBD / missing | "The brief's `ux_shape` field is empty. Re-run `/discover-scenario` to fill it before deciding on a frontend." |
+
 ## Guardrails
 - NEVER write Foundry agent system instructions in code. Those live in the Foundry portal; prompts in `prompt.py` are request-builders.
 - NEVER weaken HITL, telemetry, evals, or content-filter controls to fit the brief. If the brief implies they should be weakened, flag to the partner — don't comply.

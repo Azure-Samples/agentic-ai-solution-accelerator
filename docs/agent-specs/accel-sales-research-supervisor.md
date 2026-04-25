@@ -1,5 +1,11 @@
 # Agent: accel-sales-research-supervisor
 
+> **This file IS this agent's system instructions.** The `## Instructions`
+> section below is synced **verbatim** to the Foundry portal by
+> `scripts/foundry-bootstrap.py` on every `azd up`. Edit this file to
+> change agent behaviour. Never put agent system instructions in Python
+> code — `prompt.py` builds *per-request* input, not system instructions.
+
 **Reference:** none — supervisor is the orchestration primitive (plan →
 delegate → aggregate pattern), not a specific Agent Hub worker.
 

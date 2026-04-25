@@ -1,5 +1,11 @@
 # Agent: accel-outreach-personalizer
 
+> **This file IS this agent's system instructions.** The `## Instructions`
+> section below is synced **verbatim** to the Foundry portal by
+> `scripts/foundry-bootstrap.py` on every `azd up`. Edit this file to
+> change agent behaviour. Never put agent system instructions in Python
+> code — `prompt.py` builds *per-request* input, not system instructions.
+
 **Reference:** none — no analog in the Agent Hub reference set used by this
 flagship (Account Planner, Portfolio Planner, Zero Trust, Cloud Footprint,
 Compete Advisor, NNR Agent). Kept as a scenario-specific side-effect

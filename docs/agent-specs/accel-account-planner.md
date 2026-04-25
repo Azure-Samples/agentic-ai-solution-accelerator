@@ -1,5 +1,11 @@
 # Agent: accel-account-planner
 
+> **This file IS this agent's system instructions.** The `## Instructions`
+> section below is synced **verbatim** to the Foundry portal by
+> `scripts/foundry-bootstrap.py` on every `azd up`. Edit this file to
+> change agent behaviour. Never put agent system instructions in Python
+> code — `prompt.py` builds *per-request* input, not system instructions.
+
 **Reference:** SMB Agent Hub `account_planner` agent
 
 ## Instructions

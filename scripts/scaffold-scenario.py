@@ -157,17 +157,25 @@ TEMPLATES: dict[str, Callable[[str, str], str]] = {
 
 SPEC_TEMPLATE = """# {agent_name}
 
-Foundry agent spec for the {sid} scenario's supervisor. Instructions below
-are synced to the Foundry portal by ``scripts/foundry-bootstrap.py``; the
-model comes from ``AZURE_AI_FOUNDRY_MODEL`` (emitted by Bicep) - do NOT add
-a ``**Model:**`` field here (the lint blocks it).
+> **This file IS your agent's system instructions.** The `## Instructions`
+> section below is synced **verbatim** to the Foundry portal by
+> `scripts/foundry-bootstrap.py` on every `azd up`. **Edit this file to
+> change agent behaviour.** Never put agent system instructions in Python
+> code — `prompt.py` builds *per-request* input, not system instructions.
+
+Foundry agent spec for the {sid} scenario's supervisor. The model comes
+from ``AZURE_AI_FOUNDRY_MODEL`` (emitted by Bicep) - do NOT add a
+``**Model:**`` field here (the lint blocks it).
 
 ## Instructions
 
-You are the supervisor agent for the {sid} scenario. Your job is to plan
-which worker agents to invoke for each request, and to synthesise their
-outputs into a single final briefing. Follow the accelerator's HITL +
-grounding policies; never call side-effect tools directly.
+You are the supervisor agent for the {sid} scenario. **Replace this
+paragraph with the real system instructions for your scenario** — describe
+the agent's role, the exact JSON output contract, grounding rules, and any
+HITL-related obligations. Your job is to plan which worker agents to invoke
+for each request, and to synthesise their outputs into a single final
+briefing. Follow the accelerator's HITL + grounding policies; never call
+side-effect tools directly.
 """
 
 

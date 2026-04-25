@@ -60,6 +60,14 @@
 
 - **Out-of-scope tools (explicit):**
 
+## 5b. UX shape
+- **`ux_shape`:** TBD — pick one of:
+  - **Structured form + report** — user fills a form, agent produces a structured briefing/analysis. *Next step: fork `patterns/sales-research-frontend/` as your starter and adapt the form to your scenario's request schema.*
+  - **Chat** — multi-turn conversational UX. *No chat UI pattern shipped yet; the `chat-with-actioning` backend pattern supports this shape — you build the UI on top (or use any chat UI framework).*
+  - **Dashboard / viewer** — agent output renders in the customer's existing app. *No UI pattern needed from the accelerator — consume the SSE endpoint directly from the customer's app.*
+  - **API-only / embed** — another system calls the agent programmatically (Power Automate, n8n, partner platform). *No UI. The accelerator's hosted SSE endpoint IS the deliverable.*
+- **Rationale (one line):**
+
 ## 6. Constraints & risks
 - **Data residency:** US / EU / APAC / custom
 - **Identity:** Entra ID / External ID / custom

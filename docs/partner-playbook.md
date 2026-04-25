@@ -137,6 +137,9 @@ through the customization steps below.
 
 **What "good" looks like:**
 
+!!! tip "Load-bearing tip — easy to miss"
+    **Agent system instructions live in `docs/agent-specs/<foundry_name>.md` under `## Instructions`.** Edit those Markdown files, not Python — `scripts/foundry-bootstrap.py` syncs them verbatim to the Foundry portal on `azd up`. `prompt.py` is for per-request input only; the lint blocks instructions in code.
+
 - `python scripts/accelerator-lint.py` passes with **0 blocking, 0 warning**
 - `pytest tests/` passes (supervisor-DAG test stays green)
 - Agent instructions in each `prompt.py` are **placeholders** with a clear
