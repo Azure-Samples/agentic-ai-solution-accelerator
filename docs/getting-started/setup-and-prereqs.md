@@ -30,7 +30,7 @@ You will need:
 | Docker or compatible runtime | local container builds |
 
 Model quota: the accelerator deploys a `GlobalStandard` Azure OpenAI model
-(default `gpt-4o-mini`, 30k TPM — see `infra/main.bicep` params `modelName`,
+(default `gpt-5-mini`, 30k TPM — see `infra/main.bicep` params `modelName`,
 `modelDeploymentName`, `modelCapacity`). Confirm quota in your target region
 before running `azd up`, or override the params for a different model.
 
@@ -155,22 +155,22 @@ Failures to reach the approver are treated as rejections (fail-closed).
 ## Customizing models per agent
 
 The accelerator provisions a **single default model deployment** out of the box
-(`gpt-4o-mini`). To give individual agents a different model — e.g. put the
-supervisor on `gpt-4o` while workers stay on `gpt-4o-mini` for speed and cost —
+(`gpt-5-mini`). To give individual agents a different model — e.g. put the
+supervisor on `gpt-5` while workers stay on `gpt-5-mini` for speed and cost —
 add a `models:` block to `accelerator.yaml`:
 
 ```yaml
 models:
   - slug: default                 # reserved slug; must be the default entry
-    deployment_name: gpt-4o-mini
-    model: gpt-4o-mini
-    version: "2024-07-18"
+    deployment_name: gpt-5-mini
+    model: gpt-5-mini
+    version: "2025-08-07"
     capacity: 30
     default: true
   - slug: planner                 # arbitrary slug; agents reference by slug
-    deployment_name: gpt-4o-planner
-    model: gpt-4o
-    version: "2024-11-20"
+    deployment_name: gpt-5-planner
+    model: gpt-5
+    version: "2025-08-07"
     capacity: 10
 
 scenario:
@@ -212,8 +212,8 @@ Lint enforcement (both BLOCKING):
   slug; omitting the field falls through to slug `default`.
 
 Omitting the whole `models:` block is supported: sync-models-from-manifest
-then resets all managed env vars to the template defaults (gpt-4o-mini /
-2024-07-18 / capacity 30) — the same end state whether the block was ever
+then resets all managed env vars to the template defaults (gpt-5-mini /
+2025-08-07 / capacity 30) — the same end state whether the block was ever
 there or not. Partners who want to override the default deployment MUST
 use the `models:` block with a single default entry — overriding via raw
 env vars is unsupported because preprovision would clobber them on every
@@ -253,14 +253,14 @@ disabled public access when requested) won't fight you.
 
 - Cognitive Services account (`kind=AIServices`, GA)
 - Default content filter (`accelerator-default-policy`) blocking Medium+ on Hate/Sexual/Violence/Selfharm
-- Model deployment (default `gpt-4o-mini`, `GlobalStandard`, 30 TPM) bound to the content filter
+- Model deployment (default `gpt-5-mini`, `GlobalStandard`, 30 TPM) bound to the content filter
 - Foundry project (`accelerator-default`)
 - Azure AI Search, Key Vault (RBAC), Container App, Log Analytics + App Insights
 - User-assigned managed identity with Cognitive Services OpenAI User + Azure AI Developer roles
 
 ## Troubleshooting — top 5
 
-1. **`preflight: model deployment 'gpt-4o-mini' not found`** — the Foundry
+1. **`preflight: model deployment 'gpt-5-mini' not found`** — the Foundry
    bootstrap (`scripts/foundry-bootstrap.py`) runs after `azd up` and verifies
    the deployment exists. If you changed `modelDeploymentName` or the region
    lacks quota, re-run `azd up` after fixing `infra/main.parameters.json` or

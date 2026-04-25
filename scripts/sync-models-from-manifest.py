@@ -31,7 +31,7 @@ If ``accelerator.yaml`` declares a ``models:`` block:
 If ``models:`` is absent — normalised fixed-point state:
 
 * All five managed env vars are rewritten to the template defaults
-  that ``infra/main.parameters.json`` declares (gpt-4o-mini / 2024-07-18
+  that ``infra/main.parameters.json`` declares (gpt-5-mini / 2025-08-07
   / capacity 30 / extras=[]). This makes "remove the block" a
   convergent operation — state doesn't drift from whatever the last
   sync wrote. Partners who want to override the default deployment
@@ -65,9 +65,9 @@ _REQUIRED_FIELDS = ("slug", "deployment_name", "model", "version", "capacity")
 # so that "no models block" and "freshly provisioned with no env vars set"
 # produce identical Bicep inputs.
 _TEMPLATE_DEFAULTS = {
-    "AZURE_AI_FOUNDRY_MODEL_NAME": "gpt-4o-mini",
-    "AZURE_AI_FOUNDRY_MODEL_VERSION": "2024-07-18",
-    "AZURE_AI_FOUNDRY_MODEL": "gpt-4o-mini",
+    "AZURE_AI_FOUNDRY_MODEL_NAME": "gpt-5-mini",
+    "AZURE_AI_FOUNDRY_MODEL_VERSION": "2025-08-07",
+    "AZURE_AI_FOUNDRY_MODEL": "gpt-5-mini",
     "AZURE_AI_FOUNDRY_MODEL_CAPACITY": "30",
 }
 

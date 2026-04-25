@@ -3,7 +3,7 @@
 Usage:
     python evals/quality/run.py --api-url http://localhost:8000
     python evals/quality/run.py --api-url $API_URL --out results.jsonl
-    python evals/quality/run.py --model gpt-4o-mini  # pricing table
+    python evals/quality/run.py --model gpt-5-mini  # pricing table
 
 Each case is a JSON line. The runner is scenario-agnostic:
 
@@ -59,11 +59,14 @@ _CITATIONS_RE = re.compile(r'"citations"\s*:\s*\[\s*[^\]\s]')
 # Partners on custom models override via --model + a pricing entry, or pass
 # --cost-override to stamp a fixed cost_per_call during CI testing.
 MODEL_PRICING_USD_PER_MTOK: dict[str, dict[str, float]] = {
-    "gpt-4o-mini": {"prompt": 0.15, "completion": 0.60},
-    "gpt-4o":      {"prompt": 2.50, "completion": 10.00},
-    "gpt-4.1":     {"prompt": 2.00, "completion": 8.00},
+    "gpt-5-mini":   {"prompt": 0.25, "completion": 2.00},
+    "gpt-5":        {"prompt": 1.25, "completion": 10.00},
+    "gpt-5-nano":   {"prompt": 0.05, "completion": 0.40},
+    "gpt-4o-mini":  {"prompt": 0.15, "completion": 0.60},
+    "gpt-4o":       {"prompt": 2.50, "completion": 10.00},
+    "gpt-4.1":      {"prompt": 2.00, "completion": 8.00},
     "gpt-4.1-mini": {"prompt": 0.40, "completion": 1.60},
-    "o4-mini":     {"prompt": 1.10, "completion": 4.40},
+    "o4-mini":      {"prompt": 1.10, "completion": 4.40},
 }
 # Fallback when token usage is unavailable (stub path / pre-GA SDK). A
 # linear latency estimate keeps the acceptance gate live with a
@@ -219,7 +222,7 @@ async def main() -> int:
     p.add_argument("--api-url", default="http://localhost:8000")
     p.add_argument("--out", default=str(HERE / "results.jsonl"))
     p.add_argument(
-        "--model", default="gpt-4o-mini",
+        "--model", default="gpt-5-mini",
         help="Pricing table key (see MODEL_PRICING_USD_PER_MTOK).",
     )
     p.add_argument(

@@ -40,7 +40,7 @@ After the lab you can:
 1. An Azure **sandbox** subscription where you have Contributor — do
    **not** use a customer subscription for the lab. Cleanup at the
    end is `azd down --purge`.
-2. Regional Foundry quota for `gpt-4o-mini` on `GlobalStandard` (the
+2. Regional Foundry quota for `gpt-5-mini` on `GlobalStandard` (the
    shipped default is 30k TPM — see `infra/main.parameters.json`).
    Confirm in the Azure portal → Foundry → Quotas before starting.
 3. The tools listed in the "Prerequisites" section of `docs/getting-started/setup-and-prereqs.md`
@@ -103,7 +103,7 @@ template clone.
   expect 200.
 - In the Azure portal, open the resource group and confirm you have
   a Foundry AIServices account, a model deployment
-  (`gpt-4o-mini` by default) bound to the `accelerator-default-policy`
+  (`gpt-5-mini` by default) bound to the `accelerator-default-policy`
   content filter, an AI Search service with an `accounts` index,
   Key Vault, Container App, App Insights, and a user-assigned MI.
 - If anything is missing, `docs/getting-started/setup-and-prereqs.md`
@@ -309,7 +309,7 @@ try again. The acceptance gate is the contract.
 
 1. Open `accelerator.yaml` and replace the `default: true` entry
    under `models:` with a different model your sandbox has quota
-   for (e.g. `gpt-4o` instead of `gpt-4o-mini`, with a valid
+   for (e.g. `gpt-4.1-mini` instead of `gpt-5-mini`, with a valid
    `version` and a `capacity` within your quota).
 2. Run `azd provision`. The preprovision hook
    `scripts/sync-models-from-manifest.py` rewrites the managed azd

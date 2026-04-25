@@ -286,7 +286,7 @@ behavior. Do not disable the filter; the RAI pattern doc
 
 `MODEL_PRICE_USD_PER_1K_TOKENS` in `src/accelerator_baseline/cost.py`
 ships rough defaults for `gpt-5.2` and `gpt-5-mini`. The shipped
-template default deployment is `gpt-4o-mini` (from
+template default deployment is `gpt-5-mini` (from
 `infra/main.parameters.json`), which is **not** in that price table.
 
 Crucially, `cost.call` telemetry is **not emitted by the shipped

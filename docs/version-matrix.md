@@ -26,7 +26,7 @@ Pinned in `pyproject.toml`; `ga-versions.yaml` is the manifest lint enforces dri
 
 ## Platform targets
 - Python: **3.11** and **3.12**. 3.13 once Agent Framework declares support.
-- Foundry model deployments: default `gpt-4o-mini` (flagship; parameterized via `modelName` / `modelDeploymentName` in `infra/main.bicep`). Partners override per engagement; the weekly freshness script validates canonical GA SDKs against PyPI regardless of model choice.
+- Foundry model deployments: default `gpt-5-mini` (flagship; parameterized via `modelName` / `modelDeploymentName` in `infra/main.bicep`). Partners override per engagement; the weekly freshness script validates canonical GA SDKs against PyPI regardless of model choice.
 - Azure regions: the deployment is region-agnostic; AI Foundry + AI Search availability is the constraint.
 
 ## ARM api-versions

@@ -99,7 +99,7 @@ CATEGORIES: list[Category] = [
             "lint: manifest_present, scenario_manifest_valid, agent_has_golden_case, acceptance_wired_to_evals, agent_specs_no_hardcoded_model, models_block_shape, agent_model_refs_exist",
             "evals: acceptance thresholds come from accelerator.yaml -> acceptance; changes here move the quality gate",
             "runtime: src/main.py reads this file at startup to mount /<scenario.endpoint.path>; path changes are breaking",
-            "models: changes to the `models:` block drive scripts/sync-models-from-manifest.py on the next `azd up` preprovision and re-shape foundry.bicep deployments (slug->deployment_name map). Removing the block converges back to template defaults (gpt-4o-mini / 2024-07-18 / cap 30); raw env-var overrides of the default are NOT supported.",
+            "models: changes to the `models:` block drive scripts/sync-models-from-manifest.py on the next `azd up` preprovision and re-shape foundry.bicep deployments (slug->deployment_name map). Removing the block converges back to template defaults (gpt-5-mini / 2025-08-07 / cap 30); raw env-var overrides of the default are NOT supported.",
         ],
         patterns=[
             "accelerator.yaml",

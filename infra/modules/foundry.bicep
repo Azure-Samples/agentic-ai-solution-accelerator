@@ -27,13 +27,13 @@ param tags object
 param rbacPrincipalId string
 
 @description('Name of the model to deploy (OpenAI format).')
-param modelName string = 'gpt-4o-mini'
+param modelName string = 'gpt-5-mini'
 
 @description('Model version for the deployment.')
-param modelVersion string = '2024-07-18'
+param modelVersion string = '2025-08-07'
 
 @description('Deployment name used by the workload (becomes MODEL_DEPLOYMENT_NAME output).')
-param modelDeploymentName string = 'gpt-4o-mini'
+param modelDeploymentName string = 'gpt-5-mini'
 
 @description('Deployment capacity (TPM in thousands for GlobalStandard SKU).')
 param modelCapacity int = 30

@@ -85,13 +85,13 @@ resource tier3InputGuard 'Microsoft.Resources/deployments@2022-09-01' = if (_tie
 param resourceToken string = uniqueString(subscription().id, resourceGroup().id, envName)
 
 @description('Foundry model to deploy (OpenAI format).')
-param modelName string = 'gpt-4o-mini'
+param modelName string = 'gpt-5-mini'
 
 @description('Foundry model version.')
-param modelVersion string = '2024-07-18'
+param modelVersion string = '2025-08-07'
 
 @description('Foundry model deployment name (becomes MODEL_DEPLOYMENT_NAME).')
-param modelDeploymentName string = 'gpt-4o-mini'
+param modelDeploymentName string = 'gpt-5-mini'
 
 @description('Foundry model deployment capacity (TPM in thousands for GlobalStandard).')
 param modelCapacity int = 30

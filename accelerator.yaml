@@ -23,7 +23,7 @@ accelerator_version: "1.0.0"   # pins to the template version partner cloned
 #   - slug:            logical name referenced by `scenario.agents[].model`
 #                      (slug `default` is reserved and MUST mark the default)
 #   - deployment_name: actual Foundry deployment resource name
-#   - model:           OpenAI model name (e.g. gpt-4o-mini, gpt-4o)
+#   - model:           OpenAI model name (e.g. gpt-5-mini, gpt-4.1-mini)
 #   - version:         model version string
 #   - capacity:        TPM in thousands (GlobalStandard SKU)
 #   - default:         exactly one entry MUST set `default: true`
@@ -40,9 +40,9 @@ accelerator_version: "1.0.0"   # pins to the template version partner cloned
 # -----------------------------------------------------------------------------
 models:
   - slug: default
-    deployment_name: gpt-4o-mini
-    model: gpt-4o-mini
-    version: "2024-07-18"
+    deployment_name: gpt-5-mini
+    model: gpt-5-mini
+    version: "2025-08-07"
     capacity: 30
     default: true
 
