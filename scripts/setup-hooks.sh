@@ -66,7 +66,7 @@ GIT_VERSION=$(extract_semver "$(git --version 2>/dev/null || true)")
 say "git" "ok ($GIT_VERSION)"
 
 require_cmd az "Azure CLI not found on PATH. Install Azure CLI >= 2.55."
-AZ_VERSION=$(az version --query '"azure-cli"' -o tsv 2>/dev/null || true)
+AZ_VERSION=$(extract_semver "$(az --version 2>/dev/null | grep -E '^azure-cli' | head -n 1 || true)")
 [ -n "$AZ_VERSION" ] || fail "Could not parse Azure CLI version."
 version_ge "$AZ_VERSION" "2.55.0" || fail "Azure CLI $AZ_VERSION is too old. Need >= 2.55.0."
 say "az" "ok ($AZ_VERSION)"
@@ -83,7 +83,7 @@ GH_VERSION=$(extract_semver "$(gh version 2>/dev/null || true)")
 version_ge "$GH_VERSION" "2.50.0" || fail "gh $GH_VERSION is too old. Need >= 2.50.0."
 say "gh" "ok ($GH_VERSION)"
 
-require_cmd python3 "python3 not found on PATH. Install Python 3.11+ and rerun."
+require_cmd python3 "python3 not found on PATH. Install Python 3.11+ (python.org, your distro's package manager, or activate a Conda env), then rerun."
 PYTHON_EXE=$(command -v python3)
 PYTHON_VERSION=$(extract_semver "$(python3 --version 2>/dev/null || true)")
 [ -n "$PYTHON_VERSION" ] || fail "Could not parse python3 version."

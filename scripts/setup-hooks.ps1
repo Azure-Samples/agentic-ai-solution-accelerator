@@ -54,7 +54,7 @@ Require-Command -Name "git" -Hint "Install Git and reopen your terminal." | Out-
 Assert-MinVersion -Name "git" -Minimum ([version]"2.0.0") -GetText { git --version }
 
 Require-Command -Name "az" -Hint "Install Azure CLI >= 2.55." | Out-Null
-Assert-MinVersion -Name "az" -Minimum ([version]"2.55.0") -GetText { az version --query '"azure-cli"' -o tsv }
+Assert-MinVersion -Name "az" -Minimum ([version]"2.55.0") -GetText { (az --version 2>&1 | Select-String -Pattern '^azure-cli' | Select-Object -First 1).Line }
 
 Require-Command -Name "azd" -Hint "Install Azure Developer CLI >= 1.10." | Out-Null
 Assert-MinVersion -Name "azd" -Minimum ([version]"1.10.0") -GetText { azd version }
@@ -62,29 +62,25 @@ Assert-MinVersion -Name "azd" -Minimum ([version]"1.10.0") -GetText { azd versio
 Require-Command -Name "gh" -Hint "Install GitHub CLI >= 2.50." | Out-Null
 Assert-MinVersion -Name "gh" -Minimum ([version]"2.50.0") -GetText { gh version }
 
-Require-Command -Name "py" -Hint "Install CPython 3.11+ from python.org or: winget install Python.Python.3.11" | Out-Null
-
-$pythonSpec = $null
-$pythonVersion = $null
-foreach ($spec in @("-3.11", "-3.12")) {
-    try {
-        $verText = & py $spec --version 2>&1
-        if ($LASTEXITCODE -eq 0 -and "$verText" -match '^Python (\d+\.\d+\.\d+)') {
-            $pythonSpec = $spec
-            $pythonVersion = [version]$matches[1]
-            break
-        }
-    } catch {}
+$pyCmd = Get-Command "python" -ErrorAction SilentlyContinue
+if (-not $pyCmd) { $pyCmd = Get-Command "python3" -ErrorAction SilentlyContinue }
+if (-not $pyCmd) {
+    throw "No 'python' or 'python3' on PATH. Install Python 3.11+ (python.org, winget, or activate a Conda env), then rerun."
 }
-if (-not $pythonSpec) {
-    throw "No supported CPython found via the Python launcher. Install CPython 3.11+ from python.org or winget, then rerun."
+if ($pyCmd.Source -like "*\Microsoft\WindowsApps\*") {
+    throw "PATH resolves to the Microsoft Store Python alias stub ($($pyCmd.Source)). Install a real Python 3.11+ from python.org / winget / Conda, then rerun."
 }
 
-$BasePython = (& py $pythonSpec -c "import sys; print(sys.executable)" 2>$null).Trim()
-if (-not $BasePython -or -not (Test-Path -LiteralPath $BasePython)) {
-    throw "Resolved Python launcher target is invalid for $pythonSpec."
+$BasePython = $pyCmd.Source
+$verText = & $BasePython --version 2>&1
+if ($LASTEXITCODE -ne 0 -or "$verText" -notmatch '^Python (\d+\.\d+\.\d+)') {
+    throw "Could not parse Python version from: $verText"
 }
-Write-Status "python" "ok ($pythonVersion via py $pythonSpec)"
+$pythonVersion = [version]$matches[1]
+if ($pythonVersion -lt [version]"3.11.0") {
+    throw "Python $pythonVersion is too old. Need >= 3.11."
+}
+Write-Status "python" "ok ($pythonVersion at $BasePython)"
 
 if (-not (Test-Path -LiteralPath $RequirementsFile)) {
     throw "Missing $RequirementsFile"

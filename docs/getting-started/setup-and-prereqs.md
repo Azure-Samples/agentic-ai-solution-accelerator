@@ -43,16 +43,17 @@ You will need:
 
 Python contract:
 
-- **Windows:** install **CPython 3.11+** from python.org or winget. `py -3.11` or `py -3.12` must work.
-- **macOS/Linux:** `python3 --version` must be `>= 3.11`.
-- The accelerator does **not** support Conda / Microsoft Store / scoop as the primary partner path for `azd` hooks.
+- **Any CPython 3.11+** that's on your `PATH` as `python` (Windows) or `python3` (macOS/Linux). This includes python.org installers, winget, your distro's package manager, scoop, and **activated Conda environments** — they're all real interpreters from `setup-hooks`' perspective. Tested on **3.11–3.13**; newer minor versions may work but aren't guaranteed.
+- The Microsoft Store Python alias (`%LOCALAPPDATA%\Microsoft\WindowsApps\python.exe`) is **not** supported — it's a stub installer, not a real interpreter. `setup-hooks.ps1` rejects it automatically.
+
+`setup-hooks` creates a self-contained venv at `.azd-hooks/.venv` from your resolved interpreter. The venv is what the `azd` `preprovision` / `postprovision` hooks use at runtime — Conda activation is **not** required during `azd up`, only when you run `setup-hooks`. If you later switch to a different base Python, rerun `setup-hooks` to rebuild `.azd-hooks/.venv`.
 
 Before your first `azd up` in a fresh clone, initialize the repo-local hook environment:
 
 - **Windows:** `pwsh -File scripts/setup-hooks.ps1`
 - **macOS/Linux:** `sh scripts/setup-hooks.sh`
 
-`setup-hooks` creates `.azd-hooks/.venv` and installs the minimal Python deps used by the `preprovision` / `postprovision` hooks. If your org blocks PyPI, configure `PIP_INDEX_URL`, `PIP_TRUSTED_HOST`, and proxy settings before running it.
+`setup-hooks` installs the minimal Python deps (`requirements-hooks.txt`) used by the `preprovision` / `postprovision` hooks. If your org blocks PyPI, configure `PIP_INDEX_URL`, `PIP_TRUSTED_HOST`, and proxy settings before running it.
 
 Model quota: the accelerator deploys a `GlobalStandard` Azure OpenAI model
 (default `gpt-5-mini`, 30k TPM — see `infra/main.bicep` params `modelName`,
@@ -60,6 +61,8 @@ Model quota: the accelerator deploys a `GlobalStandard` Azure OpenAI model
 before running `azd up`, or override the params for a different model.
 
 ## Required GitHub secrets and variables
+
+> **Lab vs. production motion.** Everything from this section through "Private network access" is for the **production / customer motion** in `QUICKSTART.md` — OIDC for CI deploys, multi-environment manifests, HITL approver webhooks, and private networking. The **sandbox lab** (`docs/enablement/hands-on-lab.md`) does not need any of it: it runs `azd up` locally against a sandbox subscription (covered by `azd auth login`) and runs evals locally against the deployed API URL. Skip ahead to "Sandbox smoke-test" below if you're rehearsing in a sandbox.
 
 Every secret / variable referenced in `.github/workflows/*.yml` is listed
 below. The accelerator lint (`scripts/accelerator-lint.py` →
