@@ -57,12 +57,12 @@ Do not infer these from a generic PRD. If the source does not literally describe
 
 | Field | Explicit-evidence requirement |
 |---|---|
-| §5 Solution pattern (supervisor-routing / single-agent / chat-with-actioning) | Only fill if the source explicitly names an agent architecture. Otherwise `TBD`. |
-| §5 Side-effect tools table | Only fill rows for tools the source explicitly names. Do not invent rows for "probably needs CRM write." |
-| §5 HITL policy / gates | Only fill if the source explicitly describes an approval / review gate. Otherwise `TBD`. |
-| §4 KPI event names | Only fill if the source names the event OR names the metric in a machine-instrumentable way ("time_to_first_draft_ms"). Vague "faster response" → `TBD`. |
-| §6 RAI risks | Only fill risks the source literally lists. Do not inject generic LLM risks (hallucination, jailbreak) unless the source calls them out. Otherwise leave §6's RAI subsection with `TBD — fill via /discover-scenario`. |
-| §7 Acceptance eval thresholds (P50/P95 latency ms, groundedness score, cost/call $, quality %) | Only fill numbers that appear in the source. Never pick a "reasonable default." Otherwise `TBD`. |
+| Section 5 — Solution pattern (supervisor-routing / single-agent / chat-with-actioning) | Only fill if the source explicitly names an agent architecture. Otherwise `TBD`. |
+| Section 5 — Side-effect tools table | Only fill rows for tools the source explicitly names. Do not invent rows for "probably needs CRM write." |
+| Section 5 — HITL policy / gates | Only fill if the source explicitly describes an approval / review gate. Otherwise `TBD`. |
+| Section 4 — KPI event names | Only fill if the source names the event OR names the metric in a machine-instrumentable way ("time_to_first_draft_ms"). Vague "faster response" → `TBD`. |
+| Section 6 — RAI risks | Only fill risks the source literally lists. Do not inject generic LLM risks (hallucination, jailbreak) unless the source calls them out. Otherwise leave Section 6's RAI subsection with `TBD — fill via /discover-scenario`. |
+| Section 7 — Acceptance eval thresholds (P50/P95 latency ms, groundedness score, cost/call $, quality %) | Only fill numbers that appear in the source. Never pick a "reasonable default." Otherwise `TBD`. |
 
 ### Fields you can fill confidently when the source describes them
 

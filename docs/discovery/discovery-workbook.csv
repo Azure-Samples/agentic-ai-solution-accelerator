@@ -20,7 +20,7 @@ section,question_id,question,answer,notes
 3. Success criteria,SC-07,"Must-not-do guardrails #2","",
 3. Success criteria,SC-08,"Must-not-do guardrails #3","",
 4. ROI hypothesis,RH-01,"Baseline cost of status quo — model","","FTE × rate" or "$ per txn × volume".
-4. ROI hypothesis,RH-02,"Baseline cost of status quo — number","",$/year. Derived from roi-calculator.xlsx Inputs §2 (rows 11–15: FTE count/cost/pct and/or txn volume/cost).
+4. ROI hypothesis,RH-02,"Baseline cost of status quo — number","",$/year. Derived from roi-calculator.xlsx Inputs Section 2 (rows 11–15: FTE count/cost/pct and/or txn volume/cost).
 4. ROI hypothesis,RH-03,"Target annual savings ($)","",$/year. Reconcile with ROI sheet B19.
 4. ROI hypothesis,RH-04,"Payback period target (months)","",Reconcile with ROI sheet B23.
 4. ROI hypothesis,RH-05,"KPI event #1 name","",Snake_case. Becomes telemetry event in accelerator_baseline.

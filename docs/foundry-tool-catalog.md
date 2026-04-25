@@ -154,7 +154,7 @@ drift. Price every proposal off the live pages:
 - Grounding with Bing Search: resource-specific — see the Foundry agent tools docs linked above.
 - Azure Functions / Logic Apps: per standard Azure pricing.
 
-The ROI hypothesis in `docs/discovery/solution-brief.md` §6 should
+The ROI hypothesis in `docs/discovery/solution-brief.md` Section 6 should
 reflect the tools actually attached at deploy time.
 
 ---

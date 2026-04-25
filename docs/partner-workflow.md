@@ -100,12 +100,12 @@ Each row states **why this step matters**. "Authority" is the doc that owns the 
 | EP | Partner Engineer | Preflight (landing zone + GitHub Environment) | `/configure-landing-zone` picks the tier (`standalone` / `avm` / `alz-integrated`); `/deploy-to-env` registers the GitHub Environment and wires the OIDC federated credential so CI can deploy without secrets. Skipping this is the #1 cause of first-deploy auth failures. | [Stage 3](partner-playbook.md#stage-3--provision) | [`QUICKSTART.md` Step 4](../QUICKSTART.md#step-4--preflight-landing-zone--github-environment) |
 | E2 | Partner Engineer | Provision customer Azure | `azd up` provisions Foundry + Search + KV + ACA + App Insights in the **customer's** subscription with MI. No keys. | [Stage 3](partner-playbook.md#stage-3--provision) | [`getting-started/setup-and-prereqs.md`](getting-started/setup-and-prereqs.md) |
 | E3 | Partner Engineer | Iterate with Copilot | Every change goes through PRs that lint + quality evals + redteam must pass. Keeps HITL + RAI invariants intact. | [Stage 4](partner-playbook.md#stage-4--iterate) | [`QUICKSTART.md` Step 6](../QUICKSTART.md#step-6--iterate-with-copilot-ship-through-ci-gates) |
-| E4 | Partner Engineer | UAT support | Engineer is on-call for eval tuning, HITL approver wiring, and scenario fixes while customer runs UAT against acceptance evals. | [Stage 5](partner-playbook.md#stage-5--uat) | [`partner-playbook.md` §Stage 5](partner-playbook.md#stage-5--uat) |
-| D5 | Delivery Lead | UAT sign-off | Customer sponsor walks the acceptance evals, approves production deploy. Gate before handover. | [Stage 5](partner-playbook.md#stage-5--uat) | [`partner-playbook.md` §Stage 5](partner-playbook.md#stage-5--uat) |
+| E4 | Partner Engineer | UAT support | Engineer is on-call for eval tuning, HITL approver wiring, and scenario fixes while customer runs UAT against acceptance evals. | [Stage 5](partner-playbook.md#stage-5--uat) | [`partner-playbook.md` Stage 5](partner-playbook.md#stage-5--uat) |
+| D5 | Delivery Lead | UAT sign-off | Customer sponsor walks the acceptance evals, approves production deploy. Gate before handover. | [Stage 5](partner-playbook.md#stage-5--uat) | [`partner-playbook.md` Stage 5](partner-playbook.md#stage-5--uat) |
 | D6 | Delivery Lead | Handover meeting | Formal session with customer ops — walk the packet + runbook, confirm approvers, test killswitch, hand over alerts. | [Stage 6](partner-playbook.md#stage-6--production-handover) | [`handover/handover-packet-template.md`](handover/handover-packet-template.md) |
 | C1 | Customer Ops | Receive handover packet | Customer ops owns the deployment from here. The engagement-specific packet is primary; the generic runbook is fallback (packet wins on conflict). | — (customer-owned) | Your engagement-specific handover packet (from the partner) · [`customer-runbook.md`](customer-runbook.md) as fallback |
 | C2 | Customer Ops | Ongoing day-2 ops | Monitoring, killswitch, eval re-run, secret rotation, model swap, incident response. Steady-state, not a finish line. | — (customer-owned) | Your handover packet · [`customer-runbook.md`](customer-runbook.md) as fallback |
-| D7 | Delivery Lead | Monthly value review | Measure realized KPIs against the ROI hypothesis from D1. Feeds the next engagement; justifies renewals. | [Stage 7](partner-playbook.md#stage-7--measure) | [`partner-playbook.md` §Stage 7](partner-playbook.md#stage-7--measure) |
+| D7 | Delivery Lead | Monthly value review | Measure realized KPIs against the ROI hypothesis from D1. Feeds the next engagement; justifies renewals. | [Stage 7](partner-playbook.md#stage-7--measure) | [`partner-playbook.md` Stage 7](partner-playbook.md#stage-7--measure) |
 
 > **Loopback note.** The dashed `C2 ⇢ D1` arrow is for **new feature or
 > expansion requests** only — those legitimately restart discovery as a
@@ -120,7 +120,7 @@ Each row states **why this step matters**. "Authority" is the doc that owns the 
 
 These happen inside the stages above but aren't first-order navigation targets:
 
-- **ROI quantification** — fill `docs/discovery/roi-calculator.xlsx` after solution brief §3/§4 are confirmed, during D1. Feeds telemetry KPI names in E1. See [`discovery/how-to-use.md`](discovery/how-to-use.md).
+- **ROI quantification** — fill `docs/discovery/roi-calculator.xlsx` after solution brief Section 3 / Section 4 are confirmed, during D1. Feeds telemetry KPI names in E1. See [`discovery/how-to-use.md`](discovery/how-to-use.md).
 - **Pattern switch** — if the brief's solution shape isn't supervisor-routing, run `/switch-to-variant` during E1 before scaffolding. See [`.github/chatmodes/switch-to-variant.chatmode.md`](../.github/chatmodes/switch-to-variant.chatmode.md).
 - **Incident feedback loop** — the dashed arrow `C2 ⇢ D7` represents customer ops surfacing incidents or usage gaps back to the delivery lead for next-engagement learnings; no dedicated chatmode.
 

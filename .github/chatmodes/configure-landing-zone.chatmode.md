@@ -19,12 +19,12 @@ have a clear tier:
 
 1. **Does the customer already have an Azure AI Landing Zone (hub vNet,
    shared private DNS zones, policy assignments, MG hierarchy)?**
-   - Yes → Tier 3 (`alz-integrated`). Skip to §3.
+   - Yes → Tier 3 (`alz-integrated`). Skip to step 3.
 2. **Does the customer have any platform / CCoE team and a mandate for
    private endpoints + CAF-shaped guardrails on day one?**
-   - Yes → Tier 2 (`avm`). Skip to §3.
+   - Yes → Tier 2 (`avm`). Skip to step 3.
 3. **Is this a pilot, sandbox, SMB greenfield, or partner self-host?**
-   - Yes → Tier 1 (`standalone`). Skip to §3.
+   - Yes → Tier 1 (`standalone`). Skip to step 3.
 4. **Unknown / not decided?**
    - Default to Tier 1 (`standalone`). Call out that moving to Tier 2
      or Tier 3 later is supported via this same chatmode.

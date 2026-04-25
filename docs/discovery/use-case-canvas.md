@@ -77,7 +77,7 @@ HITL policy per `accelerator.yaml:solution.hitl`.
 - …
 
 If the answer is "none" — i.e., the agent only reads and summarizes —
-that's fine; note the pattern as **single-agent** in §8.
+that's fine; note the pattern as **single-agent** in Section 8.
 
 ## 7. Constraints
 
@@ -109,7 +109,7 @@ recommend one after the workshop.
 
 Two-sentence answer. If the answer is "the customer asked us to
 explore AI" — stop. Come back with a framing that ties to the metric
-in §3.
+in Section 3.
 
 - …
 
@@ -119,9 +119,9 @@ in §3.
 
 Before scheduling the discovery workshop, confirm with the sponsor:
 
-- [ ] The process in §1 is the same thing everyone in the room thinks
+- [ ] The process in Section 1 is the same thing everyone in the room thinks
   we're talking about.
-- [ ] §3 metric + baseline are real numbers, not placeholders.
+- [ ] Section 3 metric + baseline are real numbers, not placeholders.
 - [ ] Budget is identified.
 - [ ] The customer can bring the SMEs who do the work today — not
   just their managers — to the workshop.

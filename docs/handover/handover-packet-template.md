@@ -58,7 +58,7 @@ Anything not listed here is **not** monitored.
 
 | Alert name | Signal (metric / KQL) | Threshold | Window | Severity | Action group | Runbook step |
 |---|---|---|---|---|---|---|
-| `[PARTNER-FILL REQUIRED]` | `[PARTNER-FILL REQUIRED]` | `[PARTNER-FILL REQUIRED]` | `[PARTNER-FILL REQUIRED]` | Sev1 / 2 / 3 | `[PARTNER-FILL REQUIRED]` | `[PARTNER-FILL REQUIRED: customer-runbook.md#... or this packet §4 / §5]` |
+| `[PARTNER-FILL REQUIRED]` | `[PARTNER-FILL REQUIRED]` | `[PARTNER-FILL REQUIRED]` | `[PARTNER-FILL REQUIRED]` | Sev1 / 2 / 3 | `[PARTNER-FILL REQUIRED]` | `[PARTNER-FILL REQUIRED: customer-runbook.md#... or this packet's Section 4 / Section 5]` |
 
 ---
 

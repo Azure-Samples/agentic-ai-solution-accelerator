@@ -41,7 +41,7 @@ After the lab you can:
 2. Regional Foundry quota for `gpt-4o-mini` on `GlobalStandard` (the
    shipped default is 30k TPM — see `infra/main.parameters.json`).
    Confirm in the Azure portal → Foundry → Quotas before starting.
-3. The tools listed in `docs/getting-started/setup-and-prereqs.md` §Prerequisites
+3. The tools listed in the "Prerequisites" section of `docs/getting-started/setup-and-prereqs.md`
    (Azure CLI, `azd`, `gh`, Python 3.11, Docker or compatible).
 4. A GitHub org/account where you can push a private template clone.
 5. VS Code with GitHub Copilot Chat enabled (required for the
@@ -49,7 +49,7 @@ After the lab you can:
 
 If any prereq is missing, fix it before continuing — this lab does
 not work around a broken local environment. The troubleshooting
-matrix in `docs/getting-started/setup-and-prereqs.md` §"Troubleshooting — top 5" is
+matrix in `docs/getting-started/setup-and-prereqs.md` ("Troubleshooting — top 5") is
 the first stop when something goes wrong.
 
 ---
@@ -97,7 +97,7 @@ template clone.
   content filter, an AI Search service with an `accounts` index,
   Key Vault, Container App, App Insights, and a user-assigned MI.
 - If anything is missing, `docs/getting-started/setup-and-prereqs.md`
-  §"Troubleshooting — top 5" covers the common failure modes.
+  "Troubleshooting — top 5" covers the common failure modes.
 
 ---
 
@@ -141,8 +141,8 @@ App Insights events.
    paste it and save. Refresh — the "Successful responses per day"
    and "P95 request latency" panels should show data from your
    traffic. The "HITL approval rate" panel only lights up once
-   you've exercised a HITL-gated tool (see `docs/customer-runbook.md`
-   §1).
+   you've exercised a HITL-gated tool (see the "HITL approver"
+   section of `docs/customer-runbook.md`).
 
 **Check your work:**
 
@@ -158,7 +158,8 @@ App Insights events.
   `results.jsonl` for the acceptance gate, but it does **not**
   push that value to App Insights as `cost.call`, so the
   dashboard panel stays empty until a partner wires the emitter.)
-  `docs/customer-runbook.md` §1 + §3 has the full answer.
+  `docs/customer-runbook.md` "What you inherited" and Section 3
+  (Operational dials) have the full answer.
 
 ---
 
@@ -186,7 +187,7 @@ truth.
   portal edits are transient. The supported rollback path for a
   bad prompt is `git revert` the spec + `azd provision`, not
   "restore from Foundry portal history".
-- `docs/customer-runbook.md` §6 is the condensed version of this
+- `docs/customer-runbook.md` Section 6 (Model swap) is the condensed version of this
   behavior for the customer's ops team.
 
 ---
@@ -262,7 +263,7 @@ truth.
 - `src/accelerator_baseline/evals.py:66-75` is the branch that
   *does* fail hard — only if the runner is modified to omit
   `cost_usd` entirely. That's the "inert-is-a-failure" safety net.
-- `docs/customer-runbook.md` §3 + §4 describe what a partner has
+- `docs/customer-runbook.md` Section 3 and Section 4 describe what a partner has
   to wire for the cost gate to reflect real model spend, not a
   latency proxy.
 

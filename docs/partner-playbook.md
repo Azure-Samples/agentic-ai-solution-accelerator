@@ -68,7 +68,7 @@ IDE). The chatmode walks the partner (or partner + customer live) through 7
 sections: business context, personas, measurable success criteria, ROI
 hypothesis, solution shape, constraints/risks, acceptance evals.
 
-> **Customer already provided a PRD / BRD / functional spec?** Run `/ingest-prd` first to pre-draft the brief from the source doc, then `/discover-scenario` enters gap-fill mode on the remaining `TBD`s. Full flow: [`docs/discovery/how-to-use.md`](discovery/how-to-use.md) §"If the customer already provided a PRD / BRD / functional spec".
+> **Customer already provided a PRD / BRD / functional spec?** Run `/ingest-prd` first to pre-draft the brief from the source doc, then `/discover-scenario` enters gap-fill mode on the remaining `TBD`s. Full flow: [`docs/discovery/how-to-use.md`](discovery/how-to-use.md), "If the customer already provided a PRD / BRD / functional spec" section.
 
 **What "good" looks like:**
 
@@ -179,7 +179,7 @@ named environment.
      `infra/main.bicep`.
 2. `/deploy-to-env <env-name>` to register a new GitHub Environment entry in
    `deploy/environments.yaml` and scaffold the required secrets / variables
-   per `docs/getting-started/setup-and-prereqs.md` §Required GitHub secrets.
+   per the "Required GitHub secrets and variables" section of `docs/getting-started/setup-and-prereqs.md`.
 3. From the customer's deployment-owner machine: `azd env new <customer>-dev`
    then `azd up`. First deploy takes ~15 min on a clean subscription. The
    `azd` hooks in `azure.yaml` run automatically as part of `azd up`:
@@ -213,7 +213,7 @@ named environment.
   in `infra/main.bicep` fails fast on missing inputs).
 
 **If `azd up` fails:** first place to look is `docs/getting-started/setup-and-prereqs.md`
-§Troubleshooting. The most common failures are model-quota (wrong region),
+("Troubleshooting — top 5"). The most common failures are model-quota (wrong region),
 OIDC (federated credentials not wired), and AI Search role assignment (needs
 **Search Index Data Contributor** + **Search Service Contributor**, not
 "Data Reader").
@@ -229,7 +229,7 @@ inside the repo. Every change is a PR. CI runs four gates, all of
 which must pass before merge:
 
 - `scripts/accelerator-lint.py` — ~30 deterministic policy checks (AST-only,
-  fast); see `accelerator.yaml` §acceptance for the policy set
+  fast); see the `acceptance` section of `accelerator.yaml` for the policy set
 - `evals/quality/run.py` — quality evals against golden cases
 - `evals/redteam/run.py` — safety evals against the scenario's RAI cases
 - `build + type check` — backend build and typing gate wired in
@@ -279,7 +279,7 @@ safety pass, P50/P95 latency, cost per call.
 - Customer signs off against the acceptance thresholds — not against vibes
 - HITL exercised end-to-end for at least one irreversible tool (e.g., CRM
   write, email send). **The accelerator does not ship a HITL approval UI:**
-  the flagship HITL pattern (`docs/patterns/rai/README.md` §Principle 3) is
+  the flagship HITL pattern (`docs/patterns/rai/README.md`, "Principle 3") is
   a partner-wired approval flow (Logic Apps, Teams adaptive card, ticketing
   system) that the tool blocks on until the partner's approver endpoint
   returns. `src/accelerator_baseline/hitl.py` is the checkpoint contract.
@@ -376,7 +376,7 @@ no spreadsheets, no screenshots of runs.
 These scripts are mostly Python / Azure-SDK-based; a few utility scripts
 (e.g., `explain-change.py`, `sync-models-from-manifest.py`) shell out to
 standard developer tooling (`git`, `azd`) that the partner already has
-installed per `docs/getting-started/setup-and-prereqs.md` §Prerequisites.
+installed per the "Prerequisites" section of `docs/getting-started/setup-and-prereqs.md`.
 
 ---
 

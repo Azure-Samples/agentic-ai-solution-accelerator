@@ -57,7 +57,7 @@ def build_readme(sheet):
         ("  3. Read 'KPIs' — rows 5-7 render baseline/target values; hand-copy them into", None),
         ("     accelerator.yaml:kpis[] using the template in row 14. (Not paste-ready —", None),
         ("     Excel does not expand cell addresses into text when you copy out of a cell.)", None),
-        ("  4. Attach this file to docs/discovery/solution-brief.md §4 as the ROI hypothesis source.", None),
+        ("  4. Attach this file to docs/discovery/solution-brief.md Section 4 as the ROI hypothesis source.", None),
         ("", None),
         ("Conventions (industry-standard financial-model colors):", BOLD),
         ("  BLUE cells       = hardcoded inputs you edit per customer", None),
@@ -357,7 +357,7 @@ def build_kpis(sheet, refs):
     kpis = [
         ("briefing_production_time", "duration_ms",
          f"={refs['time_manual']}*60*1000", f"={refs['time_agent']}*60*1000",
-         "Time from request.received to response.returned. Sourced from Inputs §3."),
+         "Time from request.received to response.returned. Sourced from Inputs Section 3."),
         ("hitl_approval_rate", "ratio",
          1.0, f"={refs['hitl_rate']}",
          "Fraction of drafts approved as-is. Baseline is 1.0 (fully manual)."),

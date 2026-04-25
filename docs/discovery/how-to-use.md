@@ -13,7 +13,7 @@ reads well but doesn't tie to measurable ROI.
 | 2 | [`SOLUTION-BRIEF-GUIDE.md`](SOLUTION-BRIEF-GUIDE.md) | How to run the discovery workshop that fills the brief | Read by partner lead; optional coaching for junior facilitators |
 | 3 | [`discovery-workbook.csv`](discovery-workbook.csv) — *download* | Structured capture during the live workshop | Partner facilitator (typing) + customer SMEs (answering) |
 | 4 | [`solution-brief.md`](solution-brief.md) | Canonical engagement doc — every downstream artifact derives from it | Output of `/discover-scenario` Copilot chatmode (or manually from workbook) |
-| 5 | [`roi-calculator.xlsx`](roi-calculator.xlsx) — *download* | Quantifies the hypothesis in §4 of the brief | Partner lead, after §3 of the brief is filled |
+| 5 | [`roi-calculator.xlsx`](roi-calculator.xlsx) — *download* | Quantifies the hypothesis in Section 4 of the brief | Partner lead, after Section 3 of the brief is filled |
 
 > **Downloads:** the workbook ([`discovery-workbook.csv`](discovery-workbook.csv)) and ROI calculator ([`roi-calculator.xlsx`](roi-calculator.xlsx)) are partner-fillable templates — click to download, fork per engagement.
 
@@ -66,7 +66,7 @@ Flow:
      every `<!-- evidence -->` block before copying values into
      `accelerator.yaml` (`solution.*`, `acceptance.*`, `kpis[]`).
 5. **Quantify the hypothesis** in `roi-calculator.xlsx` once the
-   brief's §3 and §4 are final.
+   brief's Section 3 and Section 4 are final.
 
 What `/ingest-prd` does **not** do:
 - Update `accelerator.yaml`. That's `/discover-scenario` gap-fill's
@@ -95,7 +95,7 @@ What `/ingest-prd` does **not** do:
    scaffold stage.
 
 4. **ROI calculator** — open `roi-calculator.xlsx`, fill blue cells on
-   the `Inputs` sheet with numbers from brief §3 + §4. Read the `ROI`
+   the `Inputs` sheet with numbers from brief Section 3 + Section 4. Read the `ROI`
    sheet for annual savings and payback; read the `KPIs` sheet for
    rendered baseline/target values and a copy guide that mirrors the
    `accelerator.yaml:kpis` schema. The block is a copy guide, not
