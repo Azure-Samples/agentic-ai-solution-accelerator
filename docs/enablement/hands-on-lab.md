@@ -113,9 +113,8 @@ template clone.
 
 ## Lab 2 — See it work in a browser
 
-**Goal:** put a browser front-end in front of the API you just deployed
-so the workflow stops being "a curl command" and starts feeling like a
-product the customer can click through.
+**Goal:** exercise the API the way a customer will — through a browser —
+and confirm the streaming pipeline produces a usable briefing end-to-end.
 
 The accelerator ships a reference frontend at
 `patterns/sales-research-frontend/` — a minimal React + Vite + TypeScript
