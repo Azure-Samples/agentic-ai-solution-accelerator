@@ -130,10 +130,10 @@ through the customization steps below.
 - Replace flagship golden cases in `evals/quality/golden_cases.jsonl`
   (5+ for this scenario)
 - Add a redteam case per RAI risk in `evals/redteam/cases.jsonl`
-- Add additional worker agents with `/add-worker-agent` (or
-  `python scripts/scaffold-agent.py <agent_id> --scenario <scenario-id> --capability "<one-sentence capability>"`)
-  and a matching `docs/agent-specs/<foundry_name>.md` spec; `foundry-bootstrap.py`
-  picks them up on the next `azd up`
+- Add additional worker agents with `/add-worker-agent` (or directly via
+  `python scripts/scaffold-agent.py <agent_id> --scenario <scenario-id> --capability "<one-sentence capability>"`).
+  Each new agent needs a matching `docs/agent-specs/<foundry_name>.md` spec;
+  `foundry-bootstrap.py` picks them up on the next `azd up`.
 
 **What "good" looks like:**
 

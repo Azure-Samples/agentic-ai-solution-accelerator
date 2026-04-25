@@ -2,7 +2,7 @@
 
 > Partner's 5-step path from "new customer meeting" to "working agent in customer Azure."
 
-> **Before you start:** you'll authenticate against the customer's Azure tenant in Step 5 (`az login --tenant <customer-tenant-id>` + `azd up`), so confirm you have the rights to create resources there and that the customer has approved expected `azd up` cost. Re-read this before Step 5 — the rest of the steps are local.
+> **Before you start:** Step 5 authenticates against the customer's Azure tenant (`az login --tenant <customer-tenant-id>` + `azd up`), so confirm two things first — you have the rights to create resources in that tenant, and the customer has approved the expected `azd up` cost. Re-read this note before Step 5; the rest of the steps are local.
 
 ---
 
@@ -24,7 +24,13 @@ cd <customer>-agents
 code .
 ```
 
-VS Code opens with Copilot already configured via `.github/copilot-instructions.md`. Copilot now knows the hard rules: Agent Framework + Foundry only, DefaultAzureCredential only, HITL required for side effects, PR evals gate merges (and a post-deploy regression suite guards `main`), content filters via IaC.
+VS Code opens with Copilot already configured via `.github/copilot-instructions.md`. Copilot now knows the hard rules:
+
+- Agent Framework + Foundry only
+- DefaultAzureCredential only — no keys
+- HITL required for every side-effect tool call
+- PR evals gate merges; a post-deploy regression suite guards `main`
+- Content filters configured via IaC, not the portal
 
 ---
 
@@ -57,7 +63,9 @@ The brief is the **single source of truth** for the engagement. Every downstream
 /scaffold-from-brief
 ```
 
-Copilot reads the filled brief and customizes the repo. The **Lands in** column shows paths for the flagship scenario (`sales-research`); if you scaffold a new scenario via `python scripts/scaffold-scenario.py <your-scenario>`, substitute `<your-scenario>` for `sales_research` in the `src/scenarios/<...>/` paths — everything outside `src/scenarios/` is scenario-agnostic and stays put.
+Copilot reads the filled brief and customizes the repo. The **Lands in** column below shows paths for the flagship scenario (`sales-research`).
+
+If you scaffold a new scenario via `python scripts/scaffold-scenario.py <your-scenario>`, substitute `<your-scenario>` for `sales_research` in the `src/scenarios/<...>/` paths. Everything outside `src/scenarios/` is scenario-agnostic and stays put.
 
 | Brief field → | Lands in (flagship paths shown; `src/scenarios/<id>/` for custom scenarios) |
 |---|---|
