@@ -113,6 +113,8 @@ template clone.
    hooks use during `azd up`. If you skip this step, `azd up` fails fast with
    an instruction to run it.
 
+   > **If you use Conda:** activate the env that has Python 3.11+ **before** running `setup-hooks` (e.g. `conda activate <env>`), so `python` resolves on `PATH`. Once `.azd-hooks/.venv` exists, `azd up` no longer depends on Conda activation — the venv is self-contained.
+
 4. Authenticate + provision:
 
    **About preflight:** the partner motion in `QUICKSTART.md` Step 4 has you run
@@ -124,6 +126,10 @@ template clone.
 
    ```bash
    az login
+   # If your account spans multiple tenants/subscriptions, pin them explicitly
+   # so azd inherits the right context:
+   #   az login --tenant <sandbox-tenant-id>
+   #   az account set --subscription <sandbox-subscription-id>
    azd auth login
    azd env new lab-dev
    azd up
@@ -134,6 +140,10 @@ template clone.
    `preprovision` (model sync) and `postprovision`
    (`foundry-bootstrap.py` + `seed-search.py`) hooks. Expect
    ~10–15 minutes.
+
+   `azd up` will prompt you for an Azure region — pick one with `gpt-5-mini` `GlobalStandard` quota (verified in step 2 of [Prerequisites](#prerequisites)).
+
+   > **If postprovision fails with a 403 / authorization error** immediately after Bicep finishes, that's RBAC propagation lag — the role assignment Bicep just created hasn't fully propagated yet. Wait 2–3 minutes and rerun `azd provision`. The hooks are idempotent.
 
 **Check your work:**
 

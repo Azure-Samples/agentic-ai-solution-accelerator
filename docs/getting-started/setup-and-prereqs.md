@@ -302,10 +302,10 @@ disabled public access when requested) won't fight you.
 
 ## Troubleshooting — top 5
 
-1. **`hook environment not initialized` / `py not found` / `python3 too old`** — run the one-time hook bootstrap for this clone:
+1. **`hook environment not initialized` / `python not found` / `python too old`** — run the one-time hook bootstrap for this clone:
    - Windows: `pwsh -File scripts/setup-hooks.ps1`
    - macOS/Linux: `sh scripts/setup-hooks.sh`
-   On Windows, this path requires **PowerShell 7** and **CPython via `py -3.11` or `py -3.12`**. If your org blocks PyPI, configure `PIP_INDEX_URL` / proxy settings first.
+   On Windows, this requires **PowerShell 7** and any **CPython 3.11+** that resolves on `PATH` as `python` (python.org, winget, scoop, or an **activated Conda env**). The Microsoft Store Python alias (`%LOCALAPPDATA%\Microsoft\WindowsApps\python.exe`) is rejected automatically — install a real interpreter or activate a Conda env first. If your org blocks PyPI, configure `PIP_INDEX_URL` / proxy settings before running.
 2. **`preflight: model deployment 'gpt-5-mini' not found`** — the Foundry
    bootstrap (`scripts/foundry-bootstrap.py`) runs after `azd up` and verifies
    the deployment exists. If you changed `modelDeploymentName` or the region
@@ -329,4 +329,5 @@ disabled public access when requested) won't fight you.
    deployment succeeded in the Azure portal; the most common cause is the
    image build failing silently in an earlier `azd up` run. `azd deploy`
    rebuilds and redeploys the app without re-provisioning infra.
+7. **`postprovision` fails with 403 / Forbidden / "AuthorizationFailed"** — Bicep finished and the `foundry-bootstrap.py` or `seed-search.py` hook hit Foundry/Search before the role assignment propagated. RBAC propagation can lag 1–3 minutes. Wait, then rerun `azd provision` (idempotent — re-runs the hooks without re-deploying infra). If it still fails after a second attempt, confirm the user-assigned MI has `Cognitive Services OpenAI User` + `Azure AI Developer` on the Foundry account and `Search Index Data Contributor` on AI Search.
 
