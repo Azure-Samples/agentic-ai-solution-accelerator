@@ -146,7 +146,7 @@ flowchart LR
 
     ---
 
-    [Tool catalog](foundry-tool-catalog.md) · [Agent specs](agent-specs/README.md) · [Version matrix](version-matrix.md) · [Architecture](architecture.md)
+    [Tool catalog](foundry-tool-catalog.md) · [Agent specs](agent-specs/README.md) · [Version matrix](version-matrix.md) · [Architecture](patterns/architecture/README.md)
 
 -   :material-github: **Repository**
 

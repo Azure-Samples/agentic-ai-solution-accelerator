@@ -94,6 +94,71 @@ def apply_rewrites(text: str, rules: list[tuple[re.Pattern[str], str]]) -> str:
     return text
 
 
+_FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*\n?", re.DOTALL)
+_DESCRIPTION_RE = re.compile(r"^description:\s*(.+?)\s*$", re.MULTILINE)
+
+
+def wrap_chatmode_for_pages(text: str, filename: str) -> str:
+    """Wrap a `*.chatmode.md` source for partner-facing publication.
+
+    Chatmodes are runtime system prompts for Copilot Chat — a wall of
+    LLM instructions that's confusing as a standalone Pages URL. This
+    function:
+      1. Prepends a short partner-facing intro (what / when / what to ask).
+      2. Collapses the original prompt body inside a `<details>` block so
+         the page reads as orientation by default but still exposes the
+         full prompt for partners who want it.
+
+    Handles chatmodes with or without YAML frontmatter; the `description`
+    field, if present, seeds the intro paragraph. Source `.chatmode.md`
+    files are never modified — runtime consumers (Copilot Chat) keep
+    seeing the original content.
+    """
+    description = ""
+    body = text
+    fm = _FRONTMATTER_RE.match(text)
+    if fm:
+        body = text[fm.end():]
+        desc_m = _DESCRIPTION_RE.search(fm.group(1))
+        if desc_m:
+            description = desc_m.group(1).strip().strip('"\'')
+
+    slug = filename
+    for suffix in (".chatmode.md", ".md"):
+        if slug.endswith(suffix):
+            slug = slug[: -len(suffix)]
+            break
+    command = f"/{slug}"
+
+    intro_blurb = description or (
+        "A scoped Copilot Chat mode bundled with this accelerator for a "
+        "specific partner-delivery task."
+    )
+
+    body_stripped = body.strip()
+
+    return (
+        f"# `{command}` chatmode\n\n"
+        f"!!! info \"Partner-facing intro\"\n"
+        f"    **What it is:** {intro_blurb}\n\n"
+        f"    **When to load it:** In **VS Code with GitHub Copilot Chat** "
+        f"installed, after cloning this template repo. Type `{command}` in the "
+        f"chat input — Copilot picks up the mode from `.github/chatmodes/` "
+        f"automatically. (Other LLM IDEs that read `.github/chatmodes/` work "
+        f"the same way.)\n\n"
+        f"    **What to ask:** Open-ended task questions in the area above; the "
+        f"chatmode walks you through the inputs it needs and produces the "
+        f"expected artifacts.\n\n"
+        f"The full system prompt is reproduced below for transparency. You "
+        f"don't need to read it to use the chatmode — Copilot loads it for "
+        f"you when you invoke the command.\n\n"
+        f"<details markdown=\"1\">\n"
+        f"<summary><strong>System prompt (full text)</strong></summary>\n\n"
+        f"{body_stripped}\n\n"
+        f"</details>\n"
+    )
+
+
 def stage_file(src: Path, dst: Path, rules: list[tuple[re.Pattern[str], str]]) -> bool:
     dst.parent.mkdir(parents=True, exist_ok=True)
     original = src.read_text(encoding="utf-8")
@@ -152,7 +217,8 @@ def stage() -> None:
         chatmodes_dst = STAGE / "chatmodes"
         chatmodes_dst.mkdir(exist_ok=True)
         for cm in CHATMODES_SRC.glob("*.md"):
-            shutil.copy2(cm, chatmodes_dst / cm.name)
+            wrapped = wrap_chatmode_for_pages(cm.read_text(encoding="utf-8"), cm.name)
+            (chatmodes_dst / cm.name).write_text(wrapped, encoding="utf-8")
 
     total_md = sum(1 for _ in STAGE.rglob("*.md"))
     print(f"Staged {total_md} markdown files into {STAGE.relative_to(REPO_ROOT)}/")

@@ -2,6 +2,8 @@
 
 > Partner's 5-step path from "new customer meeting" to "working agent in customer Azure."
 
+> **New here?** Skim the [getting-started orientation](docs/getting-started/index.md) first — it's a 2-minute frame for what this accelerator is and how the docs fit together. This page is the canonical step-by-step.
+
 > **Engineer joining after discovery is complete?** Jump straight to [Step 3 — Scaffold the solution from the brief](#step-3--scaffold-the-solution-from-the-brief). Steps 1–2 explain how the engagement began (the delivery lead's work); if `docs/discovery/solution-brief.md` already exists in the repo, you're past that.
 
 > **First time on this accelerator?** Strongly recommended to complete [`docs/enablement/hands-on-lab.md`](docs/enablement/hands-on-lab.md) in a sandbox subscription **before** your first customer-facing deployment. The happy path below assumes you've run it once end-to-end.

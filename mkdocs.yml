@@ -76,9 +76,9 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Getting started:
-      - Overview: getting-started/index.md
+      - Orientation (start here): getting-started/index.md
+      - Quickstart (5 steps): QUICKSTART.md
       - Setup & prereqs: getting-started.md
-      - 5-step quickstart: QUICKSTART.md
       - Hands-on lab: enablement/hands-on-lab.md
   - Delivery lead:
       - Partner playbook: partner-playbook.md
@@ -87,7 +87,6 @@ nav:
       - Handover template: handover/handover-packet-template.md
   - Partner engineer:
       - Workflow map: partner-workflow.md
-      - Architecture: architecture.md
       - Agent specs: agent-specs/README.md
       - Tool catalog: foundry-tool-catalog.md
       - Version matrix: version-matrix.md
