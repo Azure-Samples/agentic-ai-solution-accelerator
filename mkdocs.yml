@@ -78,7 +78,7 @@ nav:
   - Getting started:
       - Orientation (start here): getting-started/index.md
       - Quickstart (5 steps): QUICKSTART.md
-      - Setup & prereqs: getting-started.md
+      - Setup & prereqs: getting-started/setup-and-prereqs.md
       - Hands-on lab: enablement/hands-on-lab.md
   - Delivery lead:
       - Partner playbook: partner-playbook.md

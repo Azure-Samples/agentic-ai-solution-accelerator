@@ -5,7 +5,7 @@ solution accelerator. After finishing, you'll be comfortable enough
 with the template to run a real customer engagement against it.
 
 This is not training for the customer's end users — that's partner-owned,
-separately. And it's not a substitute for reading `docs/getting-started.md`
+separately. And it's not a substitute for reading `docs/getting-started/setup-and-prereqs.md`
 (the authoritative prereqs + troubleshooting) or `QUICKSTART.md` (the
 5-step partner motion). The lab walks you through the same surface area
 with check-your-work gates so you catch misunderstandings in a sandbox,
@@ -41,7 +41,7 @@ After the lab you can:
 2. Regional Foundry quota for `gpt-4o-mini` on `GlobalStandard` (the
    shipped default is 30k TPM — see `infra/main.parameters.json`).
    Confirm in the Azure portal → Foundry → Quotas before starting.
-3. The tools listed in `docs/getting-started.md` §Prerequisites
+3. The tools listed in `docs/getting-started/setup-and-prereqs.md` §Prerequisites
    (Azure CLI, `azd`, `gh`, Python 3.11, Docker or compatible).
 4. A GitHub org/account where you can push a private template clone.
 5. VS Code with GitHub Copilot Chat enabled (required for the
@@ -49,7 +49,7 @@ After the lab you can:
 
 If any prereq is missing, fix it before continuing — this lab does
 not work around a broken local environment. The troubleshooting
-matrix in `docs/getting-started.md` §"Troubleshooting — top 5" is
+matrix in `docs/getting-started/setup-and-prereqs.md` §"Troubleshooting — top 5" is
 the first stop when something goes wrong.
 
 ---
@@ -62,7 +62,7 @@ template clone.
 1. Clone the template into your own private repo:
 
    ```bash
-   gh repo create <you>-lab-accel --template Azure/agentic-ai-solution-accelerator --private
+   gh repo create <you>-lab-accel --template Azure-Samples/agentic-ai-solution-accelerator --private
    cd <you>-lab-accel
    code .
    ```
@@ -96,7 +96,7 @@ template clone.
   (`gpt-4o-mini` by default) bound to the `accelerator-default-policy`
   content filter, an AI Search service with an `accounts` index,
   Key Vault, Container App, App Insights, and a user-assigned MI.
-- If anything is missing, `docs/getting-started.md`
+- If anything is missing, `docs/getting-started/setup-and-prereqs.md`
   §"Troubleshooting — top 5" covers the common failure modes.
 
 ---
@@ -381,7 +381,7 @@ quota you might need for the next run.
 ## What this lab is not
 
 - Customer training — partner-owned, separately
-- A substitute for reading `docs/getting-started.md` and `QUICKSTART.md`
+- A substitute for reading `docs/getting-started/setup-and-prereqs.md` and `QUICKSTART.md`
 - Certification — there's no badge or quiz; the check-your-work
   gates exist so you notice your own gaps, not to score you
 - A Tier 2 / Tier 3 networking lab — that's `/configure-landing-zone`

@@ -2,7 +2,7 @@
 
 > Partner's 5-step path from "new customer meeting" to "working agent in customer Azure."
 
-> **New here?** Skim the [getting-started orientation](docs/getting-started/index.md) first — it's a 2-minute frame for what this accelerator is and how the docs fit together. This page is the canonical step-by-step.
+> **New here?** If you haven't read [Orientation](docs/getting-started/index.md), one paragraph: this is a Microsoft-published template repo partners fork per customer engagement to deliver an agentic AI solution on **Azure AI Foundry + Microsoft Agent Framework**. Otherwise, start at Step 1 — this page is the canonical step-by-step.
 
 > **Engineer joining after discovery is complete?** Jump straight to [Step 3 — Scaffold the solution from the brief](#step-3--scaffold-the-solution-from-the-brief). Steps 1–2 explain how the engagement began (the delivery lead's work); if `docs/discovery/solution-brief.md` already exists in the repo, you're past that.
 
@@ -17,7 +17,7 @@
 ## Step 1 — Clone the template
 
 ```bash
-gh repo create <customer>-agents --template Azure/agentic-ai-solution-accelerator --private
+gh repo create <customer>-agents --template Azure-Samples/agentic-ai-solution-accelerator --private
 cd <customer>-agents
 code .
 ```
@@ -122,7 +122,7 @@ The variants below are **candidate patterns** (documented in `patterns/<variant>
 
 ## Need help?
 
-- `docs/getting-started.md` — authoritative prereqs, secrets, troubleshooting
+- `docs/getting-started/setup-and-prereqs.md` — authoritative prereqs, secrets, troubleshooting
 - `docs/discovery/SOLUTION-BRIEF-GUIDE.md` — how to run the workshop
 - `docs/version-matrix.md` — known-good SDK pins
 - `docs/agent-specs/README.md` — per-agent system instructions and Agent Hub references

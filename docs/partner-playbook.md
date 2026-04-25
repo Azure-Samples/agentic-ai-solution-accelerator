@@ -4,9 +4,9 @@ This playbook is the narrative companion to the `/delivery-guide` chatmode. It
 is written for a **Microsoft partner delivery lead** running an engagement from
 SOW to production handover using this accelerator.
 
-If this file disagrees with `docs/getting-started.md` or the chatmodes under
+If this file disagrees with `docs/getting-started/setup-and-prereqs.md` or the chatmodes under
 `.github/chatmodes/`, use the scoped precedence: the chatmodes win on the
-**executable surface** they drive, `docs/getting-started.md` wins on **setup
+**executable surface** they drive, `docs/getting-started/setup-and-prereqs.md` wins on **setup
 mechanics** (prereqs, secrets, `azd` invocation, troubleshooting), and this
 playbook wins on the **delivery motion** (when to run discovery, how to scope
 an SOW, handover sequence). This doc exists to explain **why** the motion is
@@ -29,7 +29,7 @@ discover ──► scaffold ──► provision ──► iterate ──► UAT 
    └─ /discover-scenario produces docs/discovery/solution-brief.md + updates accelerator.yaml
 ```
 
-Stages **1–2** are partner-facing ("vibecode with the customer"). Stages
+Stages **1–2** are partner-facing ("co-build with the customer in real time"). Stages
 **3–7** are engineering execution with the customer's Azure tenant in the loop.
 
 ---
@@ -176,7 +176,7 @@ named environment.
      `infra/main.bicep`.
 2. `/deploy-to-env <env-name>` to register a new GitHub Environment entry in
    `deploy/environments.yaml` and scaffold the required secrets / variables
-   per `docs/getting-started.md` §Required GitHub secrets.
+   per `docs/getting-started/setup-and-prereqs.md` §Required GitHub secrets.
 3. From the customer's deployment-owner machine: `azd env new <customer>-dev`
    then `azd up`. First deploy takes ~15 min on a clean subscription. The
    `azd` hooks in `azure.yaml` run automatically as part of `azd up`:
@@ -209,7 +209,7 @@ named environment.
 - `infra/alz-overlay/` guard passes if Tier 3 is enabled (`tier3InputGuard`
   in `infra/main.bicep` fails fast on missing inputs).
 
-**If `azd up` fails:** first place to look is `docs/getting-started.md`
+**If `azd up` fails:** first place to look is `docs/getting-started/setup-and-prereqs.md`
 §Troubleshooting. The most common failures are model-quota (wrong region),
 OIDC (federated credentials not wired), and AI Search role assignment (needs
 **Search Index Data Contributor** + **Search Service Contributor**, not
@@ -366,7 +366,7 @@ no spreadsheets, no screenshots of runs.
 These scripts are mostly Python / Azure-SDK-based; a few utility scripts
 (e.g., `explain-change.py`, `sync-models-from-manifest.py`) shell out to
 standard developer tooling (`git`, `azd`) that the partner already has
-installed per `docs/getting-started.md` §Prerequisites.
+installed per `docs/getting-started/setup-and-prereqs.md` §Prerequisites.
 
 ---
 

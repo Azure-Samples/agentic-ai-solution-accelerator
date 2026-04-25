@@ -876,7 +876,7 @@ _SECRET_REF_RE = re.compile(r"\$\{\{\s*(secrets|vars)\.([A-Z0-9_]+)\s*\}\}")
 @check
 def workflow_secrets_documented(ctx: Ctx) -> list[Finding]:
     wf_dir = ROOT / ".github/workflows"
-    doc = ROOT / "docs/getting-started.md"
+    doc = ROOT / "docs/getting-started/setup-and-prereqs.md"
     if not wf_dir.exists():
         return []
     names: set[str] = set()
@@ -889,14 +889,14 @@ def workflow_secrets_documented(ctx: Ctx) -> list[Finding]:
     if not names:
         return []
     if not doc.exists():
-        return [Finding("secrets-doc", "block", "docs/getting-started.md",
-                        f"docs/getting-started.md is missing but workflows reference "
+        return [Finding("secrets-doc", "block", "docs/getting-started/setup-and-prereqs.md",
+                        f"docs/getting-started/setup-and-prereqs.md is missing but workflows reference "
                         f"{len(names)} secrets/vars: {sorted(names)}")]
     doc_txt = doc.read_text(encoding="utf-8")
     missing = sorted(n for n in names
                      if not re.search(rf"\b{re.escape(n)}\b", doc_txt))
     if missing:
-        return [Finding("secrets-doc", "block", "docs/getting-started.md",
+        return [Finding("secrets-doc", "block", "docs/getting-started/setup-and-prereqs.md",
                         f"workflow secrets/vars not documented: {missing}")]
     return []
 

@@ -28,7 +28,7 @@
 ### 🛠️ Partner Engineer — scaffold, deploy, iterate, UAT support
 - **Start with:** [`QUICKSTART.md`](QUICKSTART.md) — the 5-step mechanics summary from clone to customer deploy
 - **Then run:** `/scaffold-from-brief` once a solution brief exists (engineer's interactive equivalent of the lead's `/delivery-guide`)
-- **Also use:** [`docs/getting-started.md`](docs/getting-started.md) (authoritative setup, prereqs, `azd up` troubleshooting) · [`docs/enablement/hands-on-lab.md`](docs/enablement/hands-on-lab.md) (7-lab sandbox rehearsal — **strongly recommended before your first customer-facing deployment**)
+- **Also use:** [`docs/getting-started/setup-and-prereqs.md`](docs/getting-started/setup-and-prereqs.md) (authoritative setup, prereqs, `azd up` troubleshooting) · [`docs/enablement/hands-on-lab.md`](docs/enablement/hands-on-lab.md) (7-lab sandbox rehearsal — **strongly recommended before your first customer-facing deployment**)
 - **✅ Done when:** acceptance evals (quality + redteam) pass in the customer's environment and the handover artifacts — repo access, runbook, approver rota, killswitch drill notes — are delivered to customer ops.
 
 ### 🏛️ Customer Ops — day-2 operations after handover
@@ -45,7 +45,7 @@
 <details>
 <summary><b>Full precedence when guidance disagrees</b> (click to expand)</summary>
 
-Chatmodes in `.github/chatmodes/` (they drive the executable surface) → `docs/partner-playbook.md` (delivery motion) and `docs/getting-started.md` (setup mechanics) → this README. The engagement-specific handover packet supersedes the generic `docs/customer-runbook.md` for the customer ops lane.
+Chatmodes in `.github/chatmodes/` (they drive the executable surface) → `docs/partner-playbook.md` (delivery motion) and `docs/getting-started/setup-and-prereqs.md` (setup mechanics) → this README. The engagement-specific handover packet supersedes the generic `docs/customer-runbook.md` for the customer ops lane.
 
 </details>
 
@@ -86,7 +86,7 @@ agentic-ai-solution-accelerator/
 │   ├── single-agent/             variant: when orchestration isn't needed
 │   └── chat-with-actioning/      variant: conversational front-end with tools
 ├── docs/
-│   ├── getting-started.md        setup, prereqs, sandbox smoke-test, troubleshooting
+│   ├── getting-started/         orientation + setup-and-prereqs (authoritative)
 │   ├── partner-playbook.md       end-to-end partner motion (7 stages)
 │   ├── discovery/                discovery kit (5 artifacts + how-to-use sequencing guide)
 │   ├── references/               reference scenarios (customer service, RFP response)

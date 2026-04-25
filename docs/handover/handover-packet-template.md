@@ -189,3 +189,15 @@ Related:
   operations; this packet wins on conflict.
 - [`docs/partner-playbook.md`](../partner-playbook.md) Stage 6 — the
   handover motion this packet supports.
+
+
+---
+
+## Wrap-up — you've delivered
+
+If you reached this section with every [PARTNER-FILL REQUIRED] resolved, the engagement is delivered. Recommended next steps:
+
+- **File feedback as an issue** on the template repo — gaps you hit, lint rules that misfired, prereqs that were missing, anything that would have saved you time on day 1.
+- **Share engagement learnings** with your delivery team — what scenario shape worked, where HITL gates saved the customer, what evals you added.
+- **Hand the customer over to day-2 ops** using [docs/customer-runbook.md](../customer-runbook.md) as the generic baseline; this packet supersedes it for customer-specifics.
+- **Start your next engagement** from [docs/partner-playbook.md](../partner-playbook.md) — Stage 1 (discovery) is the front door for the next customer.

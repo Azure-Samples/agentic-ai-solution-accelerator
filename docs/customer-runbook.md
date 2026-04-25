@@ -305,7 +305,7 @@ The same two-step runs automatically in CI:
 
 - `.github/workflows/evals.yml` (PR gate) — requires the repo
   variable `EVALS_API_URL` pointing at the long-lived deployed
-  environment. See `docs/getting-started.md` §"Required GitHub
+  environment. See `docs/getting-started/setup-and-prereqs.md` §"Required GitHub
   secrets and variables".
 - `.github/workflows/deploy.yml` (post-deploy check) — passes
   `needs.azd-up.outputs.api_url` (the URL just deployed) directly to

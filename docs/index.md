@@ -100,7 +100,7 @@ flowchart LR
 
     - **Start with:** [5-step quickstart](getting-started/index.md) — mechanics from clone to customer deploy.
     - **Then run:** `/scaffold-from-brief` once a solution brief exists (engineer's interactive equivalent of the lead's `/delivery-guide`).
-    - **Also use:** [Setup & prereqs](getting-started.md) (authoritative `azd up` troubleshooting) · [Hands-on lab](enablement/hands-on-lab.md)
+    - **Also use:** [Setup & prereqs](getting-started/setup-and-prereqs.md) (authoritative `azd up` troubleshooting) · [Hands-on lab](enablement/hands-on-lab.md)
 
     !!! warning "First customer engagement? Run the hands-on-lab first"
         The [7-lab sandbox](enablement/hands-on-lab.md) rehearses every chatmode + `azd up` + PR gates against a throwaway subscription. Skipping this is the #1 cause of avoidable first-engagement incidents.
@@ -126,7 +126,7 @@ flowchart LR
 ## Reference material
 
 !!! abstract "When guidance conflicts, use this precedence"
-    Chatmodes in `.github/chatmodes/` (they drive the executable surface) → [Partner playbook](partner-playbook.md) (delivery motion) and [Setup & prereqs](getting-started.md) (mechanics) → this home page. The engagement-specific handover packet supersedes the generic [customer runbook](customer-runbook.md) for the customer ops lane.
+    Chatmodes in `.github/chatmodes/` (they drive the executable surface) → [Partner playbook](partner-playbook.md) (delivery motion) and [Setup & prereqs](getting-started/setup-and-prereqs.md) (mechanics) → this home page. The engagement-specific handover packet supersedes the generic [customer runbook](customer-runbook.md) for the customer ops lane.
 
 <div class="grid cards" markdown>
 

@@ -49,7 +49,7 @@ Include:
 4. **What you expected vs. what happened.**
 5. **Severity from your perspective** — blocking a production deploy / blocking dev / nice-to-have.
 
-Good issues get turned around in weeks. Bad issues get closed as "needs repro."
+Good issues, with clear reproduction steps, get triaged faster. Vague or off-topic issues may be closed without action.
 
 ---
 
@@ -62,7 +62,7 @@ Good issues get turned around in weeks. Bad issues get closed as "needs repro."
 - Lint: `scripts/accelerator-lint.py` — ~30 deterministic AST-only checks; CI-gated.
 - Reference scenarios: Customer Service Actioning and RFP Response ship as walkthrough READMEs under `docs/references/` (runnable code lands when a customer engagement motivates it).
 
-See [docs/getting-started.md](docs/getting-started.md) for the exact onboarding path.
+See [docs/getting-started/setup-and-prereqs.md](docs/getting-started/setup-and-prereqs.md) for the exact onboarding path.
 
 ---
 

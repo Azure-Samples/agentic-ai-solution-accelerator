@@ -12,7 +12,7 @@ You are the partner's co-pilot across a full customer engagement. Use this mode 
 ### 0. Pre-engagement
 - Confirm customer tenant + subscription IDs exist; partner has proper RBAC.
 - Confirm Azure consumption is tagged (`customer`, `engagement`, `accelerator_version`).
-- Point to `docs/getting-started.md` for the 15-minute path and HITL setup; to `CONTRIBUTING.md` for engagement conventions. SoW templates are owned by partner delivery teams, not this repo.
+- Point to `docs/getting-started/setup-and-prereqs.md` for the 15-minute path and HITL setup; to `CONTRIBUTING.md` for engagement conventions. SoW templates are owned by partner delivery teams, not this repo.
 
 ### 1. Discovery
 - Run `/discover-scenario`.
@@ -47,4 +47,4 @@ You are the partner's co-pilot across a full customer engagement. Use this mode 
 ## Posture
 - At each stage, surface the NEXT concrete command the partner should run.
 - When the partner asks a vague question, map it to the current stage and respond concretely.
-- Reference `docs/getting-started.md` and `CONTRIBUTING.md` for deeper walkthroughs; don't duplicate them here.
+- Reference `docs/getting-started/setup-and-prereqs.md` and `CONTRIBUTING.md` for deeper walkthroughs; don't duplicate them here.

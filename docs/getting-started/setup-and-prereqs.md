@@ -1,10 +1,10 @@
-# Getting started
+# Setup & prereqs
 
 This is the authoritative reference for **setup, prereqs, secrets, and troubleshooting**. It complements — not replaces — the other partner-facing docs:
 
-- For the end-to-end delivery motion (discovery → handover → measure) see [`docs/partner-playbook.md`](../docs/partner-playbook.md).
-- For the 5-step happy-path skim, see [`QUICKSTART.md`](../QUICKSTART.md).
-- For a sandbox rehearsal before your first customer, see [`docs/enablement/hands-on-lab.md`](./enablement/hands-on-lab.md).
+- For the end-to-end delivery motion (discovery → handover → measure) see [`docs/partner-playbook.md`](../partner-playbook.md).
+- For the 5-step happy-path skim, see [`QUICKSTART.md`](../../QUICKSTART.md).
+- For a sandbox rehearsal before your first customer, see [`docs/enablement/hands-on-lab.md`](../enablement/hands-on-lab.md).
 
 When those docs and this one disagree on **setup mechanics** (prereqs, secrets, `azd` invocation, troubleshooting), this file wins. When they disagree on **delivery motion** (when to run discovery, how to scope an SOW, handover sequence), the playbook wins. The chatmodes in `.github/chatmodes/` win over both on the executable surface they drive.
 
@@ -96,11 +96,11 @@ full deploy chain.
 
 ## Sandbox smoke-test (no customer involvement)
 
-> **This path intentionally bypasses the discovery workshop** so a partner engineer can validate prereqs + infra shape end-to-end in their own subscription. For the full partner motion (discover → scaffold → provision → iterate → UAT → handover → measure) see [`docs/partner-playbook.md`](../docs/partner-playbook.md). For a guided walkthrough of this same smoke-test with check-your-work gates, use [`docs/enablement/hands-on-lab.md`](./enablement/hands-on-lab.md) Lab 1.
+> **This path intentionally bypasses the discovery workshop** so a partner engineer can validate prereqs + infra shape end-to-end in their own subscription. For the full partner motion (discover → scaffold → provision → iterate → UAT → handover → measure) see [`docs/partner-playbook.md`](../partner-playbook.md). For a guided walkthrough of this same smoke-test with check-your-work gates, use [`docs/enablement/hands-on-lab.md`](../enablement/hands-on-lab.md) Lab 1.
 
 ```bash
 # 1. Clone the template into your sandbox repo
-gh repo create <you>-accel-sandbox --template Azure/agentic-ai-solution-accelerator --private
+gh repo create <you>-accel-sandbox --template Azure-Samples/agentic-ai-solution-accelerator --private
 cd <you>-accel-sandbox
 code .
 

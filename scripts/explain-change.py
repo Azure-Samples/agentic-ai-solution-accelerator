@@ -277,11 +277,11 @@ CATEGORIES: list[Category] = [
         id="onboarding-doc",
         title="Onboarding / getting-started docs",
         impact=[
-            "lint: workflow_secrets_documented — every secret/var referenced in .github/workflows/*.yml MUST be listed in docs/getting-started.md",
+            "lint: workflow_secrets_documented — every secret/var referenced in .github/workflows/*.yml MUST be listed in docs/getting-started/setup-and-prereqs.md",
             "partner UX: this is the authoritative setup doc; keep the 15-minute path in sync with the actual deploy chain",
         ],
         patterns=[
-            "docs/getting-started.md",
+            "docs/getting-started/setup-and-prereqs.md",
         ],
     ),
     Category(

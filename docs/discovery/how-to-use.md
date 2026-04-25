@@ -154,3 +154,14 @@ What `/ingest-prd` does **not** do:
 - `.github/chatmodes/ingest-prd.chatmode.md` is the chatmode that
   pre-drafts the solution brief from a customer PRD/BRD/spec;
   `/discover-scenario` gap-fill mode then fills the TBDs it leaves.
+
+---
+
+## Next step
+
+You now have a discovery brief (and, if you ran the ROI calculator, a
+quantified hypothesis). **Continue to** [Quickstart Step 3 — Scaffold the
+solution from the brief](../../QUICKSTART.md#step-3--scaffold-the-solution-from-the-brief)
+to scaffold the agents your brief defined. The brief is the input to
+`/scaffold-from-brief`; everything downstream (lint, evals, dashboards)
+keys off its fields.

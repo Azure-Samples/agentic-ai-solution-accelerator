@@ -122,7 +122,7 @@ def load_scenario(manifest_path: pathlib.Path | None = None) -> ScenarioBundle:
     if not scenario:
         raise ValueError(
             f"{path}: missing top-level 'scenario' block (required since D2). "
-            "See docs/getting-started.md for the manifest shape."
+            "See docs/getting-started/setup-and-prereqs.md for the manifest shape."
         )
 
     _require_keys(

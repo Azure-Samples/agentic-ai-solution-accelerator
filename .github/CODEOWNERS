@@ -35,7 +35,7 @@
 
 # Discovery + onboarding docs — partner delivery + eng
 /docs/discovery/                    @microsoft/smb-partner-delivery @microsoft/smb-agentic-ai-champs
-/docs/getting-started.md            @microsoft/smb-partner-delivery @microsoft/smb-agentic-ai-champs
+/docs/getting-started/setup-and-prereqs.md @microsoft/smb-partner-delivery @microsoft/smb-agentic-ai-champs
 
 # Copilot kit — eng owns normative rules, partner delivery reviews
 /.github/copilot-instructions.md    @microsoft/smb-agentic-ai-champs @microsoft/smb-partner-delivery
