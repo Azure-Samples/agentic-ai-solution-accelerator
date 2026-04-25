@@ -1,8 +1,16 @@
 name: evals
 
+# This workflow is a TEMPLATE for partners forking this accelerator.
+# It is NOT auto-run on the canonical Azure-Samples template repo —
+# the template has no live deployment to evaluate against, so
+# `vars.EVALS_API_URL` is never set here.
+#
+# Partners forking this repo should set repo variable `EVALS_API_URL`
+# to the deployed API base URL of their customer instance, then either
+# re-enable the `pull_request:` trigger below to gate merges, or invoke
+# manually via `workflow_dispatch`.
+
 on:
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 
 permissions:

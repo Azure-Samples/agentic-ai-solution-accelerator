@@ -1,5 +1,22 @@
 name: deploy
 
+# This workflow is a TEMPLATE for partners forking this accelerator.
+# It is NOT auto-run on the canonical Azure-Samples template repo —
+# the template has no live Azure deployment, no SERVICE_PRINCIPAL
+# secrets, and no `vars.AZURE_LOCATION`.
+#
+# Partners forking this repo to deliver a customer engagement should:
+#   1. Configure a GitHub Environment matching `deploy/environments.yaml`
+#      (default name: `production`), with these secrets:
+#        - AZURE_CLIENT_ID
+#        - AZURE_TENANT_ID
+#        - AZURE_SUBSCRIPTION_ID
+#      and these vars:
+#        - AZURE_LOCATION
+#   2. (Optional) Re-enable an automatic trigger by adding `push:` or
+#      `pull_request:` blocks to the `on:` section below.
+#   3. Trigger this workflow from the Actions UI via `workflow_dispatch`.
+#
 # Deploy chain: accelerator-lint -> resolve-env -> azd-up -> post-deploy evals.
 #
 # BYO-Azure multi-environment:
@@ -31,8 +48,6 @@ on:
         required: false
         type: string
         default: ""
-  push:
-    branches: [main]
 
 permissions:
   contents: read
