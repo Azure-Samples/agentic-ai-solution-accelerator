@@ -7,7 +7,7 @@ with the template to run a real customer engagement against it.
 This is not training for the customer's end users — that's partner-owned,
 separately. And it's not a substitute for reading `docs/getting-started/setup-and-prereqs.md`
 (the authoritative prereqs + troubleshooting) or `QUICKSTART.md` (the
-5-step partner motion). The lab walks you through the same surface area
+seven-step partner motion). The lab walks you through the same surface area
 with check-your-work gates so you catch misunderstandings in a sandbox,
 not in front of a customer.
 
@@ -20,7 +20,7 @@ After the lab you can:
 1. Deploy the flagship scenario to your own sandbox subscription with
    `azd up` and confirm it works end-to-end.
 2. Open the reference front-end locally and drive the workflow from a
-   browser instead of curl.
+   browser.
 3. Read App Insights telemetry emitted by real browser traffic, and know
    which dashboard panels require partner-wired emitters to light up.
 4. Run the quality and redteam evals against your deployment and read

@@ -22,7 +22,7 @@ One signpost — pick the lane that matches what you're doing today. You can com
 ```text
 orientation (you are here)
     │
-    ├─→ Quickstart  ─────────  the canonical 5-step engineer path
+    ├─→ Quickstart  ─────────  the canonical seven-step engineer path
     │       │
     │       └─→ Setup & prereqs  ──  authoritative for prereqs / secrets / troubleshooting
     │

@@ -87,7 +87,7 @@ hide:
 
     **You own:** scaffold, provision, iterate, acceptance evals, UAT support, engagement handover artifacts.
 
-    - **Start with:** [5-step quickstart](getting-started/index.md) — mechanics from clone to customer deploy.
+    - **Start with:** [seven-step quickstart](getting-started/index.md) — mechanics from clone to customer deploy.
     - **Then run:** `/scaffold-from-brief` once a solution brief exists.
     - **Also use:** [Setup & prereqs](getting-started/setup-and-prereqs.md) (authoritative `azd up` troubleshooting) · [Hands-on lab](enablement/hands-on-lab.md)
 
