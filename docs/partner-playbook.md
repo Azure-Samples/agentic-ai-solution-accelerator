@@ -180,8 +180,8 @@ named environment.
 2. `/deploy-to-env <env-name>` to register a new GitHub Environment entry in
    `deploy/environments.yaml` and scaffold the required secrets / variables
    per the "Required GitHub secrets and variables" section of `docs/getting-started/setup-and-prereqs.md`.
-3. From the customer's deployment-owner machine: `azd env new <customer>-dev`
-   then `azd up`. First deploy takes ~15 min on a clean subscription. The
+3. From the customer's deployment-owner machine: `azd env new <customer-short-name>-dev`
+   (e.g., `azd env new contoso-dev`) then `azd up`. First deploy takes ~15 min on a clean subscription. The
    `azd` hooks in `azure.yaml` run automatically as part of `azd up`:
    - `preprovision` → `scripts/sync-models-from-manifest.py`
    - `postprovision` → `scripts/foundry-bootstrap.py` **and**
@@ -299,8 +299,8 @@ hand day-2 operations over.
 
 **How:**
 
-1. `/deploy-to-env <customer>-prod` to register the prod environment
-2. `azd env new <customer>-prod`; `azd up` in prod — the `postprovision`
+1. `/deploy-to-env <customer-short-name>-prod` (e.g., `contoso-prod`) to register the prod environment
+2. `azd env new <customer-short-name>-prod`; `azd up` in prod — the `postprovision`
    hook re-runs `foundry-bootstrap.py` and `seed-search.py` automatically
    against the prod project + search service
 3. Wire App Insights alerting on the KPIs the engagement committed to

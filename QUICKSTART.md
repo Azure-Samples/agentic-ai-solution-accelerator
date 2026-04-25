@@ -19,8 +19,9 @@
 ## Step 1 — Clone the template
 
 ```bash
-gh repo create <customer>-agents --template Azure-Samples/agentic-ai-solution-accelerator --private
-cd <customer>-agents
+# Replace <customer-short-name> with your customer's short name (e.g., contoso, fabrikam)
+gh repo create <customer-short-name>-agents --template Azure-Samples/agentic-ai-solution-accelerator --private
+cd <customer-short-name>-agents
 code .
 ```
 
@@ -65,7 +66,7 @@ The brief is the **single source of truth** for the engagement. Every downstream
 
 Copilot reads the filled brief and customizes the repo. The **Lands in** column below shows paths for the flagship scenario (`sales-research`).
 
-If you scaffold a new scenario via `python scripts/scaffold-scenario.py <your-scenario>`, substitute `<your-scenario>` for `sales_research` in the `src/scenarios/<...>/` paths. Everything outside `src/scenarios/` is scenario-agnostic and stays put.
+If you scaffold a new scenario via `python scripts/scaffold-scenario.py <scenario-id>` (e.g., `sales-research`, `customer-service`), substitute `<scenario-id>` for `sales_research` in the `src/scenarios/<...>/` paths. Everything outside `src/scenarios/` is scenario-agnostic and stays put.
 
 | Brief field → | Lands in (flagship paths shown; `src/scenarios/<id>/` for custom scenarios) |
 |---|---|
@@ -89,7 +90,7 @@ Before `azd up`, make two decisions and wire one piece of OIDC plumbing. These t
 
 ```
 /configure-landing-zone     # pick standalone | avm | alz-integrated; updates accelerator.yaml + infra/
-/deploy-to-env <env-name>   # registers the GitHub Environment, wires OIDC, scopes secrets
+/deploy-to-env <env-name>   # e.g., dev, uat, prod — registers the GitHub Environment, wires OIDC, scopes secrets
 ```
 
 `/configure-landing-zone` walks you through the tier decision (Tier 1 standalone for pilots / SMB; Tier 2 `avm` for private endpoints; Tier 3 `alz-integrated` for an existing customer ALZ hub). `/deploy-to-env` adds the env to `deploy/environments.yaml`, creates the matching GitHub Environment, and wires the OIDC federated credential so CI can deploy without a service-principal secret. Skip this and your first PR will fail auth.
@@ -106,9 +107,11 @@ Before `azd up`, make two decisions and wire one piece of OIDC plumbing. These t
 > only.
 
 ```bash
+# Replace <customer-tenant-id> with the customer's Azure tenant GUID, and
+# <customer-short-name> with the customer's short name (e.g., contoso)
 az login --tenant <customer-tenant-id>
 azd auth login
-azd env new <customer>-dev
+azd env new <customer-short-name>-dev
 azd up
 ```
 

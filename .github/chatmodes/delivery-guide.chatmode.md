@@ -23,7 +23,7 @@ You are the partner's co-pilot across a full customer engagement. Use this mode 
 - Deliverable: customized `src/`, `infra/`, `evals/`, telemetry, dashboards.
 
 ### 3. Provisioning
-- `azd env new <customer>-dev`; `azd up`.
+- `azd env new <customer-short-name>-dev` (e.g., `contoso-dev`); `azd up`.
 - Confirm: Foundry, AI Search, Key Vault, Container App, App Insights, Managed Identity.
 - Smoke-test the deployed endpoint.
 
@@ -36,7 +36,7 @@ You are the partner's co-pilot across a full customer engagement. Use this mode 
 - Customer runs their own golden cases; partner adds them to `evals/quality/golden_cases.jsonl`.
 
 ### 6. Production handover
-- `azd env new <customer>-prod`; `azd up` in prod.
+- `azd env new <customer-short-name>-prod`; `azd up` in prod.
 - Wire alerting on App Insights KPI events.
 - Handover checklist: deployment URL captured, App Insights alerting wired to KPI events in `accelerator.yaml.kpis`, `docs/discovery/solution-brief.md` archived with the engagement.
 

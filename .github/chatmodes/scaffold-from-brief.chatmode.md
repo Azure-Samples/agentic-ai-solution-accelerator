@@ -14,6 +14,7 @@ You are applying the customer's filled `docs/discovery/solution-brief.md` to thi
 
 ## Step 1 — Run the scaffolder
 ```bash
+# <scenario-id> is the kebab-case scenario slug (e.g., sales-research, customer-service)
 python scripts/scaffold-scenario.py <scenario-id>
 ```
 This materializes:

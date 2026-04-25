@@ -1,5 +1,7 @@
 # Handover packet template — `<customer>` engagement
 
+> **Template-fill marker:** Replace every occurrence of `<customer>` (and `<YYYY-MM-DD>` in the filename) throughout this packet with the customer short-name (e.g., `contoso`) and the export date.
+
 > **DO NOT HAND OVER** this packet to the customer while any
 > `[PARTNER-FILL REQUIRED: ...]` markers remain. Search the file for
 > the literal string `PARTNER-FILL REQUIRED` before exporting — every

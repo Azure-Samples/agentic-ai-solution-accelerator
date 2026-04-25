@@ -62,8 +62,9 @@ template clone.
 1. Clone the template into your own private repo:
 
    ```bash
-   gh repo create <you>-lab-accel --template Azure-Samples/agentic-ai-solution-accelerator --private
-   cd <you>-lab-accel
+   # Replace <your-handle> with any short name (e.g., contoso-lab-accel becomes from <your-handle>=contoso)
+   gh repo create <your-handle>-lab-accel --template Azure-Samples/agentic-ai-solution-accelerator --private
+   cd <your-handle>-lab-accel
    code .
    ```
 
@@ -237,6 +238,7 @@ truth.
 1. From the repo root:
 
    ```bash
+   # Replace <your-api-url> with the deployed endpoint (e.g., https://my-app.azurecontainerapps.io)
    python evals/quality/run.py --api-url <your-api-url>
    python evals/redteam/run.py --api-url <your-api-url>
    python scripts/enforce-acceptance.py

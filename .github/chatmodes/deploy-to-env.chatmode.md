@@ -27,7 +27,7 @@ environments:
   - name: dev
     github_environment: dev
     description: Default partner sandbox — deployed automatically on push to main.
-  - name: <env-name>
+  - name: <env-name>            # e.g., uat, prod
     github_environment: <env-name>
     description: <one-line purpose>
 ```

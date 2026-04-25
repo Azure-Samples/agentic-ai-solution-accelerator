@@ -24,6 +24,7 @@ Use this when the brief or a follow-on requirement introduces a capability no cu
 
 ## Invoke the scaffolder
 ```bash
+# <agent_id> e.g., risk_scoring; <scenario-id> e.g., sales-research
 python scripts/scaffold-agent.py <agent_id> \
   --scenario <scenario-id> \
   --capability "<one-sentence capability>" \

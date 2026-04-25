@@ -1,5 +1,7 @@
 # Solution Brief — <Customer>
 
+<!-- Template-fill marker: Replace `<customer-slug>` with the engagement slug (e.g., contoso-q4-research) and `<Customer>` with the customer display name. -->
+
 > This document is the **canonical source of truth** for this engagement. Every downstream artifact (agent prompts, tools, retrieval, HITL, evals, telemetry, manifest) derives from it. Fill it with the customer during discovery (`/discover-scenario`), then run `/scaffold-from-brief` to apply it across the repo.
 
 **Engagement:** `<customer-slug>`

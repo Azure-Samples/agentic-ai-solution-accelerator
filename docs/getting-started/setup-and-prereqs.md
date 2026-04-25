@@ -100,8 +100,9 @@ full deploy chain.
 
 ```bash
 # 1. Clone the template into your sandbox repo
-gh repo create <you>-accel-sandbox --template Azure-Samples/agentic-ai-solution-accelerator --private
-cd <you>-accel-sandbox
+# Replace <your-handle> with any short name (e.g., contoso → contoso-accel-sandbox)
+gh repo create <your-handle>-accel-sandbox --template Azure-Samples/agentic-ai-solution-accelerator --private
+cd <your-handle>-accel-sandbox
 code .
 
 # 2. Authenticate to your SANDBOX subscription (not a customer subscription for the smoke-test)

@@ -1,5 +1,8 @@
 # Use-case canvas — `<Customer>`
 
+<!-- Template-fill marker: Replace `<customer-slug>` with the engagement slug (e.g., contoso-q4-research) and `<Customer>` with the customer display name. -->
+
+
 A one-page scoping instrument for the **pre-workshop** phase of a
 partner engagement. Send this to the customer sponsor after the first
 scoping call; use the answers to decide whether to schedule the
