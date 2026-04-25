@@ -188,7 +188,7 @@ def stage() -> None:
     # mirroring the source-tree path here is enough — no nav entry
     # needed.
     asset_suffixes = {".csv", ".xlsx", ".xlsm", ".png", ".jpg", ".jpeg",
-                      ".svg", ".pdf", ".gif", ".webp"}
+                      ".svg", ".pdf", ".gif", ".webp", ".css"}
     asset_count = 0
     for src in DOCS_SRC.rglob("*"):
         if not src.is_file() or src.suffix.lower() not in asset_suffixes:

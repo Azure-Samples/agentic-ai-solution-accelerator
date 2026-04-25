@@ -33,6 +33,7 @@ table is the source of truth.
 ## The workflow
 
 ```mermaid
+%%{init: {'theme':'base','themeVariables':{'fontSize':'16px'},'flowchart':{'nodeSpacing':50,'rankSpacing':80,'htmlLabels':true,'curve':'basis'}}}%%
 flowchart LR
     classDef lead fill:#E1F0FF,stroke:#1F6FEB,color:#0B3D91,stroke-width:1px;
     classDef eng  fill:#E8F5E9,stroke:#2E7D32,color:#1B5E20,stroke-width:1px;
@@ -77,7 +78,7 @@ flowchart LR
     click D6 "handover/handover-packet-template/" "D6 first action: open the handover packet template"
     click D7 "partner-playbook/#stage-7--measure" "D7 first action: Stage 7 — Measure (monthly KPI review)"
     click E1 "QUICKSTART/#step-3--scaffold-the-solution-from-the-brief" "E1 first action: QUICKSTART Step 3 — Scaffold (first-timer? run hands-on-lab once first)"
-    click E2 "getting-started/" "E2 first action: Setup & prereqs — azd up + troubleshooting"
+    click E2 "getting-started/setup-and-prereqs/" "E2 first action: Setup & prereqs — azd up + troubleshooting"
     click E3 "QUICKSTART/#step-4--provision--deploy-to-customers-azure" "E3 first action: QUICKSTART Steps 4–5 — iterate through CI gates"
     click E4 "partner-playbook/#stage-5--uat" "E4 first action: Stage 5 — UAT (engineer view)"
     click C1 "customer-runbook/" "C1 first action: open your engagement-specific handover packet (partner-delivered); customer-runbook is the fallback"

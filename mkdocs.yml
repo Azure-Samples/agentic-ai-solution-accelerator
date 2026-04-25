@@ -111,4 +111,7 @@ extra:
     - icon: fontawesome/brands/github
       link: https://github.com/Azure-Samples/agentic-ai-solution-accelerator
 
+extra_css:
+  - stylesheets/extra.css
+
 copyright: Copyright &copy; Microsoft Corporation.

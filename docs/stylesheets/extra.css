@@ -1,0 +1,14 @@
+/* Let Mermaid diagrams render at natural size; scroll horizontally if too wide.
+   Material for MkDocs otherwise constrains the SVG to the content column,
+   shrinking wide flowcharts (e.g. /partner-workflow/) to unreadable text. */
+.md-typeset .mermaid {
+  text-align: center;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.md-typeset .mermaid svg {
+  max-width: none !important;
+  height: auto;
+  min-width: 800px;
+}
