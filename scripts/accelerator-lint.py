@@ -90,6 +90,12 @@ def solution_brief_present(ctx: Ctx) -> list[Finding]:
         return [Finding("brief-present", "block", _rel(brief),
                         "docs/discovery/solution-brief.md is required")]
     txt = brief.read_text(encoding="utf-8")
+    # Skip the placeholder check while the brief is still the unmodified
+    # shipped template — chatmodes (/discover-scenario, /ingest-prd)
+    # overwrite this banner on completion, so its presence guarantees
+    # discovery has not run yet for this engagement.
+    if "STATUS: TEMPLATE" in txt:
+        return []
     placeholder_markers = ["<!-- FILL IN:", "TBD", "TODO:"]
     if any(m in txt for m in placeholder_markers):
         return [Finding("brief-unfilled", "warn", _rel(brief),

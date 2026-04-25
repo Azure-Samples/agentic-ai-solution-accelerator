@@ -1,5 +1,7 @@
 # Solution Brief — <Customer>
 
+> **STATUS: TEMPLATE.** This is the unmodified template shipped with the accelerator. Fill it via `/discover-scenario` (or `/ingest-prd` then `/discover-scenario` for gap-fill). The chatmodes overwrite this banner on completion; lint exempts the brief while the banner is present.
+
 <!-- Template-fill marker: Replace `<customer-slug>` with the engagement slug (e.g., contoso-q4-research) and `<Customer>` with the customer display name. -->
 
 > This document is the **canonical source of truth** for this engagement. Every downstream artifact (agent prompts, tools, retrieval, HITL, evals, telemetry, manifest) derives from it. Fill it with the customer during discovery (`/discover-scenario`), then run `/scaffold-from-brief` to apply it across the repo.

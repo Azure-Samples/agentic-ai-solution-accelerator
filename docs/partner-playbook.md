@@ -51,7 +51,7 @@ This matters for scoping the SOW honestly.
 | End-user / app-level auth    | Service-to-service Managed Identity everywhere (Foundry, Search, Key Vault all Entra-only, no keys); HTTPS-only ingress | **Who can call the API / load the UI** — Entra Easy Auth on Container Apps, App Gateway + WAF, or Front Door. The shipped API has no end-user auth dependency. |
 | State persistence            | **Nothing.** `/research/stream` is in-memory per request; no datastore in `infra/`.                                       | Cosmos / Postgres / Redis / browser IndexedDB if the customer UX needs run history, multi-user separation, or durable HITL state. |
 | HITL approval surface        | The **contract**: `HITL_POLICY` constant + `checkpoint(...)` call + lint enforcement + `tool.hitl_*` events + `HITL_DEV_MODE=1` stub for labs/evals | The **production approver** — Logic Apps, Teams adaptive card, ServiceNow, email — that `HITL_APPROVER_ENDPOINT` points at. The accelerator does not ship an approval UI. |
-| Customer-facing UI           | Reference frontend at `patterns/sales-research-frontend/` — plain React + Vite + TypeScript, deployable to Azure Static Web Apps. Proves the SSE wiring. | UX, branding, design system, run history, auth flow, HITL approval surface. Fork as a starter; the customer's real UX is the partner's value-add. |
+| Customer-facing UI           | Reference frontend at `patterns/sales-research-frontend/` — plain React + Vite + TypeScript, deployable to Azure Static Web Apps. Proves the SSE wiring. | UX, branding, design system, run history, auth flow, HITL approval surface. Fork as a starter; the customer's real UX is the partner team's value-add. |
 | SOW / commercial terms       | **Nothing**                                                                         | **You** — templates live in your partner practice   |
 | Customer training material   | **Nothing shipped today.** The shipped partner-team self-paced walkthrough is `docs/enablement/hands-on-lab.md`; customer-facing training is partner-owned. | Role-based customer training, support ops |
 
@@ -70,7 +70,7 @@ their branding) — not the template itself.
 `accelerator.yaml` so the scaffolding step has everything it needs.
 
 **How:** run `/discover-scenario` in GitHub Copilot Chat (or any chat-mode-aware
-IDE). The chatmode walks the partner (or partner + customer live) through 7
+IDE). The chatmode walks you (or you + customer live) through 7
 sections: business context, personas, measurable success criteria, ROI
 hypothesis, solution shape, constraints/risks, acceptance evals.
 
@@ -110,7 +110,7 @@ hypothesis, solution shape, constraints/risks, acceptance evals.
 can follow.
 
 **How:** run `/scaffold-from-brief`. The chatmode is a thin wrapper over
-`scripts/scaffold-scenario.py`; it drives the CLI and then walks the partner
+`scripts/scaffold-scenario.py`; it drives the CLI and then walks you
 through the customization steps below.
 
 **What the CLI materializes automatically** (one command,
@@ -120,10 +120,10 @@ through the customization steps below.
 - `src/scenarios/<package>/agents/supervisor/{__init__,prompt,transform,validate}.py`
 - `docs/agent-specs/accel-<scenario-id>-supervisor.md`
 - `data/samples/<package>.json`
-- A `scenario:` snippet printed to stdout for the partner to paste into
+- A `scenario:` snippet printed to stdout to paste into
   `accelerator.yaml`
 
-**What the partner does manually after the CLI runs** (chatmode step 3):
+**Manual follow-ups after the CLI runs** (chatmode step 3):
 
 - Paste the `scenario:` snippet into `accelerator.yaml` and re-sync
   `solution.*`, `acceptance.*`, and `kpis[]` from the brief
@@ -271,7 +271,7 @@ portal edits.
 - Cost per call trending toward the acceptance target (instrument via
   `src/accelerator_baseline/cost.py`)
 - P50 / P95 latency visible in App Insights KPI events
-- **At least one irreversible HITL tool exercised end-to-end before exiting Stage 4** — partner triggers a tool call that hits `hitl.checkpoint(...)`, the approver endpoint receives the request, the partner approves it, the tool executes, and the redteam case for that tool passes. UAT is not the place to discover that the approval flow is mis-wired; surface it here.
+- **At least one irreversible HITL tool exercised end-to-end before exiting Stage 4** — trigger a tool call that hits `hitl.checkpoint(...)`, the approver endpoint receives the request, the approver approves it, the tool executes, and the redteam case for that tool passes. UAT is not the place to discover that the approval flow is mis-wired; surface it here.
 
 **When a worker is underperforming:** add a new case to `golden_cases.jsonl`
 showing the failure, then fix the prompt / tool in a PR. Close the loop:
@@ -305,7 +305,7 @@ safety pass, P50/P95 latency, cost per call.
   write, email send). **The accelerator does not ship a HITL approval UI:**
   the flagship HITL pattern (`docs/patterns/rai/README.md`, "Principle 3") is
   a partner-wired approval flow (Logic Apps, Teams adaptive card, ticketing
-  system) that the tool blocks on until the partner's approver endpoint
+  system) that the tool blocks on until the approver endpoint
   returns. `src/accelerator_baseline/hitl.py` is the checkpoint contract.
 - Killswitch flipped and verified — `src/accelerator_baseline/killswitch.py`
 - Dashboards in App Insights show the KPI events the sponsor cares about
@@ -331,12 +331,12 @@ hand day-2 operations over.
    against the prod project + search service
 3. Wire App Insights alerting on the KPIs the engagement committed to
    in `accelerator.yaml.kpis[]` (customer-owned — `kpis[]` carries
-   `{name, type, baseline, target}` metadata only; partners wire the
-   matching telemetry event per KPI in scenario code, and neither
+   `{name, type, baseline, target}` metadata only; the matching telemetry
+   event per KPI is wired in scenario code, and neither
    alerts nor dashboards beyond `infra/dashboards/roi-kpis.json` are
    auto-created)
 4. Capture the handover artifacts — deployment URL, alert configuration,
-   the partner's HITL approver endpoint URL + runbook, killswitch procedure,
+   the HITL approver endpoint URL + runbook, killswitch procedure,
    and the archived `docs/discovery/solution-brief.md` copy
 
 **Handover to whom:** the customer's internal owner per the SOW. If the
@@ -375,8 +375,8 @@ no spreadsheets, no screenshots of runs.
   memory
 - At least one KPI moved from baseline toward target within 30 days of go-live
 - Feedback captured back to Microsoft in this repo's Issues — both what
-  worked and what didn't. The accelerator improves only if partners file
-  issues.
+  worked and what didn't. The accelerator improves only when partner
+  teams file issues.
 
 ---
 
@@ -403,8 +403,8 @@ no spreadsheets, no screenshots of runs.
 
 These scripts are mostly Python / Azure-SDK-based; a few utility scripts
 (e.g., `explain-change.py`, `sync-models-from-manifest.py`) shell out to
-standard developer tooling (`git`, `azd`) that the partner already has
-installed per the "Prerequisites" section of `docs/getting-started/setup-and-prereqs.md`.
+standard developer tooling (`git`, `azd`) — already installed if you
+followed the "Prerequisites" section of `docs/getting-started/setup-and-prereqs.md`.
 
 ---
 
