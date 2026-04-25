@@ -37,7 +37,7 @@ You will need:
 | Azure Developer CLI (`azd`) `>= 1.11` | one-shot provision + deploy |
 | GitHub CLI (`gh`) `>= 2.50` | repo bootstrap + secrets |
 | Python `3.11` | backend, evals, lint, bootstrap |
-| Docker or compatible runtime | local container builds |
+| Docker or Podman *(optional)* | only needed for local container builds; `azd up` uses ACR remote build by default |
 
 Model quota: the accelerator deploys a `GlobalStandard` Azure OpenAI model
 (default `gpt-5-mini`, 30k TPM — see `infra/main.bicep` params `modelName`,

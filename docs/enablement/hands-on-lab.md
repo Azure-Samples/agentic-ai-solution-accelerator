@@ -44,7 +44,7 @@ After the lab you can:
    shipped default is 30k TPM — see `infra/main.parameters.json`).
    Confirm in the Azure portal → Foundry → Quotas before starting.
 3. The tools listed in the "Prerequisites" section of `docs/getting-started/setup-and-prereqs.md`
-   (Azure CLI, `azd`, `gh`, Python 3.11, Docker or compatible).
+   (Azure CLI, `azd`, `gh`, Python 3.11). Docker/Podman is optional — `azd up` builds the container image remotely in Azure Container Registry by default.
 4. A GitHub org/account where you can push a private template clone.
 5. VS Code with GitHub Copilot Chat enabled (required for the
    chatmodes under `.github/chatmodes/`).

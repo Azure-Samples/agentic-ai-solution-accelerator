@@ -13,6 +13,7 @@ services:
     host: containerapp
     docker:
       path: Dockerfile
+      remoteBuild: true
 infra:
   provider: bicep
   path: infra
