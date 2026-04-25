@@ -32,6 +32,16 @@ from ..accelerator_baseline.hitl import checkpoint, HITLDenied
 from ..accelerator_baseline.telemetry import emit_event, Event
 
 
+TOOL_NAME = "<tool_name>"
+
+# Module-level constant. The accelerator-lint `hitl-required` rule
+# scans every `src/tools/*.py` file for `HITL_POLICY` to identify
+# side-effect tools — without it, the file is treated as read-only and
+# the HITL gate is not enforced. Set to "always" / "never" /
+# "threshold(<field> < N)" per the chatmode prompt above.
+HITL_POLICY = "<always | never | threshold(<field> < N)>"
+
+
 INPUT_SCHEMA = {
     "type": "object",
     "properties": {},
@@ -40,18 +50,14 @@ INPUT_SCHEMA = {
 
 
 async def run(args: dict[str, Any]) -> dict[str, Any]:
-    await checkpoint(
-        tool="<tool_name>",
-        args=args,
-        policy="<hitl policy>",
-    )
+    await checkpoint(tool=TOOL_NAME, args=args, policy=HITL_POLICY)
 
     credential = DefaultAzureCredential()
     # call external system
     result: dict[str, Any] = {}
 
     emit_event(Event(
-        name="tool.<tool_name>.executed",
+        name=f"tool.{TOOL_NAME}.executed",
         args_redacted={k: _redact(v) for k, v in args.items()},
         external_system="<system>",
         ok=True,
@@ -63,6 +69,8 @@ def _redact(v: Any) -> Any:
     return v
 ```
 
+> **Why `HITL_POLICY` is a module-level constant.** The `accelerator-lint` rule `hitl-required` scans `src/tools/*.py` for that exact identifier to identify side-effect tools. If you bury the policy as an inline argument to `checkpoint(...)`, lint treats the file as read-only and never checks for the HITL gate. The shipped `crm_write_contact.py` and `send_email.py` follow the same shape — copy from them if in doubt.
+
 ## Register on the worker
 Expose the tool in the worker's tool registry so Foundry advertises it.
 
@@ -72,8 +80,28 @@ Expose the tool in the worker's tool registry so Foundry advertises it.
 - HITL deny → raises `HITLDenied`, no external call
 - Redaction → no raw PII in events
 
-## Redteam case
-Add one case to `evals/redteam/` exercising prompt-injection and jailbreak attempts to misuse the tool.
+## Author + run the redteam case
+Every side-effect tool ships with at least one redteam case. Author it now, then run it — both halves are required, not just authoring.
+
+1. Add a case to `evals/redteam/cases.jsonl` exercising prompt-injection or jailbreak attempts to misuse the tool.
+2. Run it:
+
+   ```bash
+   python evals/redteam/run.py --api-url <your-api-url>
+   ```
+
+   Confirm the new case appears in the output and the safety bar in `accelerator.yaml.acceptance.safety_pass` still holds.
+
+## Verify against acceptance
+Re-run the full acceptance chain to prove the new tool didn't regress the scenario:
+
+```bash
+python evals/quality/run.py --api-url <your-api-url>
+python evals/redteam/run.py --api-url <your-api-url>
+python scripts/enforce-acceptance.py
+```
+
+`enforce-acceptance.py` reports pass/fail against every threshold in `accelerator.yaml.acceptance`. If any threshold drops, fix the tool before opening the PR — the same chain runs in CI and will block merge.
 
 ## Guardrails
 - NEVER skip `checkpoint(...)`.

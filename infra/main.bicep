@@ -37,6 +37,9 @@ param privateDnsZoneIds object = {
   search: ''
 }
 
+@description('Comma-separated list of allowed CORS origins for the API (e.g. "https://app.contoso.com,https://swa-app.azurestaticapps.net"). Empty default = no cross-origin browser calls (server-to-server only). Use "*" only in sandbox subscriptions. Wire via `azd env set ALLOWED_ORIGINS=...` before `azd up` if your customer has a UI hosted on a different origin than the API.')
+param allowedOrigins string = ''
+
 // Foundry's AIServices-kind account PE registers THREE DNS suffixes
 // (see modules/foundry.bicep comment). Filter the object to the
 // applicable keys, drop empties, and pass the resulting array.
@@ -179,6 +182,7 @@ module containerApp 'modules/container-app.bicep' = {
     modelDeploymentName: foundry.outputs.modelDeploymentName
     searchEndpoint: search.outputs.endpoint
     externalIngress: externalIngress
+    allowedOrigins: allowedOrigins
   }
 }
 

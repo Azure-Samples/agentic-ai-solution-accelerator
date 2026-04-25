@@ -146,7 +146,7 @@ What `/ingest-prd` does **not** do:
 
 - `docs/partner-playbook.md` stage 1 drives the partner motion across
   these artifacts end-to-end.
-- `docs/enablement/hands-on-lab.md` is the sandbox rehearsal; Lab 7
+- `docs/enablement/hands-on-lab.md` is the sandbox rehearsal; Lab 8
   walks a partner engineer through `/discover-scenario` +
   `scaffold-scenario.py`.
 - `.github/chatmodes/discover-scenario.chatmode.md` is the chatmode

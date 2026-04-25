@@ -23,9 +23,12 @@ You are the partner's co-pilot across a full customer engagement. Use this mode 
 - Deliverable: customized `src/`, `infra/`, `evals/`, telemetry, dashboards.
 
 ### 3. Provisioning
+- Run `/configure-landing-zone` to choose the Azure AI Landing Zone tier (Tier 1 `standalone` for pilots; Tier 2 `avm` for private endpoints + CAF guardrails; Tier 3 `alz-integrated` when the customer already operates an ALZ hub). Updates `accelerator.yaml` + `infra/`.
+- Run `/deploy-to-env <env-name>` (e.g., `<customer-short-name>-dev`) to register the GitHub Environment, wire OIDC for CI deploys, and scope environment-level secrets/variables. Skipping this is the most common first-deploy failure.
 - `azd env new <customer-short-name>-dev` (e.g., `contoso-dev`); `azd up`.
 - Confirm: Foundry, AI Search, Key Vault, Container App, App Insights, Managed Identity.
 - Smoke-test the deployed endpoint.
+- **Establish the acceptance baseline.** Before iterating, run `python evals/quality/run.py --api-url <api-url>`, `python evals/redteam/run.py --api-url <api-url>`, then `python scripts/enforce-acceptance.py`. Capture the output as the engagement's known-good starting point — every PR in Stage 4 has to clear this same bar.
 
 ### 4. Iteration
 - Partner refines prompts/tools via Copilot Chat. Each change is a PR.

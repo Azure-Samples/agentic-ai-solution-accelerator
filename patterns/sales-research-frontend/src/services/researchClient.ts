@@ -2,8 +2,11 @@ import type { ResearchRequest, StreamEvent } from "../types/research";
 
 const API_BASE_URL: string =
   (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") ??
-  "http://localhost:8000";
+  "";
 
+// Empty base URL means "same-origin" — the dev server proxies /research/*
+// to the API, and the SWA prod build either uses the SWA `/api/*` rewrite
+// or expects a VITE_API_BASE_URL set at build time.
 export const RESEARCH_STREAM_URL = `${API_BASE_URL}/research/stream`;
 
 export interface RunOptions {

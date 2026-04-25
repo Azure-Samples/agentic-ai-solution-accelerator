@@ -1,6 +1,6 @@
 # QUICKSTART — Deploy an Agentic AI Solution in ~15 minutes
 
-> Partner's 5-step path from "new customer meeting" to "working agent in customer Azure."
+> Partner's path from "new customer meeting" to "working agent in customer Azure," in seven steps (six on the happy path; the baseline gate at 5b takes ~5 minutes more).
 
 > **Before you start:** Step 5 authenticates against the customer's Azure tenant (`az login --tenant <customer-tenant-id>` + `azd up`), so confirm two things first — you have the rights to create resources in that tenant, and the customer has approved the expected `azd up` cost. Re-read this note before Step 5; the rest of the steps are local.
 
@@ -118,6 +118,23 @@ azd up
 `azd up` provisions: Azure AI Foundry · Azure AI Search · Key Vault · Container Apps · Application Insights · Managed Identity. No keys. Content filters via IaC. Dashboards pre-wired to the brief's KPI events.
 
 ~10–15 minutes; URL of the deployed agent prints at the end.
+
+---
+
+## Step 5b — Establish the acceptance baseline
+
+Before you start iterating, run the acceptance chain once against the freshly deployed flagship. The numbers it produces are the engagement's **known-good starting point**: every PR in Step 6 has to clear this same bar.
+
+```bash
+# Replace <api-url> with the URL azd up printed in Step 5
+python evals/quality/run.py --api-url <api-url>
+python evals/redteam/run.py --api-url <api-url>
+python scripts/enforce-acceptance.py
+```
+
+`enforce-acceptance.py` reports pass / fail against every threshold in `accelerator.yaml.acceptance` (quality, groundedness, safety, P50/P95 latency, cost per call). If a threshold fails on the unmodified flagship, fix the deploy first — quotas, model region, or grounding seed are the usual culprits — before you start authoring scenario-specific changes.
+
+Capture the output (a screenshot or `enforce-acceptance.py > baseline.txt` in the customer fork) so the team has a reference when later PRs move a number.
 
 ---
 

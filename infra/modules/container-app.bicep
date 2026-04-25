@@ -10,6 +10,9 @@ param searchEndpoint string
 @description('When true, the Container App has a public FQDN (Tier 1/2). When false, ingress is internal-only and requires a vNet-integrated environment reachable via private endpoint or hub firewall (Tier 3).')
 param externalIngress bool = true
 
+@description('Comma-separated list of allowed CORS origins for the FastAPI ALLOWED_ORIGINS env var (e.g. "https://app.contoso.com,https://swa-app.azurestaticapps.net"). Empty (default) means no cross-origin browser calls — the API is server-to-server only. Use "*" for sandbox-only allow-all.')
+param allowedOrigins string = ''
+
 // NOTE — Container Apps private endpoint is intentionally NOT wired in
 // Tier 3 by this module. The PE sub-resource for
 // `Microsoft.App/managedEnvironments` requires the env to be
@@ -68,6 +71,7 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
             { name: 'AZURE_AI_FOUNDRY_ENDPOINT', value: foundryEndpoint }
             { name: 'AZURE_AI_FOUNDRY_MODEL', value: modelDeploymentName }
             { name: 'AZURE_AI_SEARCH_ENDPOINT', value: searchEndpoint }
+            { name: 'ALLOWED_ORIGINS', value: allowedOrigins }
           ]
         }
       ]

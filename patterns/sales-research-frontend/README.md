@@ -39,12 +39,15 @@ In another:
 
 ```bash
 cd patterns/sales-research-frontend
-cp .env.example .env       # adjust VITE_API_BASE_URL if needed
+cp .env.example .env       # leave VITE_API_BASE_URL empty for dev
 npm install
 npm run dev                # http://localhost:5173
 ```
 
-The form is pre-filled with sensible defaults so you can click **Run research**
+The dev server **proxies** `/research/*` and `/healthz` to the local API
+(default `http://localhost:8000`, override with `VITE_DEV_API_PROXY`), so the
+browser issues same-origin requests and CORS doesn't apply. The form is
+pre-filled with sensible defaults so you can click **Run research**
 immediately. The streaming viewer shows each SSE event as it arrives; the
 result panel renders the final supervisor briefing (with a raw-JSON toggle).
 
@@ -61,10 +64,21 @@ Set `VITE_API_BASE_URL` at build time to your deployed Container Apps URL.
 For a CI-driven flow, see the
 [Static Web Apps GitHub Actions guide](https://learn.microsoft.com/azure/static-web-apps/github-actions-workflow).
 
-`staticwebapp.config.json` includes a placeholder `/api/*` rewrite — if your
-SWA front-ends the API through a proxy route instead of calling it directly,
-edit the `rewrite` to point at your hostname; otherwise delete that route and
-let the browser call the API directly with CORS enabled on the FastAPI side.
+The browser calls the API directly, so the API has to allow the SWA origin.
+The accelerator's API ships with CORS middleware controlled by the
+`ALLOWED_ORIGINS` env var (see `src/main.py`); wire your SWA hostname in
+before deploying:
+
+```bash
+azd env set ALLOWED_ORIGINS "https://<your-swa>.azurestaticapps.net"
+azd provision
+```
+
+For multiple origins (preview slots, custom domains), pass a comma-separated
+list. `staticwebapp.config.json` also ships an optional `/api/*` rewrite — if
+you'd rather front the API through SWA's reverse proxy than expose it to
+the browser, edit the `rewrite` to point at your hostname; otherwise delete
+that route and rely on the CORS path above.
 
 ## How to customize
 

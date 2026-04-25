@@ -7,14 +7,19 @@ Key properties (enforced by scripts/accelerator-lint.py):
 - No agent instructions in code - Foundry portal holds them.
 - No scenario-specific imports here - all scenario wiring comes from the
   manifest via :mod:`src.workflow.registry`.
+- CORS allow-list driven by the ``ALLOWED_ORIGINS`` env var (comma-separated
+  list of exact origins, or ``*`` for sandbox-only allow-all). Empty default
+  is production-safe: no cross-origin browser calls until the deployer opts in.
 """
 from __future__ import annotations
 
 import json
 import logging
+import os
 from typing import AsyncIterator
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import ValidationError
 
@@ -70,8 +75,48 @@ def _make_stream_endpoint(bundle: ScenarioBundle):
     return stream_endpoint
 
 
+def _configure_cors(app: FastAPI) -> None:
+    """Install CORS middleware from ``ALLOWED_ORIGINS``.
+
+    The env var is a comma-separated list of exact origins
+    (e.g. ``http://localhost:5173,https://contoso.example.com``). The literal
+    value ``*`` enables allow-all without credentials — sandbox-only.
+    Empty / unset means no cross-origin allowed: the API is server-to-server
+    until the deployer explicitly opts in. This is the production-safe default.
+
+    Read directly from ``os.environ`` (not via :func:`load_settings`) so this
+    can run before Foundry / Search env vars are present — e.g. in unit-test
+    smoke checks of the FastAPI app object.
+    """
+    raw = os.environ.get("ALLOWED_ORIGINS", "").strip()
+    if not raw:
+        return
+    origins = [o.strip() for o in raw.split(",") if o.strip()]
+    if not origins:
+        return
+    if origins == ["*"]:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_credentials=False,
+            allow_methods=["GET", "POST", "OPTIONS"],
+            allow_headers=["*"],
+        )
+        logger.info("CORS: allow-all (sandbox mode).")
+        return
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["*"],
+    )
+    logger.info("CORS: allow-listed %d origin(s).", len(origins))
+
+
 app = FastAPI(title="Agentic AI Solution Accelerator", version="0.1.0")
 _configure_otel()
+_configure_cors(app)
 _bundle = load_scenario()
 logger.info("loaded scenario %r at %s", _bundle.id, _bundle.endpoint_path)
 app.add_api_route(

@@ -59,6 +59,17 @@ python -c "from src.main import app; print('OK')"
 
 If lint reports `agent_has_golden_case` or `agents_registered_in_manifest_match_code`, revisit the two manual follow-ups above. If the scaffolder reports `workflow.py is no longer scaffold-managed`, someone has hand-edited the `from .agents import (...)` tuple, the `WORKERS` dict shape, or the close-brace line; restore the canonical shape (see the flagship `sales_research/workflow.py`) before retrying.
 
+## Verify against acceptance
+A new worker changes the supervisor's routing surface. Re-run the full acceptance chain against your deployed dev environment to confirm quality and safety still hold:
+
+```bash
+python evals/quality/run.py --api-url <your-api-url>
+python evals/redteam/run.py --api-url <your-api-url>
+python scripts/enforce-acceptance.py
+```
+
+`enforce-acceptance.py` reports pass/fail against every threshold in `accelerator.yaml.acceptance`. If quality regresses on a worker the new agent shouldn't have touched, the supervisor is mis-routing — tighten the new agent's one-sentence capability or its `_build_input_<agent_id>` payload. The same chain runs in CI and will block merge.
+
 ## Guardrails
 - Never write the Foundry system prompt in code — it lives in the portal.
 - Never bypass the scaffolder to "just quickly add" a worker. The declarative `WORKERS` registry is the contract every future tool (scheduler, telemetry, lints, docs) reads.

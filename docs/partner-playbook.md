@@ -195,6 +195,15 @@ named environment.
    instructions ready for editing. Rerun `foundry-bootstrap.py` or
    `seed-search.py` by hand only for recovery / troubleshooting — normal
    `azd up` cycles handle both.
+6. **Establish the acceptance baseline** before exiting this stage. Run the full chain against the dev environment:
+
+   ```bash
+   python evals/quality/run.py --api-url <api-url>
+   python evals/redteam/run.py --api-url <api-url>
+   python scripts/enforce-acceptance.py
+   ```
+
+   The numbers are the engagement's known-good starting point. Every PR in Stage 4 has to clear this same bar — capture the output (`> baseline.txt` in the customer fork is enough) so the team has a reference when later changes move a number. If a threshold fails on the unmodified flagship, fix the deploy first (quotas, model region, grounding seed) before scaffolding scenario logic.
 
 **What "good" looks like:**
 
@@ -250,6 +259,7 @@ portal edits.
 - Cost per call trending toward the acceptance target (instrument via
   `src/accelerator_baseline/cost.py`)
 - P50 / P95 latency visible in App Insights KPI events
+- **At least one irreversible HITL tool exercised end-to-end before exiting Stage 4** — partner triggers a tool call that hits `hitl.checkpoint(...)`, the approver endpoint receives the request, the partner approves it, the tool executes, and the redteam case for that tool passes. UAT is not the place to discover that the approval flow is mis-wired; surface it here.
 
 **When a worker is underperforming:** add a new case to `golden_cases.jsonl`
 showing the failure, then fix the prompt / tool in a PR. Close the loop:
