@@ -18,6 +18,13 @@ to the Azure subscription hosting the deployment, App Insights, Azure
 AI Foundry, and (if the partner used the forked-template pattern) the
 customer's GitHub fork.
 
+**Acronyms used in this runbook:**
+
+- **HITL** — human-in-the-loop (a partner-authored approver webhook gates side-effect tool calls)
+- **MI** — Managed Identity (the user-assigned identity that holds RBAC on Foundry, Search, Key Vault)
+- **RBAC** — role-based access control (Azure's auth model — no keys; identity + role assignments)
+- **CCoE** — Cloud Center of Excellence (the customer team that owns hub networking, private DNS, and Azure policy in Tier 3 deployments)
+
 **Not in scope here:**
 
 - Commercial / SOW / SLA questions → partner delivery lead
@@ -25,6 +32,56 @@ customer's GitHub fork.
   back to `/discover-scenario` + `/scaffold-from-brief`
 - Source-code changes to the accelerator template itself → upstream
   Issues; the customer's fork is the day-2 change surface
+
+---
+
+## On-call now (do these 3 things)
+
+If you've been paged for a P1 (bad output, unsafe tool behavior, model outage), do these in order. Detail and other incident types are in [§9 Incident playbook](#9-incident-playbook).
+
+1. **Flip the killswitch** — halts every side-effect tool call; read-only retrieval and inference keep running so in-flight sessions don't error.
+
+   ```bash
+   az containerapp update \
+     --name <api-container-app-name> \
+     --resource-group <rg> \
+     --set-env-vars KILLSWITCH_TOOLS=on
+   ```
+
+Detail: [§3 Killswitch](#killswitch). Re-enable by setting the var back to empty or `off`.
+
+2. **Check App Insights** — filter `customEvents` by `response.returned` with `customDimensions.ok == 'false'` and by `tool.hitl_misconfigured` over the incident window. Correlate to a specific agent / tool. Workbook panels are in [§2 Monitoring](#2-monitoring).
+
+3. **Page the partner approver / delivery lead** — the partner's handover packet lists the named contact and SLA. HITL approver reachability and the customer-specific rollback path live there, not here.
+
+Disengage the killswitch only after evals pass ([§5 Re-running evals](#5-re-running-evals-against-the-deployed-environment)).
+
+---
+
+## Daily ops
+
+- **Open the Azure Monitor workbook** built from `infra/dashboards/roi-kpis.json` (deploy once via App Insights → Workbooks → New → Advanced editor; see [§2 Dashboard](#dashboard)).
+- **Triage three signals**: error rate (`response.returned ok=false`), HITL misconfiguration (`tool.hitl_misconfigured` should be 0), P95 latency vs the threshold in `accelerator.yaml.acceptance.p95_latency_ms`.
+- **Confirm HITL approver rota is current** — the partner's handover packet lists the on-call rotation. Stale rota = blocked side-effect tool calls.
+
+## Weekly ops
+
+- **Re-run the eval suites** the partner shipped (quality + redteam). Detail: [§5 Re-running evals](#5-re-running-evals-against-the-deployed-environment). Investigate any regression before the next prompt or model change ships.
+- **Review the cost trend panel** ([§4 Cost](#4-cost)). Investigate any week-over-week jump > 20% — usually a prompt regression inflating output tokens or a usage-pattern shift.
+- **Confirm killswitch and secret-rotation drills are still in muscle memory** — run the drill once per quarter at minimum.
+
+## Handover acceptance checklist
+
+Before accepting handover from the partner, confirm:
+
+- [ ] **Alerts wired** — error-rate, P95 latency, and HITL-misconfigured alert rules exist in Azure Monitor and route to the customer on-call channel ([§2 Alerts](#alerts)).
+- [ ] **Approver rota current** — the HITL approver service responds, and the partner packet lists the named on-call rotation with an SLA.
+- [ ] **Killswitch tested** — you have flipped `KILLSWITCH_TOOLS=on` against the deployed Container App and confirmed side-effect tools halt.
+- [ ] **Runbook walked** — this document plus the partner's handover packet have been read by the named on-call team; questions raised during walkthrough are resolved.
+- [ ] **Eval URL set** — you know how to trigger the eval suites and where the results land (workflow URL or local `results.jsonl` path).
+- [ ] **Acceptance signed** — partner delivery lead and customer ops lead both sign the handover packet's acceptance section.
+
+If any of the above is missing, **refuse handover** — day-2 ops without these is unsupported.
 
 ---
 
@@ -75,7 +132,7 @@ commit.
 
 ---
 
-## 1. Monitoring
+## 2. Monitoring
 
 ### Telemetry plane
 
@@ -163,7 +220,7 @@ Thresholds are customer-owned. The accelerator does not opine.
 
 ---
 
-## 2. Operational dials at runtime
+## 3. Operational dials at runtime
 
 ### Killswitch
 
@@ -223,7 +280,7 @@ behavior. Do not disable the filter; the RAI pattern doc
 
 ---
 
-## 3. Cost
+## 4. Cost
 
 ### Where the numbers come from
 
@@ -248,7 +305,7 @@ must do **both**:
 Confirm with the partner whether they wired both. If they did not,
 `cost.call` events will not appear in App Insights, the cost-per-call
 dashboard panel will be empty, and the `cost_per_call_usd` acceptance
-gate will trip a loud failure on every eval run (see §4).
+gate will trip a loud failure on every eval run (see §5).
 
 ### Azure-side cost monitoring
 
@@ -259,7 +316,7 @@ in Azure Cost Management views. Additional chargeback tags
 
 ---
 
-## 4. Re-running evals against the deployed environment
+## 5. Re-running evals against the deployed environment
 
 ### Quality evals
 
@@ -315,13 +372,13 @@ The same two-step runs automatically in CI:
 ### When to run manually
 
 - After a model swap
-- After a prompt edit (see §6)
+- After a prompt edit (see §7)
 - Before a monthly value review
 - On any production incident where output quality is suspected
 
 ---
 
-## 5. Model swap
+## 6. Model swap
 
 The **authoritative source of truth** for which model(s) are deployed
 is `accelerator.yaml.models[]`, not `infra/main.bicep` param defaults.
@@ -347,7 +404,7 @@ clobbered** on the next provision.
 4. `azd provision` — preprovision syncs env vars, Bicep creates the
    new deployment, postprovision `foundry-bootstrap.py` re-verifies
    the agents against the new model.
-5. Re-run quality + redteam evals (§4) and `enforce-acceptance.py`.
+5. Re-run quality + redteam evals (§5) and `enforce-acceptance.py`.
 6. If acceptance holds, merge; if not, revert the manifest PR.
 
 To run two models side-by-side (canary), add a second entry (not
@@ -360,7 +417,7 @@ the specific scenario.
 
 ---
 
-## 6. Prompt / agent-instruction rollback
+## 7. Prompt / agent-instruction rollback
 
 Agent instructions are stored in Foundry, but their **repo-side source
 of truth** is `docs/agent-specs/<foundry_name>.md`. Every `azd
@@ -381,7 +438,7 @@ workflow (e.g., "prompts are portal-managed for this engagement and
 
 ---
 
-## 7. Secret rotation
+## 8. Secret rotation
 
 ### Key Vault
 
@@ -417,11 +474,11 @@ for those follows the partner's runbook, not this one.
 
 ---
 
-## 8. Incident response
+## 9. Incident playbook
 
 ### P1 — bad output or unsafe tool behavior in production
 
-1. **Flip the killswitch** (§2). Side-effect tools halt immediately;
+1. **Flip the killswitch** (§3). Side-effect tools halt immediately;
    read-only paths keep working so in-flight sessions don't error.
 2. In App Insights, filter `customEvents` by `tool.executed`,
    `tool.hitl_*`, and `response.returned` with `ok == 'false'` over
@@ -432,14 +489,14 @@ for those follows the partner's runbook, not this one.
    Revert the spec file + `azd provision` to roll back.
 4. If a code regression is suspected, revert the offending commit
    in the fork + `azd deploy`.
-5. Re-run evals (§4). Disengage the killswitch only when they pass.
+5. Re-run evals (§5). Disengage the killswitch only when they pass.
 
 ### P1 — model outage
 
 Manifests as elevated `response.returned` with `ok == 'false'` and
 error strings mentioning Foundry. Confirm via Azure Service Health.
 
-Mitigation: swap to a backup model (§5), re-run evals, deploy. Revert
+Mitigation: swap to a backup model (§6), re-run evals, deploy. Revert
 when the primary region recovers. This is a partner-coordinated
 change if they own the fork's release process.
 
@@ -457,7 +514,7 @@ incident.
 
 ### P2 — cost regression
 
-Cost alerts fire (§1). Likely causes:
+Cost alerts fire (§2). Likely causes:
 
 - Model swap without refreshing `MODEL_PRICE_USD_PER_1K_TOKENS`
 - Prompt regression inflating output tokens
@@ -473,7 +530,7 @@ security incidents follow the customer's own IR process.
 
 ---
 
-## 9. Scaling
+## 10. Scaling
 
 ### Container App
 
@@ -485,7 +542,7 @@ queue-based, cron-based) is a Bicep edit.
 ### Model capacity
 
 Capacity is a **regional TPM quota** on the Foundry account.
-Increase via `accelerator.yaml.models[].capacity` (§5). If the
+Increase via `accelerator.yaml.models[].capacity` (§6). If the
 region is at quota, request an increase in Azure portal → Foundry →
 Quotas, or add a second deployment in another region (requires
 partner-authored routing — not shipped in the flagship).
@@ -499,7 +556,7 @@ Some SKU transitions require re-indexing; confirm with
 
 ---
 
-## 10. Re-provisioning and rollback
+## 11. Re-provisioning and rollback
 
 ### `azd provision`
 
@@ -528,18 +585,18 @@ environment.
 ### Rolling back code
 
 `git revert` in the fork + `azd deploy`. Prompt/spec changes
-require `azd provision` (see §6).
+require `azd provision` (see §7).
 
 ---
 
-## 11. Monthly value review
+## 12. Monthly value review
 
 Pull numbers from App Insights directly. `accelerator.yaml.kpis[]`
 enumerates the KPIs the engagement committed to in discovery; each
 entry has `{name, type, baseline, target}` only — it does **not**
 auto-wire telemetry events. Partners wire specific events per KPI
 when they implement the scenario. Confirm the mapping with the
-partner and reuse the workbook panels (§1) plus custom KQL for
+partner and reuse the workbook panels (§2) plus custom KQL for
 scenario-specific KPIs.
 
 At the review, compare 30-day trends to the baseline and target in
@@ -549,7 +606,7 @@ that work is out of day-2 scope.
 
 ---
 
-## 12. Out of scope for this runbook
+## 13. Out of scope for this runbook
 
 - Editing the upstream accelerator template itself
 - Scaffolding a new scenario
