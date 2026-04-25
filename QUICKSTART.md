@@ -30,13 +30,13 @@ You'll move between three places as you go through this guide. Every step below 
 
 ## Step 1 — Clone the template
 
-**Where:** VS Code. Run the `gh` commands from the integrated terminal (`` Ctrl+` ``); the final `code .` reopens VS Code on the cloned repo.
+**Where:** VS Code. Run the `gh` commands from the integrated terminal (`` Ctrl+` ``); the final `code -r .` re-roots the current window onto the cloned repo (use `code .` instead if you're starting from a separate shell and want a fresh window).
 
 ```bash
 # Replace <customer-short-name> with your customer's short name (e.g., contoso, fabrikam)
 gh repo create <customer-short-name>-agents --template Azure-Samples/agentic-ai-solution-accelerator --private --clone
 cd <customer-short-name>-agents
-code .
+code -r .
 ```
 
 VS Code opens with Copilot already configured via `.github/copilot-instructions.md`. Copilot now knows the hard rules:
