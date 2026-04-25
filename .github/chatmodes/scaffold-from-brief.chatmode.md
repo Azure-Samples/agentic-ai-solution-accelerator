@@ -55,7 +55,7 @@ python -c "from src.main import app"
 flake8 src --select=E9,F63,F7,F82
 python scripts/accelerator-lint.py
 ```
-The lint's `scenario-manifest` check AST-validates every import ref in the new `scenario:` block; `agents-three-layer` verifies the package's `agents/` directory contains complete three-layer agents.
+The lint's `scenario-manifest` check validates every import ref in the new `scenario:` block; `agents-three-layer` verifies the package's `agents/` directory contains complete three-layer agents.
 
 ## Step 6 — Surface the UX-shape next step
 

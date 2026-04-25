@@ -5,7 +5,7 @@
 // replacement** for infra/modules/ai-search.bicep — same param
 // signature, same outputs — so a partner can `cp
 // infra/avm-reference/ai-search.bicep infra/modules/ai-search.bicep`
-// during vibecoding without touching main.bicep.
+// during local iteration without touching main.bicep.
 //
 // AVM docs: https://github.com/Azure/bicep-registry-modules/tree/main/avm/res/search/search-service
 // Module:   br/public:avm/res/search/search-service:0.12.0

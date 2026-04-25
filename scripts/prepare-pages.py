@@ -43,6 +43,7 @@ def rewrites_for_root_about() -> list[tuple[re.Pattern[str], str]]:
         (re.compile(r"\]\(docs/"), "](../"),
         (re.compile(r"\]\(\.github/chatmodes/([^)#]+)\.md"), r"](../chatmodes/\1.md"),
         (re.compile(r"\]\(\.github/CLA\.md"), "](CLA.md"),
+        (re.compile(r"\]\(README\.md\)"), "](../index.md)"),
     ]
 
 

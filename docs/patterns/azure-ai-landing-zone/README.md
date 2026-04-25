@@ -34,7 +34,7 @@ Tier 3 today gets you partway: when the overlay outputs are wired through `azd e
 1. **External env + App Gateway / Front Door fronted by the hub firewall** (simplest; `externalIngress: true` and public traffic traverses the hub). Requires partner to provision AGW/AFD.
 2. **Internal env + vNet integration.** Partner enlarges `workloadSubnetPrefix` to `/23`, sets `externalIngress: false`, and adds `vnetConfiguration` + a PE on the managed env. The `/configure-landing-zone` chatmode walks through subnet enlargement; the PE + DNS link are authored by hand.
 
-If you set `mode: alz-integrated`, deploy, and skip the overlay output wiring, the workload will be provisioned with public access off and the PEs uncreated — services become **unreachable**. That's fail-closed by design.
+If you set `mode: alz-integrated`, deploy, and skip the overlay output wiring, the workload will be provisioned with public access off and the PEs uncreated — services become **unreachable**. That fails closed (intentional).
 
 ## Tier decision tree
 

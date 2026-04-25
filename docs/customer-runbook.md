@@ -141,7 +141,7 @@ OpenTelemetry events to Application Insights via the
 `APPLICATIONINSIGHTS_CONNECTION_STRING` env var on the Container App.
 Event definitions live in `src/accelerator_baseline/telemetry.py`.
 
-**Events emitted by the shipped flagship today:**
+**Events emitted today:**
 
 | Event                   | Emitted from                                                | Fires when                                             |
 |-------------------------|-------------------------------------------------------------|--------------------------------------------------------|
@@ -165,7 +165,7 @@ explicitly passes `policy="never"` (typically aligned with
 `accelerator.yaml.solution.hitl = none` for reversible actions) would
 produce it.
 
-**Registered but not emitted by the shipped flagship:**
+**Registered but not emitted by the flagship scenario today:**
 
 - `aggregator.composed` — reserved for scenarios that compose worker
   outputs in an aggregator stage. The flagship doesn't use that

@@ -7,7 +7,7 @@ tools: ['codebase', 'editFiles', 'search', 'runCommands']
 
 Use this when the brief or a follow-on requirement introduces a capability no current worker covers (e.g., "pricing calc", "risk scoring", "invoice classification").
 
-**Do not hand-scaffold.** `scripts/scaffold-agent.py` is the single supported entry point. It edits the declarative `WORKERS: dict[str, WorkerSpec]` registry in `src/scenarios/<scenario>/workflow.py` — that dict is the only attachment point the supervisor DAG reads. Hand edits that don't match the scaffolder's regex contract flip the file to "no longer scaffold-managed" and break future automation.
+**Do not hand-scaffold.** `scripts/scaffold-agent.py` is the single supported entry point. It edits the declarative `WORKERS: dict[str, WorkerSpec]` registry in `src/scenarios/<scenario>/workflow.py` — that dict is the only attachment point the supervisor DAG reads. Hand edits whose shape doesn't match what the scaffolder expects flip the file to "no longer scaffold-managed" and break future automation.
 
 ## Preconditions
 - The solution uses the `supervisor-routing` pattern (check `accelerator.yaml.solution.pattern`).

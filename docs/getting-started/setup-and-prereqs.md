@@ -212,11 +212,11 @@ Lint enforcement (both BLOCKING):
 
 Omitting the whole `models:` block is supported: sync-models-from-manifest
 then resets all managed env vars to the template defaults (gpt-4o-mini /
-2024-07-18 / capacity 30), which is a convergent fixed-point (same state
-whether the block was ever there or not). Partners who want to override
-the default deployment MUST use the `models:` block with a single default
-entry — overriding via raw env vars is unsupported because preprovision
-would clobber them on every `azd up`.
+2024-07-18 / capacity 30) — the same end state whether the block was ever
+there or not. Partners who want to override the default deployment MUST
+use the `models:` block with a single default entry — overriding via raw
+env vars is unsupported because preprovision would clobber them on every
+`azd up`.
 
 ## CI chain
 

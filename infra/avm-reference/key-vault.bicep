@@ -5,7 +5,7 @@
 // replacement** for infra/modules/key-vault.bicep — same param
 // signature, same outputs — so a partner can
 // `cp infra/avm-reference/key-vault.bicep infra/modules/key-vault.bicep`
-// during vibecoding without touching main.bicep.
+// during local iteration without touching main.bicep.
 //
 // AVM module: br/public:avm/res/key-vault/vault:0.9.0
 //

@@ -28,7 +28,7 @@ accelerator_version: "1.0.0"   # pins to the template version partner cloned
 #   - capacity:        TPM in thousands (GlobalStandard SKU)
 #   - default:         exactly one entry MUST set `default: true`
 #
-# Omitting this whole block is a convergent fixed-point: the
+# Omitting this whole block resets state to template defaults: the
 # preprovision sync (scripts/sync-models-from-manifest.py) resets every
 # managed env var (AZURE_AI_FOUNDRY_MODEL_NAME/VERSION/MODEL/CAPACITY
 # and EXTRA_DEPLOYMENTS_JSON=[]) back to the template defaults, and
@@ -73,7 +73,7 @@ models:
 #
 # Changing this value does NOT auto-rewrite infra/ — the lint rule
 # `landing_zone_mode_consistent` just asserts that the infra/ shape
-# matches the declared mode. Vibecode the switch with the
+# matches the declared mode. Make the switch in Copilot Chat with the
 # /configure-landing-zone chatmode or use the AVM reference modules in
 # infra/avm-reference/ and the overlay skeleton in infra/alz-overlay/.
 # -----------------------------------------------------------------------------

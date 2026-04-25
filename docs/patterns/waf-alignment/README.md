@@ -39,7 +39,7 @@ Legend:
 
 | Decision | Posture | How |
 |---|---|---|
-| Per-call cost tracking in telemetry | 🟡 | CI cost gating is in the box: `cost_per_call_usd` in `accelerator.yaml.acceptance` runs as a CI gate, and `src/accelerator_baseline/telemetry.py` declares the typed `cost.call` event. Production per-call cost telemetry (the actual `cost.call` emission) is **not wired into the shipped flagship** — partners call `record_call_cost(...)` from `src/accelerator_baseline/cost.py` at their Foundry call sites. The shipped `MODEL_PRICE_USD_PER_1K_TOKENS` table is partial — partners extend it for their region/SKUs. See [`docs/customer-runbook.md`](../../customer-runbook.md#4-cost) for the full wire-up. |
+| Per-call cost tracking in telemetry | 🟡 | CI cost gating is in the box: `cost_per_call_usd` in `accelerator.yaml.acceptance` runs as a CI gate, and `src/accelerator_baseline/telemetry.py` declares the typed `cost.call` event. Production per-call cost telemetry (the actual `cost.call` emission) is **not wired into the flagship scenario today** — partners call `record_call_cost(...)` from `src/accelerator_baseline/cost.py` at their Foundry call sites. The shipped `MODEL_PRICE_USD_PER_1K_TOKENS` table is partial — partners extend it for their region/SKUs. See [`docs/customer-runbook.md`](../../customer-runbook.md#4-cost) for the full wire-up. |
 | Acceptance thresholds fail CI on regression | 🟢 | `src/accelerator_baseline/evals.py` + `.github/workflows/evals.yml`. |
 | Mandatory Azure tags | 🟢 | `infra/main.bicep` applies `azd-env-name` + `accelerator-version` tags. |
 | Model tier selection | 🟡 | `modelName` + `modelCapacity` params in `infra/main.bicep`; partner picks per quota. |

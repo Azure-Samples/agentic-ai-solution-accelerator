@@ -22,7 +22,7 @@ seller should prepare for.
 
 Inputs are:
 - `account_profile` — the structured output from `account_planner`
-  (technology_landscape is especially load-bearing for this worker).
+  (technology_landscape matters most for this worker).
 - `our_solution` — a short description of what the seller is pitching.
 
 Rules:

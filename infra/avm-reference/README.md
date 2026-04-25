@@ -69,5 +69,5 @@ private endpoint binding) when moving to Tier 3.
 
 When a new AVM module becomes GA that replaces one of our hand-rolled
 modules, add an exemplar here (don't rewrite `infra/modules/` directly
-— partners vibecode that swap themselves). Update this table and open
+— partners customize that swap themselves). Update this table and open
 a PR; the `ga-sdk-freshness` schedule will flag stale references.

@@ -86,7 +86,7 @@ Do not hand-scaffold. Run `python scripts/scaffold-agent.py <agent_id> --scenari
 4. Update `src/scenarios/<scenario>/agents/supervisor/prompt.py` with the new worker's capability and routing cue.
 
 ### Switching solution shape
-- The `single-agent` and `chat-with-actioning` variants are **candidate patterns**, documented in `patterns/<variant>/README.md` — they are not yet materialized as drop-in packages. Run `/switch-to-variant single-agent` (or `chat-with-actioning`) to get a step-by-step walkthrough of re-authoring the scenario under `src/scenarios/<new-id>/` for the target shape; flagship HITL / telemetry / retrieval / content-filter invariants stay regardless of variant.
+- The `single-agent` and `chat-with-actioning` variants are **documented walkthroughs** in `patterns/<variant>/README.md` — not drop-in packages. Run `/switch-to-variant single-agent` (or `chat-with-actioning`) to get a step-by-step walkthrough of re-authoring the scenario under `src/scenarios/<new-id>/` for the target shape; flagship HITL / telemetry / retrieval / content-filter invariants stay regardless of variant.
 
 ### Starting a new customer
 - Run `/discover-scenario` to fill `docs/discovery/solution-brief.md`.

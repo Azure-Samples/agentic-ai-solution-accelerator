@@ -6,7 +6,7 @@
 // replacement** for infra/modules/monitor.bicep — same param
 // signature, same outputs — so a partner can `cp
 // infra/avm-reference/monitor.bicep infra/modules/monitor.bicep`
-// during vibecoding without touching main.bicep.
+// during local iteration without touching main.bicep.
 //
 // Two AVM modules compose the observability plane:
 //   - br/public:avm/res/operational-insights/workspace:0.15.0  (LAW)

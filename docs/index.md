@@ -5,7 +5,7 @@ hide:
 
 # Agentic AI Solution Accelerator
 
-> **A GitHub template that Microsoft partners clone to deliver a customer-specific agentic AI solution — live in days, not months.** Full engagement motion (discovery → UAT → handover → measure) is weeks, and documented honestly below.
+> **A GitHub template that Microsoft partners clone to deliver a customer-specific agentic AI solution — live in days, not months.** Full engagement motion (discovery → UAT → handover → measure) is weeks, and documented below.
 
 **Flagship scenario:** Sales Research & Personalized Outreach — a supervisor agent routes a research request across specialist workers (Account Researcher, ICP/Fit Analyst, Competitive Context, Outreach Personalizer) and returns a grounded, citeable sales brief with a CRM-ready outreach draft. **Human-in-the-loop gates every CRM write and every email send.**
 
@@ -88,7 +88,7 @@ hide:
     **You own:** scaffold, provision, iterate, acceptance evals, UAT support, engagement handover artifacts.
 
     - **Start with:** [5-step quickstart](getting-started/index.md) — mechanics from clone to customer deploy.
-    - **Then run:** `/scaffold-from-brief` once a solution brief exists (engineer's interactive equivalent of the lead's `/delivery-guide`).
+    - **Then run:** `/scaffold-from-brief` once a solution brief exists.
     - **Also use:** [Setup & prereqs](getting-started/setup-and-prereqs.md) (authoritative `azd up` troubleshooting) · [Hands-on lab](enablement/hands-on-lab.md)
 
     !!! warning "First customer engagement? Run the hands-on-lab first"
@@ -144,3 +144,24 @@ hide:
     [GitHub repo](https://github.com/Azure-Samples/agentic-ai-solution-accelerator) · [Chatmodes](../.github/chatmodes/delivery-guide.chatmode.md) · [Contributing](../CONTRIBUTING.md)
 
 </div>
+
+---
+
+## Glossary
+
+Acronyms used across these docs, in one place.
+
+| Term | Meaning |
+|---|---|
+| **ALZ** | Azure Landing Zone — Microsoft's reference architecture for an enterprise Azure tenancy (hub vNet, private DNS, MG hierarchy, policy). |
+| **AVM** | Azure Verified Modules — Microsoft-maintained Bicep/Terraform modules following Azure best practices. |
+| **BYO** | Bring Your Own — partner supplies the Azure subscription / tenant / identity, accelerator deploys into it. |
+| **CCoE** | Cloud Center of Excellence — the customer team that owns Azure platform standards, ALZ, policy. |
+| **HITL** | Human-in-the-Loop — required human approval gate before any side-effect tool call (CRM write, email send, etc.). |
+| **MG** | Management Group — Azure's tenancy-scoped policy + RBAC container above subscriptions. |
+| **OIDC** | OpenID Connect — token-based federated auth; used here so GitHub Actions can deploy to Azure without a service-principal secret. |
+| **RAG** | Retrieval-Augmented Generation — pattern of grounding LLM responses in indexed sources (here, Azure AI Search). |
+| **RAI** | Responsible AI — Microsoft's safety practice (content filters, redteam evals, PII handling, transparency). |
+| **RBAC** | Role-Based Access Control — Azure's identity-based permission model. |
+| **SSE** | Server-Sent Events — one-way streaming HTTP protocol the scenario endpoint uses to push agent progress to clients. |
+| **WAF** | Well-Architected Framework — Microsoft's five-pillar architecture review (reliability, security, cost, op-ex, performance). |

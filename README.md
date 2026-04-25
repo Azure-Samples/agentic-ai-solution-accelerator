@@ -1,8 +1,8 @@
 # Agentic AI Solution Accelerator
 
-> 📖 **Sharing with a partner? Send them the Pages site, not this README.** The partner-facing entry point is **<https://azure-samples.github.io/agentic-ai-solution-accelerator/>** — search, persona navigation, and rendered Mermaid diagrams. Same markdown, better browsing. This README is what you land on inside a clone (`git clone` or `gh repo create --template`) and when poking at the source on GitHub.
+> **A GitHub template Microsoft partners clone to deliver a customer-specific agentic AI deployment in days.** Best read as a rendered site at <https://azure-samples.github.io/agentic-ai-solution-accelerator/>; this README is what you see inside a clone. Same markdown either way.
 
-> **A GitHub template partners clone to get a customer-specific agentic AI deployment live in days, not months.** Full engagement motion (discovery → UAT → handover → measure) is weeks, and documented honestly below.
+> Full engagement motion (discovery → UAT → handover → measure) is weeks, and documented below.
 
 **Flagship scenario:** Sales Research & Personalized Outreach — a supervisor agent routes a research request across specialist workers (Account Researcher, ICP/Fit Analyst, Competitive Context, Outreach Personalizer) and returns a grounded, citeable sales brief with a CRM-ready outreach draft. Human-in-the-loop gates every CRM write and every email send.
 
@@ -16,7 +16,7 @@
 
 **👉 Scan the full workflow first:** [`docs/partner-workflow.md`](docs/partner-workflow.md) — one-page visual of all 7 stages (discover → scaffold → provision → iterate → UAT → handover → measure) across the three responsibilities. Use it to orient yourself, then come back here and open your lane below.
 
-> **Authority cascade:** when two sources conflict, the more specific one wins — chatmode > playbook / QUICKSTART > this README. (Pages and this README render the same markdown, so "the doc you're reading" is never the conflict; it's always the linked chatmode or playbook that supersedes.) Full chain: [Reference material](#reference-material).
+> **Doc precedence:** when two sources conflict, the more specific one wins — chatmode > playbook / QUICKSTART > this README. (Pages and this README render the same markdown, so "the doc you're reading" is never the conflict; it's always the linked chatmode or playbook that supersedes.) Full chain: [Reference material](#reference-material).
 
 ### 🧭 Delivery Lead — scope, discovery, UAT, handover, value review
 - **Start with:** [`docs/partner-playbook.md`](docs/partner-playbook.md) — end-to-end 7-stage motion, SOW guidance, "what good looks like" per stage
@@ -27,7 +27,7 @@
 
 ### 🛠️ Partner Engineer — scaffold, deploy, iterate, UAT support
 - **Start with:** [`QUICKSTART.md`](QUICKSTART.md) — clone → discover → scaffold → **preflight (`/configure-landing-zone` + `/deploy-to-env`)** → `azd up` → iterate
-- **Then run:** `/scaffold-from-brief` once a solution brief exists (engineer's interactive companion)
+- **Then run:** `/scaffold-from-brief` once a solution brief exists
 - **Also use:** [`docs/getting-started/setup-and-prereqs.md`](docs/getting-started/setup-and-prereqs.md) (authoritative setup, prereqs, `azd up` troubleshooting) · [`docs/enablement/hands-on-lab.md`](docs/enablement/hands-on-lab.md) (7-lab sandbox rehearsal — **strongly recommended before your first customer-facing deployment**)
 - **✅ Done when:** acceptance evals (quality + redteam) pass in the customer's environment and the handover artifacts — repo access, runbook, approver rota, killswitch drill notes — are delivered to customer ops.
 
@@ -43,7 +43,7 @@
 ## Reference material
 
 <details>
-<summary><b>Full precedence when guidance disagrees</b> (click to expand)</summary>
+<summary><b>Full doc precedence when guidance disagrees</b> (click to expand)</summary>
 
 Chatmodes in `.github/chatmodes/` (they drive the executable surface) → `docs/partner-playbook.md` (delivery motion) and `docs/getting-started/setup-and-prereqs.md` (setup mechanics) → this README. The engagement-specific handover packet supersedes the generic `docs/customer-runbook.md` for the customer ops lane.
 
@@ -52,7 +52,7 @@ Chatmodes in `.github/chatmodes/` (they drive the executable surface) → `docs/
 ### 📐 Patterns & compliance
 [Architecture](docs/patterns/architecture/README.md) · [WAF alignment](docs/patterns/waf-alignment/README.md) · [Responsible AI](docs/patterns/rai/README.md) · [Azure AI Landing Zone](docs/patterns/azure-ai-landing-zone/README.md)
 
-### 🔀 Scenario variants (candidate patterns, not drop-ins)
+### 🔀 Scenario variants (re-authoring walkthroughs)
 [single-agent](patterns/single-agent/README.md) · [chat-with-actioning](patterns/chat-with-actioning/README.md) · [sales-research-frontend](patterns/sales-research-frontend/README.md) (reference UI)
 
 ### 📚 Reference scenarios (walkthroughs)
@@ -133,7 +133,7 @@ agentic-ai-solution-accelerator/
 
 Flagship itself (sales research & outreach) is fully runnable under `src/scenarios/sales_research/` — loaded at startup via the top-level `scenario:` block in `accelerator.yaml`. Add a sibling scenario with `python scripts/scaffold-scenario.py <id>`; the framework mounts it the same way the flagship is mounted.
 
-### Candidate pattern variants (not shipped runnable yet)
+### Documented scenario ideas (no runnable starter yet)
 
 - **Zero Trust posture analysis** — chat-based, file-upload (CSV/Excel) assessment with multi-turn iteration. Fits a different solution shape than the flagship (conversational + artifact ingest). Tracked in `docs/agent-specs/README.md`; promote to `docs/references/zero-trust/` when a customer engagement motivates it.
 

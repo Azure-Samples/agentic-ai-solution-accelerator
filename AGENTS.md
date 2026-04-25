@@ -1,9 +1,8 @@
 # Agent guidance — works across Copilot, Cursor, Claude Code, Codex CLI
-#
-# This file mirrors `.github/copilot-instructions.md` for IDE-agnostic tools
-# that read AGENTS.md (OpenAI Codex, Cursor, Claude Code). Keep them in sync.
-# The authoritative copy is `.github/copilot-instructions.md`; this file
-# redirects with the hard rules partners must always enforce.
+
+> **This file documents the rules AI coding agents follow when working in this repo.** If you're a human partner, you don't need to read this — start at [README.md](README.md). If you're an AI agent (Copilot, Cursor, Cline, Claude Code, Codex CLI, etc.), the rules below are mandatory.
+
+The authoritative copy of these rules is `.github/copilot-instructions.md`; this file is the IDE-agnostic mirror. Keep them in sync.
 
 ## Template intent
 This repo is an Azure Agentic AI Solution Accelerator. A partner clones it
@@ -74,11 +73,11 @@ Add a new agent by running `python scripts/scaffold-agent.py <agent_id> --scenar
 ## When adding things
 - **New tool** → `/add-tool` chat mode → creates `src/tools/<tool>.py` with HITL scaffolding + unit test.
 - **New worker agent** → `/add-worker-agent` chat mode → creates the 3-layer module + wires into supervisor.
-- **Per-agent model override** → edit `accelerator.yaml` `models:` block (add a slug entry), then set `scenario.agents[].model: <slug>`. `scripts/sync-models-from-manifest.py` picks it up on the next `azd up` preprovision; Bicep provisions the extra deployment with the shared RAI policy (`@batchSize(1)` serialises the loop); `foundry-bootstrap.py` re-points the Foundry agent and warns about orphan deployments. Lint rules `models_block_shape` + `agent_model_refs_exist` + `template_defaults_match_parameters` enforce shape. Removing the block resets state to template defaults (convergent fixed-point); raw env-var overrides are NOT supported.
+- **Per-agent model override** → edit `accelerator.yaml` `models:` block (add a slug entry), then set `scenario.agents[].model: <slug>`. `scripts/sync-models-from-manifest.py` picks it up on the next `azd up` preprovision; Bicep provisions the extra deployment with the shared RAI policy (`@batchSize(1)` serialises the loop); `foundry-bootstrap.py` re-points the Foundry agent and warns about orphan deployments. Lint rules `models_block_shape` + `agent_model_refs_exist` + `template_defaults_match_parameters` enforce shape. Removing the block resets state to template defaults; raw env-var overrides are NOT supported.
 - **New Azure environment** (partner dev/staging/customer sub) → `/deploy-to-env` chat mode → adds entry to `deploy/environments.yaml`, creates the GitHub Environment, wires OIDC, dispatches a deploy. Never hand-edit `deploy.yml` to add envs; the manifest + `resolve-env` job is the contract. The azd env name is **always** derived from `deploy/environments.yaml` — never set `vars.AZURE_ENV_NAME`.
 - **Preflight a change before commit / PR** → `/explain-change` chat mode → runs `python scripts/explain-change.py` to map the current diff to the specific lint rules, evals, and deploy-pipeline steps it will trigger. Read-only; does not replace CI gates.
 - **Pick or switch landing-zone tier** → `/configure-landing-zone` chat mode → walks the partner through choosing `standalone` / `avm` / `alz-integrated` based on the customer environment and updates `accelerator.yaml` + `infra/` accordingly. Uses exemplars in `infra/avm-reference/` (Tier 2) or the overlay skeleton in `infra/alz-overlay/` (Tier 3). Lint rule `landing_zone_mode_consistent` enforces the match.
-- **Switching pattern** → `/switch-to-variant` chat mode → walks through re-authoring the scenario under `src/scenarios/<new-id>/` toward a `single-agent` or `chat-with-actioning` shape (candidate patterns in `patterns/<variant>/README.md`; not drop-in packages).
+- **Switching pattern** → `/switch-to-variant` chat mode → walks through re-authoring the scenario under `src/scenarios/<new-id>/` toward a `single-agent` or `chat-with-actioning` shape (documented walkthroughs in `patterns/<variant>/README.md`; not drop-in packages).
 - **Starting a new customer engagement** → `/discover-scenario` then `/scaffold-from-brief`.
 
 ## References

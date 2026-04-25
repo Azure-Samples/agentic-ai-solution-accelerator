@@ -79,8 +79,9 @@ to confirm. Do NOT make changes without explicit confirmation.
 - **Important:** the overlay only creates the spoke RG + vNet +
   peering today. Private DNS zone group bindings, private endpoints per
   service, route tables, NSGs, and hub-LAW diagnostic settings are
-  **not yet shipped** (planned for H9). The partner must wire these by
-  hand or wait. Be transparent about this with the customer CCoE.
+  **not yet covered by the overlay** — the partner wires these by
+  hand against the customer's hub. Be transparent about this with the
+  customer CCoE.
 - Run `python scripts/accelerator-lint.py`. The
   `landing_zone_mode_consistent` rule fails if overlay placeholders
   remain, if `infra/main.parameters.alz.json` is missing, or if the

@@ -89,13 +89,13 @@ Run `python scripts/accelerator-lint.py` locally; CI runs the same thing.
 
 ## Variations a partner can choose
 
-These are **candidate patterns**, documented — not drop-in packages. Switching requires re-authoring the scenario under `src/scenarios/<new-id>/`. See `.github/chatmodes/switch-to-variant.chatmode.md` for guidance.
+These are **documented walkthroughs** — not drop-in packages. Switching requires re-authoring the scenario under `src/scenarios/<new-id>/`. See `.github/chatmodes/switch-to-variant.chatmode.md` for guidance.
 
 | Variant | Where it lives today | When to reach for it |
 |---|---|---|
 | **Supervisor routing** | Flagship (`src/scenarios/sales_research/`) | Research / multi-facet briefing. Default. |
-| **Single-agent retrieval** | Candidate: `patterns/single-agent/README.md` | Doc Q&A, policy lookup — one agent + retrieval, no side-effects. |
-| **Chat-with-actioning** | Candidate: `patterns/chat-with-actioning/README.md` | Conversational UX over multi-turn tool use; HITL still gates every side-effect. |
+| **Single-agent retrieval** | Walkthrough: `patterns/single-agent/README.md` | Doc Q&A, policy lookup — one agent + retrieval, no side-effects. |
+| **Chat-with-actioning** | Walkthrough: `patterns/chat-with-actioning/README.md` | Conversational UX over multi-turn tool use; HITL still gates every side-effect. |
 
 Raising past 3–5 coordinated workers is out of scope for v1 — evaluation surface and HITL coordination get unmanageable. Split into separate engagements.
 

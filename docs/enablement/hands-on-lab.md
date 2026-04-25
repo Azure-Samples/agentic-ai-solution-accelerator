@@ -250,7 +250,7 @@ truth.
 **Check your work:**
 
 - Look at the `cost_per_call_usd` line in the
-  `enforce-acceptance.py` output. In the shipped flagship,
+  `enforce-acceptance.py` output. In the flagship scenario,
   `src/accelerator_baseline/cost.py::record_call_cost()` is not
   called from the workflow — but `evals/quality/run.py` still
   records a **best-effort** `cost_usd` per case (token-pricing

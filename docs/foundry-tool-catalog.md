@@ -33,9 +33,8 @@ OpenAPI, MCP, etc.), the current path is **one of**:
 2. Extend `scripts/foundry-bootstrap.py` in the cloned repo to call `AIProjectClient.agents.create_agent(..., tools=[...])` with the tool schemas the engagement needs, and keep the tool list in the scenario manifest.
 
 There is no shipped scaffold for path 2 yet — partners wire it per
-engagement. That's honest scope: the accelerator ships the
-orchestration + grounding + HITL baseline; Foundry-attached tools are
-a per-engagement choice.
+engagement. The accelerator ships the orchestration + grounding +
+HITL baseline; Foundry-attached tools are a per-engagement choice.
 
 ---
 

@@ -2,15 +2,17 @@
 
 > Partner's 5-step path from "new customer meeting" to "working agent in customer Azure."
 
-> **New here?** If you haven't read [Orientation](docs/getting-started/index.md), one paragraph: this is a Microsoft-published template repo partners fork per customer engagement to deliver an agentic AI solution on **Azure AI Foundry + Microsoft Agent Framework**. Otherwise, start at Step 1 — this page is the canonical step-by-step.
+> **Before you start:** you'll authenticate against the customer's Azure tenant in Step 5 (`az login --tenant <customer-tenant-id>` + `azd up`), so confirm you have the rights to create resources there and that the customer has approved expected `azd up` cost. Re-read this before Step 5 — the rest of the steps are local.
 
-> **Engineer joining after discovery is complete?** Jump straight to [Step 3 — Scaffold the solution from the brief](#step-3--scaffold-the-solution-from-the-brief). Steps 1–2 explain how the engagement began (the delivery lead's work); if `docs/discovery/solution-brief.md` already exists in the repo, you're past that.
+---
 
-> **First time on this accelerator?** Strongly recommended to complete [`docs/enablement/hands-on-lab.md`](docs/enablement/hands-on-lab.md) in a sandbox subscription **before** your first customer-facing deployment. The happy path below assumes you've run it once end-to-end.
+## Before Step 1 — read these if any apply to you
 
-> **Scoping an engagement or running the discovery workshop?** Read [`docs/partner-playbook.md`](docs/partner-playbook.md) for the full 7-stage motion; this QUICKSTART is the mechanics summary.
-
-> **Customer already provided a PRD / BRD / functional spec?** Run `/ingest-prd` before `/discover-scenario` to pre-draft the brief from the source doc — full flow: [`docs/discovery/how-to-use.md`](docs/discovery/how-to-use.md) §"If the customer already provided a PRD / BRD / functional spec".
+- **New here?** This is a Microsoft-published template repo partners fork per customer engagement to deliver an agentic AI solution on **Azure AI Foundry + Microsoft Agent Framework**. Skim [Orientation](docs/getting-started/index.md) once.
+- **First time on this accelerator?** Strongly recommended to complete [`docs/enablement/hands-on-lab.md`](docs/enablement/hands-on-lab.md) in a sandbox subscription **before** your first customer-facing deployment. The happy path below assumes you've run it once end-to-end.
+- **Engineer joining after discovery is complete?** Jump straight to [Step 3 — Scaffold the solution from the brief](#step-3--scaffold-the-solution-from-the-brief).
+- **Scoping an engagement or running the discovery workshop?** Read [`docs/partner-playbook.md`](docs/partner-playbook.md) for the full 7-stage motion; this QUICKSTART is the mechanics summary.
+- **Customer already provided a PRD / BRD / functional spec?** Run `/ingest-prd` before `/discover-scenario` to pre-draft the brief — full flow: [`docs/discovery/how-to-use.md`](docs/discovery/how-to-use.md).
 
 ---
 
@@ -132,7 +134,7 @@ Any red light blocks merge. Green = `azd deploy` against customer env.
 
 ---
 
-## Step 7 (optional) — Ship a UI
+## Step 7 — Ship a UI
 
 Steps 1–6 give you a working SSE API. To put a UI in front of it for your
 customer, fork the [frontend pattern](patterns/sales-research-frontend/README.md) —

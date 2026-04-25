@@ -6,7 +6,7 @@
 // replacement** for infra/modules/container-app.bicep — same param
 // signature, same outputs — so a partner can `cp
 // infra/avm-reference/container-app.bicep infra/modules/container-app.bicep`
-// during vibecoding without touching main.bicep.
+// during local iteration without touching main.bicep.
 //
 // Two AVM modules compose the workload:
 //   - br/public:avm/res/app/managed-environment:0.13.0
