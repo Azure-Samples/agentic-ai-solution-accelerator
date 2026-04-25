@@ -170,6 +170,14 @@ a minimal React + Vite + TypeScript starter that consumes `/research/stream`
 and is deployable to Azure Static Web Apps. It's reference material, not a
 finished product: the customer's real UX is the partner's value-add.
 
+**Before customer-facing**, you also wire — none of which the accelerator ships:
+
+- **End-user auth** — Entra Easy Auth on Container Apps, App Gateway + WAF, or Front Door. The shipped API has no end-user auth dependency.
+- **State persistence** — Cosmos / Postgres / Redis / IndexedDB if the UX needs run history, multi-user separation, or durable HITL state.
+- **HITL approval surface** — Logic Apps / Teams adaptive card / ServiceNow that `HITL_APPROVER_ENDPOINT` resolves to. The accelerator ships the contract, not the approver UI.
+
+See `docs/partner-playbook.md` "What the accelerator gives you vs. what you still own" for the full split.
+
 If your customer already has an internal portal or Power Platform surface,
 the same pattern shows how to call the SSE endpoint from any client; lift
 `src/services/researchClient.ts` and the `StreamEvent` types in
