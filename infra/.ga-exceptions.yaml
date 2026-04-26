@@ -12,6 +12,17 @@
 # accelerator cannot currently claim "fully GA" for that one resource.
 
 exceptions:
+  - resource_type: Microsoft.CognitiveServices/accounts
+    api_version: 2025-04-01-preview
+    reason: >-
+      The `allowProjectManagement` property required to host the Foundry
+      `accounts/projects` child resource is not exposed in the GA 2024-10-01
+      shape; ARM silently drops it, then the project deploy fails with
+      "BadRequest: Project can only created under AIServices Kind account
+      with allowProjectManagement set to true." Bumping the parent account to
+      the same preview api-version as the project child resolves this. Model
+      deployments and RAI policies remain on GA 2024-10-01.
+    revisit_by: 2026-10
   - resource_type: Microsoft.CognitiveServices/accounts/projects
     api_version: 2025-04-01-preview
     reason: >-
