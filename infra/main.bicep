@@ -37,8 +37,8 @@ param privateDnsZoneIds object = {
   search: ''
 }
 
-@description('Comma-separated list of allowed CORS origins for the API (e.g. "https://app.contoso.com,https://swa-app.azurestaticapps.net"). Empty default = no cross-origin browser calls (server-to-server only). Use "*" only in sandbox subscriptions. Wire via `azd env set ALLOWED_ORIGINS=...` before `azd up` if your customer has a UI hosted on a different origin than the API.')
-param allowedOrigins string = ''
+@description('Comma-separated list of allowed CORS origins for the API (e.g. "https://app.contoso.com,https://swa-app.azurestaticapps.net"). Defaults to the Vite dev server origin (http://localhost:5173) so the bundled reference UI under `patterns/` works against a deployed API out of the box during lab walkthroughs — localhost is never a public origin so this is safe to ship as a default. For production, override via `azd env set ALLOWED_ORIGINS=https://<your-swa>.azurestaticapps.net` before `azd up`. Use "*" only in sandbox subscriptions.')
+param allowedOrigins string = 'http://localhost:5173'
 
 // Foundry's AIServices-kind account PE registers THREE DNS suffixes
 // (see modules/foundry.bicep comment). Filter the object to the

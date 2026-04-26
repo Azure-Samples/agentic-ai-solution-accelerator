@@ -7,6 +7,6 @@
     "enablePrivateLink": { "value": false },
     "externalIngress": { "value": true },
     "scenarioId": { "value": "${ACCELERATOR_SCENARIO_ID=sales-research}" },
-    "allowedOrigins": { "value": "${ALLOWED_ORIGINS=}" }
+    "allowedOrigins": { "value": "${ALLOWED_ORIGINS=http://localhost:5173}" }
   }
 }

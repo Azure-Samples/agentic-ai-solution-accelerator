@@ -66,16 +66,21 @@ For a CI-driven flow, see the
 
 The browser calls the API directly, so the API has to allow the SWA origin.
 The accelerator's API ships with CORS middleware controlled by the
-`ALLOWED_ORIGINS` env var (see `src/main.py`); wire your SWA hostname in
-before deploying:
+`ALLOWED_ORIGINS` env var (see `src/main.py`).
+
+The Bicep default already includes `http://localhost:5173` (the Vite dev
+server) so `npm run dev` against a deployed API works without any extra
+wiring during the lab walkthrough. **For a SWA deployment**, override with
+your hostname before deploying:
 
 ```bash
 azd env set ALLOWED_ORIGINS "https://<your-swa>.azurestaticapps.net"
 azd provision
 ```
 
-For multiple origins (preview slots, custom domains), pass a comma-separated
-list. `staticwebapp.config.json` also ships an optional `/api/*` rewrite — if
+(That replaces the localhost default. To keep both, pass a comma-separated
+list: `"http://localhost:5173,https://<your-swa>.azurestaticapps.net"`.)
+`staticwebapp.config.json` also ships an optional `/api/*` rewrite — if
 you'd rather front the API through SWA's reverse proxy than expose it to
 the browser, edit the `rewrite` to point at your hostname; otherwise delete
 that route and rely on the CORS path above.
