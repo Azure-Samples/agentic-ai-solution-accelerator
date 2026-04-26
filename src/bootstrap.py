@@ -176,8 +176,23 @@ async def _bootstrap_foundry(bundle: ScenarioBundle) -> None:
         deployment = model_map.get("default", "")
         work.append((agent.foundry_name, deployment, instructions))
 
-    from azure.identity.aio import DefaultAzureCredential
+    # SDK contract (GA-only — enforced by scripts/accelerator-lint.py
+    # `sdks_pinned_to_ga` against ga-versions.yaml):
+    #
+    #   azure-ai-agents >=1.0.0,<2.0.0  -> AgentsClient
+    #     Imperative agent CRUD: list_agents / create_agent / update_agent.
+    #     This is the surface we use here.
+    #
+    #   azure-ai-projects >=1.0.0,<3.0.0 -> AIProjectClient
+    #     In 2.x, `client.agents` is `AgentsOperations` — a *declarative
+    #     versioned* surface (list / create_version_from_manifest / ...),
+    #     NOT the imperative CRUD we want. Do not call client.agents.list_agents
+    #     on AIProjectClient; it does not exist on 2.x.
+    #
+    # If a future SDK bump moves these methods, update both this comment and
+    # ga-versions.yaml in the same change so the lint stays honest.
     from azure.ai.agents.aio import AgentsClient
+    from azure.identity.aio import DefaultAzureCredential
 
     cred = DefaultAzureCredential()
     try:
