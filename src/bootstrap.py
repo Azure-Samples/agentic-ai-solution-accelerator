@@ -179,67 +179,126 @@ async def _bootstrap_foundry(bundle: ScenarioBundle) -> None:
     # SDK contract (GA-only — enforced by scripts/accelerator-lint.py
     # `sdks_pinned_to_ga` against ga-versions.yaml):
     #
-    #   azure-ai-agents >=1.0.0,<2.0.0  -> AgentsClient
-    #     Imperative agent CRUD: list_agents / create_agent / update_agent.
-    #     This is the surface we use here.
+    #   azure-ai-projects >=2.0.0,<3.0.0 -> AIProjectClient.agents
+    #     The *new* Foundry "Agents (versions)" surface. Each instructions
+    #     edit is a new version; "latest" is the active one. Methods used:
+    #       agents.list()                 — enumerate agents in the project
+    #       agents.get_version(name, ver) — fetch latest definition
+    #       agents.create_version(name, definition=PromptAgentDefinition(
+    #           model=..., instructions=...))
+    #     The first create_version() implicitly creates the agent envelope.
     #
-    #   azure-ai-projects >=1.0.0,<3.0.0 -> AIProjectClient
-    #     In 2.x, `client.agents` is `AgentsOperations` — a *declarative
-    #     versioned* surface (list / create_version_from_manifest / ...),
-    #     NOT the imperative CRUD we want. Do not call client.agents.list_agents
-    #     on AIProjectClient; it does not exist on 2.x.
+    #   azure-ai-agents >=1.0.0,<2.0.0  -> AgentsClient
+    #     The *legacy* Foundry Assistants surface. Kept as a transitive dep
+    #     of agent-framework, and used here only to delete any orphaned
+    #     Assistants left over from earlier accelerator versions so the
+    #     portal stops showing the "Update your agents" migration banner.
     #
     # If a future SDK bump moves these methods, update both this comment and
     # ga-versions.yaml in the same change so the lint stays honest.
-    from azure.ai.agents.aio import AgentsClient
+    from azure.ai.projects.aio import AIProjectClient
+    from azure.ai.projects.models import PromptAgentDefinition
+    from azure.core.exceptions import ResourceNotFoundError
     from azure.identity.aio import DefaultAzureCredential
+
+    desired_names = {name for name, _, _ in work}
 
     cred = DefaultAzureCredential()
     try:
-        client = AgentsClient(endpoint=endpoint, credential=cred)
+        proj = AIProjectClient(endpoint=endpoint, credential=cred)
         try:
-            existing: dict[str, Any] = {}
+            existing_names: set[str] = set()
 
             async def _list() -> None:
-                async for a in client.list_agents():
+                async for a in proj.agents.list():
                     if a.name:
-                        existing[a.name] = a
+                        existing_names.add(a.name)
 
             await _retry(
                 _list,
-                name="foundry.list_agents",
+                name="foundry.agents.list",
                 budget_seconds=_retry_budget_seconds(),
             )
 
             for name, deployment, instructions in work:
-                if name in existing:
-                    agent_obj = existing[name]
+                # Decide whether a fresh version is needed: skip the write
+                # when the latest version already matches our desired
+                # (model, instructions) pair so partners don't churn version
+                # history on every cold start.
+                needs_new_version = True
+                if name in existing_names:
+                    try:
+                        latest = await proj.agents.get_version(name, "latest")
+                        defn = getattr(latest, "definition", None)
+                        cur_model = getattr(defn, "model", None)
+                        cur_instr = getattr(defn, "instructions", None)
+                        if cur_model == deployment and cur_instr == instructions:
+                            needs_new_version = False
+                    except ResourceNotFoundError:
+                        # Envelope exists but no version yet — still need
+                        # to create one.
+                        needs_new_version = True
 
-                    async def _update(_id=agent_obj.id, _dep=deployment, _ins=instructions) -> None:
-                        await client.update_agent(
-                            agent_id=_id, model=_dep, instructions=_ins,
-                        )
-
-                    await _retry(
-                        _update,
-                        name=f"foundry.update.{name}",
-                        budget_seconds=_retry_budget_seconds(),
+                if not needs_new_version:
+                    logger.info(
+                        "bootstrap.foundry: %s up-to-date (model=%s)",
+                        name, deployment,
                     )
-                    logger.info("bootstrap.foundry: updated %s (model=%s)", name, deployment)
-                else:
-                    async def _create(_name=name, _dep=deployment, _ins=instructions) -> None:
-                        await client.create_agent(
-                            name=_name, model=_dep, instructions=_ins,
-                        )
+                    continue
 
-                    await _retry(
-                        _create,
-                        name=f"foundry.create.{name}",
-                        budget_seconds=_retry_budget_seconds(),
+                async def _create_version(
+                    _name=name, _dep=deployment, _ins=instructions,
+                ) -> None:
+                    await proj.agents.create_version(
+                        agent_name=_name,
+                        definition=PromptAgentDefinition(
+                            model=_dep, instructions=_ins,
+                        ),
                     )
-                    logger.info("bootstrap.foundry: created %s (model=%s)", name, deployment)
+
+                verb = "updated" if name in existing_names else "created"
+                await _retry(
+                    _create_version,
+                    name=f"foundry.{verb}.{name}",
+                    budget_seconds=_retry_budget_seconds(),
+                )
+                logger.info(
+                    "bootstrap.foundry: %s %s (model=%s)",
+                    verb, name, deployment,
+                )
         finally:
-            await client.close()
+            await proj.close()
+
+        # ---- legacy cleanup pass ----------------------------------------
+        # Delete any orphaned legacy Assistants (created by earlier
+        # accelerator versions via azure-ai-agents.AgentsClient) whose
+        # name collides with one of our desired agents. On a fresh
+        # subscription this is a no-op. Failures are logged but not fatal
+        # — provisioning succeeded above and the runtime targets the new
+        # versioned surface, so an orphaned Assistant is at worst a
+        # cosmetic portal nag.
+        try:
+            from azure.ai.agents.aio import AgentsClient
+
+            legacy = AgentsClient(endpoint=endpoint, credential=cred)
+            try:
+                async for a in legacy.list_agents():
+                    if a.name in desired_names and a.id:
+                        try:
+                            await legacy.delete_agent(agent_id=a.id)
+                            logger.info(
+                                "bootstrap.foundry: deleted legacy Assistant %s",
+                                a.name,
+                            )
+                        except Exception as exc:  # pragma: no cover - best effort
+                            logger.warning(
+                                "bootstrap.foundry: could not delete legacy "
+                                "Assistant %s: %s", a.name, exc,
+                            )
+            finally:
+                await legacy.close()
+        except Exception as exc:  # pragma: no cover - best effort
+            logger.warning("bootstrap.foundry: legacy cleanup skipped: %s", exc)
     finally:
         await cred.close()
 
