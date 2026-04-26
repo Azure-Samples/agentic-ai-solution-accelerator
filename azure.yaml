@@ -20,7 +20,13 @@ infra:
   module: main
 hooks:
   postdeploy:
-    shell: sh
-    run: |
-      echo "Deployed. Acceptance evals will run on your next PR."
-      echo "Dashboards: see infra/dashboards/roi-kpis.json, opened by 'azd monitor'."
+    posix:
+      shell: sh
+      run: |
+        echo "Deployed. Acceptance evals will run on your next PR."
+        echo "Dashboards: see infra/dashboards/roi-kpis.json, opened by 'azd monitor'."
+    windows:
+      shell: pwsh
+      run: |
+        Write-Host "Deployed. Acceptance evals will run on your next PR."
+        Write-Host "Dashboards: see infra/dashboards/roi-kpis.json, opened by 'azd monitor'."
