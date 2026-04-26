@@ -13,6 +13,16 @@ COPY src ./src
 # the runtime image MUST ship it. scripts/accelerator-lint.py::dockerfile_copies_manifest
 # enforces this invariant.
 COPY accelerator.yaml ./
+# docs/agent-specs/<foundry_name>.md hold the Instructions body for every
+# scenario.agents[] entry. src.bootstrap reads them at FastAPI startup to
+# create-or-update Foundry agents (replacing the previous postprovision azd
+# hook). scripts/accelerator-lint.py::dockerfile_copies_agent_specs enforces
+# this invariant.
+COPY docs/agent-specs ./docs/agent-specs
+# data/ holds seed JSON files referenced by scenario.retrieval.indexes[].seed.
+# src.bootstrap uploads them at startup so the AI Search index is queryable
+# the moment /healthz returns 200.
+COPY data ./data
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir .
 

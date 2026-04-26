@@ -99,7 +99,7 @@ CATEGORIES: list[Category] = [
             "lint: manifest_present, scenario_manifest_valid, agent_has_golden_case, acceptance_wired_to_evals, agent_specs_no_hardcoded_model, models_block_shape, agent_model_refs_exist",
             "evals: acceptance thresholds come from accelerator.yaml -> acceptance; changes here move the quality gate",
             "runtime: src/main.py reads this file at startup to mount /<scenario.endpoint.path>; path changes are breaking",
-            "models: changes to the `models:` block drive scripts/sync-models-from-manifest.py on the next `azd up` preprovision and re-shape foundry.bicep deployments (slug->deployment_name map). Removing the block converges back to template defaults (gpt-5-mini / 2025-08-07 / cap 30); raw env-var overrides of the default are NOT supported.",
+            "models: changes to the `models:` block are parsed at compile time by `infra/main.bicep` via `loadYamlContent` and re-shape foundry.bicep deployments (slug->deployment_name map). Removing the block converges back to template defaults (gpt-5-mini / 2025-08-07 / cap 30); raw env-var overrides of the default are NOT supported.",
         ],
         patterns=[
             "accelerator.yaml",
@@ -148,7 +148,7 @@ CATEGORIES: list[Category] = [
         impact=[
             "lint: bicep_has_model_deployment, bicep_has_content_filter (raiPolicies), no_preview_api_versions, key_vault_rbac_only, container_app_uses_managed_identity, uses_default_azure_credential, shared_assets_not_scenario_specific",
             "deploy: next `azd up` will re-provision affected resources; partners may hit quota or region constraints",
-            "RBAC: Search roles must be Search Service Contributor + Search Index Data Contributor (seed-search.py requires Contributor to upload docs)",
+            "RBAC: Search roles must be Search Service Contributor + Search Index Data Contributor (the in-app FastAPI startup bootstrap, src/bootstrap.py, requires Contributor to upload seed docs as the workload MI)",
         ],
         patterns=[
             "infra/**/*.bicep",
@@ -267,7 +267,7 @@ CATEGORIES: list[Category] = [
         title="Foundry agent specs (docs/agent-specs/*.md)",
         impact=[
             "lint: agent_specs_no_hardcoded_model — specs must not pin a model; model_deployment_name comes from Bicep outputs",
-            "note: these docs are the bootstrap source for scripts/foundry-bootstrap.py; keep the system-instructions section in sync with what is configured in the Foundry portal",
+            "note: these docs are the bootstrap source for src/bootstrap.py (FastAPI startup); keep the system-instructions section in sync with what is configured in the Foundry portal",
         ],
         patterns=[
             "docs/agent-specs/*.md",

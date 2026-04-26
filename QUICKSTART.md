@@ -46,13 +46,6 @@ VS Code opens with Copilot already configured via `.github/copilot-instructions.
 - PR evals gate merges; a post-deploy regression suite guards `main`
 - Content filters configured via IaC, not the portal
 
-Before Step 2, initialize the repo-local hook environment for this clone:
-
-- **Windows:** `pwsh -File scripts/setup-hooks.ps1`
-- **macOS/Linux:** `sh scripts/setup-hooks.sh`
-
-This is a one-time local bootstrap that creates `.azd-hooks/.venv` for the `azd` `preprovision` / `postprovision` hooks. If you skip it, `azd up` fails fast with an instruction to run it.
-
 ---
 
 ## Step 2 — Run the discovery workshop
@@ -129,10 +122,10 @@ Before `azd up`, make two decisions and wire one piece of OIDC plumbing. These t
 
 > **Authoring agent instructions.** Agent system instructions live in
 > `docs/agent-specs/<agent>.md` under the `## Instructions` heading —
-> edit those Markdown files, not Python. On `azd up`,
-> `scripts/foundry-bootstrap.py` syncs each spec verbatim to the
-> Foundry portal. `prompt.py` is for *per-request* input construction
-> only.
+> edit those Markdown files, not Python. On `azd up`, the FastAPI
+> startup bootstrap (`src/bootstrap.py`) syncs each spec verbatim to
+> the Foundry portal once the Container App boots. `prompt.py` is for
+> *per-request* input construction only.
 
 ```bash
 # Replace <customer-tenant-id> with the customer's Azure tenant GUID, and

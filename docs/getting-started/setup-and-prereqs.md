@@ -37,28 +37,23 @@ You will need:
 | Azure Developer CLI (`azd`) `>= 1.10` | one-shot provision + deploy |
 | GitHub CLI (`gh`) `>= 2.50` | repo bootstrap + secrets |
 | Git | template clone + branch work |
-| PowerShell 7 *(Windows only)* | required because Windows `azd` hooks run with `pwsh` |
-| Python `3.11+` | repo-local hook venv for `azd` hooks |
+| PowerShell 7 *(Windows only)* | required because some `azd` lifecycle hooks (e.g. `postdeploy`) run with `pwsh` |
 | Docker or Podman *(optional)* | only needed for local container builds; `azd up` uses ACR remote build by default |
 
-Python contract:
-
-- **Any CPython 3.11+** that's on your `PATH` as `python` (Windows) or `python3` (macOS/Linux). This includes python.org installers, winget, your distro's package manager, scoop, and **activated Conda environments** — they're all real interpreters from `setup-hooks`' perspective. Tested on **3.11–3.13**; newer minor versions may work but aren't guaranteed.
-- The Microsoft Store Python alias (`%LOCALAPPDATA%\Microsoft\WindowsApps\python.exe`) is **not** supported — it's a stub installer, not a real interpreter. `setup-hooks.ps1` rejects it automatically.
-
-`setup-hooks` creates a self-contained venv at `.azd-hooks/.venv` from your resolved interpreter. The venv is what the `azd` `preprovision` / `postprovision` hooks use at runtime — Conda activation is **not** required during `azd up`, only when you run `setup-hooks`. If you later switch to a different base Python, rerun `setup-hooks` to rebuild `.azd-hooks/.venv`.
-
-Before your first `azd up` in a fresh clone, initialize the repo-local hook environment:
-
-- **Windows:** `pwsh -File scripts/setup-hooks.ps1`
-- **macOS/Linux:** `sh scripts/setup-hooks.sh`
-
-`setup-hooks` installs the minimal Python deps (`requirements-hooks.txt`) used by the `preprovision` / `postprovision` hooks. If your org blocks PyPI, configure `PIP_INDEX_URL`, `PIP_TRUSTED_HOST`, and proxy settings before running it.
+> **No Python required to deploy.** Earlier versions of this accelerator required a repo-local Python hook venv (`scripts/setup-hooks`) before `azd up`. That hook surface is gone. `azd up` now goes from a fresh clone straight to a working deployment with no Python on the partner's machine — provisioning is pure Bicep, and post-provision tasks (Foundry agent creation, AI Search index seeding) run inside the Container App at FastAPI startup. Python 3.11+ is still required if you want to **work in the repo locally** — running `pytest`, `scripts/accelerator-lint.py`, scenario scaffolding, or `uvicorn src.main:app` for local dev. See "Repo development (optional)" below.
 
 Model quota: the accelerator deploys a `GlobalStandard` Azure OpenAI model
-(default `gpt-5-mini`, 30k TPM — see `infra/main.bicep` params `modelName`,
-`modelDeploymentName`, `modelCapacity`). Confirm quota in your target region
-before running `azd up`, or override the params for a different model.
+(default `gpt-5-mini`, 30k TPM — overrideable through the `accelerator.yaml`
+`models:` block; see "Customizing models per agent" below). Confirm quota in
+your target region before running `azd up`.
+
+### Repo development (optional)
+
+Skip this section unless you plan to run scripts, tests, or the FastAPI app from your machine.
+
+- **Any CPython 3.11+** that resolves on `PATH` as `python` (Windows) or `python3` (macOS/Linux). python.org installers, winget, your distro's package manager, scoop, and **activated Conda environments** all work. Tested on **3.11–3.13**.
+- The Microsoft Store Python alias (`%LOCALAPPDATA%\Microsoft\WindowsApps\python.exe`) is **not** a real interpreter — install one of the above instead, or activate a Conda env.
+- Install the dev extras: `pip install -e ".[dev]"` from the repo root.
 
 ## Required GitHub secrets and variables
 
@@ -133,17 +128,11 @@ gh repo create <your-handle>-accel-sandbox --template Azure-Samples/agentic-ai-s
 cd <your-handle>-accel-sandbox
 code .
 
-# 2. Initialize the repo-local hook environment (required once per clone)
-# Windows:
-#   pwsh -File scripts/setup-hooks.ps1
-# macOS/Linux:
-#   sh scripts/setup-hooks.sh
-
-# 3. Authenticate to your SANDBOX subscription (not a customer subscription for the smoke-test)
+# 2. Authenticate to your SANDBOX subscription (not a customer subscription for the smoke-test)
 az login --tenant <your-sandbox-tenant-id>
 azd auth login
 
-# 4. Provision + deploy
+# 3. Provision + deploy
 azd env new sandbox-dev
 azd up           # ~10-15 min: Foundry + Search + KV + ACA + App Insights
 ```
@@ -224,26 +213,18 @@ scenario:
 
 How it flows:
 
-1. **preprovision hook** (`scripts/sync-models-from-manifest.py`) reads the
-   `models:` block and writes azd env vars: the default entry drives the
-   existing `AZURE_AI_FOUNDRY_MODEL_NAME/VERSION/MODEL/CAPACITY` params, and
-   non-default entries are packed into `AZURE_AI_FOUNDRY_EXTRA_DEPLOYMENTS_JSON`.
-   The sync is convergent — removing the block from the manifest resets
-   all managed env vars back to the template defaults so state doesn't
-   drift across add/remove cycles.
-2. **Bicep** (`infra/modules/foundry.bicep`) provisions the default deployment
-   as before, then loops over the JSON array (`@batchSize(1)` — one at a
-   time to avoid Foundry capacity-queue rejections) to create each extra
-   deployment bound to the same shared RAI (content filter) policy. Output
-   `AZURE_AI_FOUNDRY_MODEL_MAP` is a `slug -> deployment_name` object.
-3. **postprovision** (`scripts/foundry-bootstrap.py`) resolves each Foundry
-   agent's `scenario.agents[].model` slug via the map (or `default` when
-   omitted) and creates/updates the agent with that deployment name. It also
-   scans the Foundry account for **orphan deployments** — deployments that
-   exist but are no longer in the manifest (ARM incremental mode doesn't
-   delete them automatically) — and prints the concrete
-   `az cognitiveservices account deployment delete` command per orphan so
-   the partner can reclaim quota.
+1. **Bicep** parses `accelerator.yaml` at compile time via `loadYamlContent`
+   in `infra/main.bicep`, splits the `models:` block into a default entry
+   plus extras, and provisions each in `infra/modules/foundry.bicep`
+   (`@batchSize(1)` — one at a time to avoid Foundry capacity-queue
+   rejections) bound to the same shared RAI (content filter) policy. Output
+   `AZURE_AI_FOUNDRY_MODEL_MAP` is a `slug -> deployment_name` object,
+   passed into the Container App as the `AZURE_AI_FOUNDRY_MODEL_MAP` env
+   var.
+2. **FastAPI startup** (`src/bootstrap.py`) reads the model map and resolves
+   each Foundry agent's `scenario.agents[].model` slug (or `default` when
+   omitted) before calling `create_or_update` against Foundry. The bootstrap
+   is idempotent — restarts re-converge to the manifest.
 
 Lint enforcement (both BLOCKING):
 
@@ -253,13 +234,10 @@ Lint enforcement (both BLOCKING):
 - `agent_model_refs_exist` — every `scenario.agents[].model` references a declared
   slug; omitting the field falls through to slug `default`.
 
-Omitting the whole `models:` block is supported: sync-models-from-manifest
-then resets all managed env vars to the template defaults (gpt-5-mini /
-2025-08-07 / capacity 30) — the same end state whether the block was ever
-there or not. Partners who want to override the default deployment MUST
-use the `models:` block with a single default entry — overriding via raw
-env vars is unsupported because preprovision would clobber them on every
-`azd up`.
+Omitting the whole `models:` block is supported: `infra/main.bicep` falls back
+to a built-in default (gpt-5-mini / 2025-08-07 / capacity 30) — the same end
+state whether the block was ever there or not. Partners who want a different
+default deployment MUST use the `models:` block with a single default entry.
 
 ## CI chain
 
@@ -302,32 +280,34 @@ disabled public access when requested) won't fight you.
 
 ## Troubleshooting — top 5
 
-1. **`hook environment not initialized` / `python not found` / `python too old`** — run the one-time hook bootstrap for this clone:
-   - Windows: `pwsh -File scripts/setup-hooks.ps1`
-   - macOS/Linux: `sh scripts/setup-hooks.sh`
-   On Windows, this requires **PowerShell 7** and any **CPython 3.11+** that resolves on `PATH` as `python` (python.org, winget, scoop, or an **activated Conda env**). The Microsoft Store Python alias (`%LOCALAPPDATA%\Microsoft\WindowsApps\python.exe`) is rejected automatically — install a real interpreter or activate a Conda env first. If your org blocks PyPI, configure `PIP_INDEX_URL` / proxy settings before running.
-2. **`preflight: model deployment 'gpt-5-mini' not found`** — the Foundry
-   bootstrap (`scripts/foundry-bootstrap.py`) runs after `azd up` and verifies
-   the deployment exists. If you changed `modelDeploymentName` or the region
-   lacks quota, re-run `azd up` after fixing `infra/main.parameters.json` or
-   requesting a quota increase for `GlobalStandard <model>`.
-3. **`preflight: has no RAI (content filter) policy bound`** — Bicep attaches
+1. **`preflight: model deployment 'gpt-5-mini' not found`** — the FastAPI
+   startup bootstrap (`src/bootstrap.py`) verifies the deployment exists
+   before agents are created. If you changed the `models:` block in
+   `accelerator.yaml` or the region lacks quota, edit the manifest and
+   re-run `azd up` after fixing it or requesting a quota increase for
+   `GlobalStandard <model>`.
+2. **`preflight: has no RAI (content filter) policy bound`** — Bicep attaches
    the default policy; if it drifted (portal edit, partial deploy), re-run
    `azd up` so the ARM deployment reapplies. The lint rule
    `content_filter_attached` catches this at template-edit time.
-4. **`scenario_manifest_valid: module:attr does not resolve`** — the
+3. **`scenario_manifest_valid: module:attr does not resolve`** — the
    `scenario:` block in `accelerator.yaml` points at an import path the lint
    can't find. Verify the file exists under `src/<package path>/<module>.py`
    and the attribute is defined at module scope (the lint walks the AST; no
    import is attempted, so side-effect errors in the module don't hide the
    real issue).
-5. **`secrets-doc` lint failure** — a workflow added a `secrets.NEW_NAME` or
+4. **`secrets-doc` lint failure** — a workflow added a `secrets.NEW_NAME` or
    `vars.NEW_NAME` reference, but no entry was added to the tables above.
    Add it before merging.
-6. **`azd up` completes but no API_URL emitted** — the bicep outputs
-   (`API_URL` or `SERVICE_API_URI`) are empty. Confirm the Container App
-   deployment succeeded in the Azure portal; the most common cause is the
-   image build failing silently in an earlier `azd up` run. `azd deploy`
-   rebuilds and redeploys the app without re-provisioning infra.
-7. **`postprovision` fails with 403 / Forbidden / "AuthorizationFailed"** — Bicep finished and the `foundry-bootstrap.py` or `seed-search.py` hook hit Foundry/Search before the role assignment propagated. RBAC propagation can lag 1–3 minutes. Wait, then rerun `azd provision` (idempotent — re-runs the hooks without re-deploying infra). If it still fails after a second attempt, confirm the user-assigned MI has `Cognitive Services OpenAI User` + `Azure AI Developer` on the Foundry account and `Search Index Data Contributor` on AI Search.
+5. **`azd up` completes but `/healthz` returns 503 / startup probe fails** —
+   the FastAPI startup bootstrap (`src/bootstrap.py`) is failing inside the
+   Container App. The most common cause is RBAC propagation lag: the user-
+   assigned MI's role assignments (`Cognitive Services OpenAI User` +
+   `Azure AI Developer` on Foundry, `Search Index Data Contributor` on AI
+   Search) sometimes take 1–3 minutes to propagate. The startup probe
+   budget is 10 minutes (60 retries × 10s) which absorbs this in normal
+   conditions; if the probe still fails, inspect Container App logs in App
+   Insights (`traces | where operation_Name == "lifespan.startup"`) and
+   confirm the role assignments are present. `azd deploy` (not full `azd up`)
+   triggers a revision restart that re-runs bootstrap.
 

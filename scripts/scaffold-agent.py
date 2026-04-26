@@ -148,7 +148,7 @@ AGENT_TEMPLATES: dict[str, Callable[[str, str, str], str]] = {
 SPEC_TEMPLATE = """# {agent_name}
 
 Foundry agent spec for the ``{sid}`` scenario's ``{aid}`` worker. Instructions
-below are synced to the Foundry portal by ``scripts/foundry-bootstrap.py``;
+below are synced to the Foundry portal by ``src/bootstrap.py``;
 the model comes from ``AZURE_AI_FOUNDRY_MODEL`` (emitted by Bicep) - do NOT
 add a ``**Model:**`` field here (the lint blocks it).
 

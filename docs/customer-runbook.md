@@ -94,10 +94,10 @@ the partner's handover notes for the exact value. Inside the group:
 
 - **Foundry (AIServices) account + project** — hosts agent definitions
   and model deployment(s). Model deployment names come from
-  `accelerator.yaml.models[]` via `scripts/sync-models-from-manifest.py`.
+  `accelerator.yaml.models[]` via Bicep `loadYamlContent` at compile time.
 - **Azure AI Search** — index(es) declared in
   `accelerator.yaml → scenario.retrieval.indexes[]`. Seeded by
-  `scripts/seed-search.py` in the `azd` postprovision hook.
+  `src/bootstrap.py` at FastAPI startup (replaces the previous postprovision azd hook).
 - **Key Vault** — present for partner-added secrets, accessed via
   RBAC + Managed Identity.
 - **Container App (API)** — runs the scenario workflow and exposes the
@@ -273,7 +273,7 @@ Azure AI content filter is bound to the model deployment in
 `infra/modules/foundry.bicep` via IaC. Severity thresholds live in
 the Bicep — changing them requires a Bicep edit and `azd provision`.
 Editing the filter in the Foundry portal is **not supported** — the
-postprovision `foundry-bootstrap.py` pre-flight will still verify
+the in-app FastAPI startup bootstrap (`src/bootstrap.py`) will still verify
 a filter is bound, but portal drift from the IaC is undefined
 behavior. Do not disable the filter; the RAI pattern doc
 (`docs/patterns/rai/README.md`) calls this out as out-of-support.
@@ -383,7 +383,7 @@ The same two-step runs automatically in CI:
 The **authoritative source of truth** for which model(s) are deployed
 is `accelerator.yaml.models[]`, not `infra/main.bicep` param defaults.
 On every `azd provision` or `azd up`, the preprovision hook
-`scripts/sync-models-from-manifest.py` rewrites the five managed azd
+`infra/main.bicep` parses the manifest at compile time via `loadYamlContent`, then rewrites the managed model
 env vars (`AZURE_AI_FOUNDRY_MODEL_NAME`, `_MODEL_VERSION`, `_MODEL`,
 `_MODEL_CAPACITY`, `_EXTRA_DEPLOYMENTS_JSON`) from the manifest. Raw
 `azd env set AZURE_AI_FOUNDRY_MODEL_NAME=…` overrides **will be
@@ -402,7 +402,7 @@ clobbered** on the next provision.
 3. (Optional) Update `MODEL_PRICE_USD_PER_1K_TOKENS` in `cost.py` so
    the cost gate isn't inert for the new model.
 4. `azd provision` — preprovision syncs env vars, Bicep creates the
-   new deployment, postprovision `foundry-bootstrap.py` re-verifies
+   new deployment; on the Container App's next startup `src/bootstrap.py` re-verifies
    the agents against the new model.
 5. Re-run quality + redteam evals (Section 5) and `enforce-acceptance.py`.
 6. If acceptance holds, merge; if not, revert the manifest PR.
@@ -421,7 +421,7 @@ the specific scenario.
 
 Agent instructions are stored in Foundry, but their **repo-side source
 of truth** is `docs/agent-specs/<foundry_name>.md`. Every `azd
-provision` runs `scripts/foundry-bootstrap.py` as the postprovision
+up` triggers a Container App revision restart that runs `src/bootstrap.py` as the FastAPI startup
 hook, which overwrites each agent's portal-side instructions from the
 matching spec file. Consequences:
 
@@ -434,7 +434,7 @@ matching spec file. Consequences:
 
 If the partner's handover packet documents a different authoring
 workflow (e.g., "prompts are portal-managed for this engagement and
-`foundry-bootstrap.py` is disabled"), follow the packet.
+`src/bootstrap.py` is disabled" via `BOOTSTRAP_SKIP=1`), follow the packet.
 
 ---
 
@@ -552,7 +552,7 @@ partner-authored routing — not shipped in the flagship).
 Change the SKU in `infra/modules/ai-search.bicep` (and `replicaCount`
 / `partitionCount` if tuned in the fork) then `azd provision`.
 Some SKU transitions require re-indexing; confirm with
-`seed-search.py` before going live.
+`src/bootstrap.py` before going live.
 
 ---
 
@@ -561,8 +561,8 @@ Some SKU transitions require re-indexing; confirm with
 ### `azd provision`
 
 Idempotent. Re-applies `infra/main.bicep`, then runs the preprovision
-and postprovision hooks (`sync-models-from-manifest.py`,
-`foundry-bootstrap.py`, `seed-search.py`). **It does touch:**
+and the in-app FastAPI startup bootstrap (`src/bootstrap.py`
+). **It does touch:**
 
 - Foundry agent instructions (overwritten from `docs/agent-specs/`)
 - AI Search index schema and, if the index is empty or the seed

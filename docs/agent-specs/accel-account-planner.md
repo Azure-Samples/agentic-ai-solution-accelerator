@@ -2,7 +2,7 @@
 
 > **This file IS this agent's system instructions.** The `## Instructions`
 > section below is synced **verbatim** to the Foundry portal by
-> `scripts/foundry-bootstrap.py` on every `azd up`. Edit this file to
+> `src/bootstrap.py` (run inside the Container App at FastAPI startup) on every `azd up` / `azd deploy`. Edit this file to
 > change agent behaviour. Never put agent system instructions in Python
 > code — `prompt.py` builds *per-request* input, not system instructions.
 

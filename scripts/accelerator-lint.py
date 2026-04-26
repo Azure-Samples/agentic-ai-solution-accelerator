@@ -1128,6 +1128,12 @@ def dockerfile_matches_ga_pins(ctx: Ctx) -> list[Finding]:
 _DOCKERFILE_MANIFEST_RE = re.compile(
     r"^\s*COPY\s+[^\n]*\baccelerator\.yaml\b", re.MULTILINE
 )
+_DOCKERFILE_AGENT_SPECS_RE = re.compile(
+    r"^\s*COPY\s+[^\n]*\bdocs/agent-specs\b", re.MULTILINE
+)
+_DOCKERFILE_DATA_RE = re.compile(
+    r"^\s*COPY\s+(?!.*pyproject)[^\n]*\bdata\b", re.MULTILINE
+)
 
 
 @check
@@ -1153,6 +1159,54 @@ def dockerfile_copies_manifest(ctx: Ctx) -> list[Finding]:
         "Dockerfile does not COPY accelerator.yaml. The container cannot "
         "boot without the manifest — src.workflow.registry loads it at "
         "startup. Add `COPY accelerator.yaml ./` before `pip install .`.",
+    )]
+
+
+@check
+def dockerfile_copies_agent_specs(ctx: Ctx) -> list[Finding]:
+    """src/Dockerfile must COPY docs/agent-specs into the image.
+
+    ``src.bootstrap`` runs at FastAPI startup (replacing the previous
+    azd ``postprovision`` hook) and reads ``docs/agent-specs/<foundry_name>.md``
+    for every ``scenario.agents[]`` entry to extract the ``## Instructions``
+    body that gets pushed to Foundry's ``create_or_update``. If the image
+    ships without these spec files, bootstrap fails, the startup probe
+    fails its retry budget, and ``azd up`` exits non-zero.
+    """
+    dockerfile = ROOT / "src" / "Dockerfile"
+    if not dockerfile.exists():
+        return []
+    text = dockerfile.read_text(encoding="utf-8", errors="ignore")
+    if _DOCKERFILE_AGENT_SPECS_RE.search(text):
+        return []
+    return [Finding(
+        "dockerfile-missing-agent-specs", "block", _rel(dockerfile),
+        "Dockerfile does not COPY docs/agent-specs. src.bootstrap reads "
+        "<foundry_name>.md at startup to push agent Instructions to Foundry. "
+        "Add `COPY docs/agent-specs ./docs/agent-specs` before `pip install .`.",
+    )]
+
+
+@check
+def dockerfile_copies_seed_data(ctx: Ctx) -> list[Finding]:
+    """src/Dockerfile must COPY data/ into the image.
+
+    ``src.bootstrap`` uploads seed JSON (e.g. ``data/samples/accounts.json``)
+    declared by ``scenario.retrieval.indexes[].seed`` into AI Search at
+    FastAPI startup. Without these files the index exists but is empty,
+    breaking the demo flow on the first request.
+    """
+    dockerfile = ROOT / "src" / "Dockerfile"
+    if not dockerfile.exists():
+        return []
+    text = dockerfile.read_text(encoding="utf-8", errors="ignore")
+    if _DOCKERFILE_DATA_RE.search(text):
+        return []
+    return [Finding(
+        "dockerfile-missing-seed-data", "block", _rel(dockerfile),
+        "Dockerfile does not COPY data/. src.bootstrap uploads seed JSON "
+        "to AI Search at startup; without these files the index is empty. "
+        "Add `COPY data ./data` before `pip install .`.",
     )]
 
 
@@ -1608,65 +1662,6 @@ def agent_model_refs_exist(ctx: Ctx) -> list[Finding]:
                 "agent-model-refs-exist", "block", "accelerator.yaml",
                 f"scenario.agents[{i}].model={slug!r} does not match any "
                 f"declared `models[].slug`. Declared: {sorted(declared_slugs)}",
-            ))
-    return out
-
-
-@check
-def template_defaults_match_parameters(ctx: Ctx) -> list[Finding]:
-    """The ``_TEMPLATE_DEFAULTS`` constant in
-    ``scripts/sync-models-from-manifest.py`` must stay in lockstep with
-    the ``${VAR=default}`` values declared in ``infra/main.parameters.json``.
-    Drift would cause the absent-``models:``-block path to converge to
-    the wrong state (bootstrap sees different values than Bicep gets).
-    """
-    params_path = ROOT / "infra" / "main.parameters.json"
-    script_path = ROOT / "scripts" / "sync-models-from-manifest.py"
-    if not (params_path.exists() and script_path.exists()):
-        return []
-
-    try:
-        params_text = params_path.read_text(encoding="utf-8")
-        script_text = script_path.read_text(encoding="utf-8")
-    except Exception:
-        return []
-
-    managed = (
-        "AZURE_AI_FOUNDRY_MODEL_NAME",
-        "AZURE_AI_FOUNDRY_MODEL_VERSION",
-        "AZURE_AI_FOUNDRY_MODEL",
-        "AZURE_AI_FOUNDRY_MODEL_CAPACITY",
-    )
-    out: list[Finding] = []
-    for var in managed:
-        # ${VAR=default} in parameters.json
-        m = re.search(
-            r"\$\{" + re.escape(var) + r"=([^}]*)\}", params_text
-        )
-        if not m:
-            continue
-        expected = m.group(1)
-        # "VAR": "default" in _TEMPLATE_DEFAULTS dict literal
-        m2 = re.search(
-            r'"' + re.escape(var) + r'"\s*:\s*"([^"]*)"', script_text
-        )
-        if not m2:
-            out.append(Finding(
-                "template-defaults-match", "block",
-                "scripts/sync-models-from-manifest.py",
-                f"_TEMPLATE_DEFAULTS is missing key {var!r}; "
-                f"infra/main.parameters.json declares default={expected!r}",
-            ))
-            continue
-        actual = m2.group(1)
-        if actual != expected:
-            out.append(Finding(
-                "template-defaults-match", "block",
-                "scripts/sync-models-from-manifest.py",
-                f"_TEMPLATE_DEFAULTS[{var!r}]={actual!r} drifts from "
-                f"infra/main.parameters.json default={expected!r}. "
-                "Keep these in lockstep or the absent-block fixed-point "
-                "will converge to the wrong state.",
             ))
     return out
 

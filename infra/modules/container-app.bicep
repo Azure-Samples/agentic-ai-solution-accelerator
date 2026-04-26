@@ -7,6 +7,9 @@ param foundryEndpoint string
 param modelDeploymentName string
 param searchEndpoint string
 
+@description('JSON object string mapping accelerator.yaml model slugs to deployed deployment_names. Consumed by src.bootstrap (parses AZURE_AI_FOUNDRY_MODEL_MAP) so each Foundry agent can be bound to its declared slug. Sourced from foundry.bicep `modelMap` output via main.bicep.')
+param modelMapJson string = '{}'
+
 @description('When true, the Container App has a public FQDN (Tier 1/2). When false, ingress is internal-only and requires a vNet-integrated environment reachable via private endpoint or hub firewall (Tier 3).')
 param externalIngress bool = true
 
@@ -70,8 +73,32 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
             { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
             { name: 'AZURE_AI_FOUNDRY_ENDPOINT', value: foundryEndpoint }
             { name: 'AZURE_AI_FOUNDRY_MODEL', value: modelDeploymentName }
+            { name: 'AZURE_AI_FOUNDRY_MODEL_MAP', value: modelMapJson }
             { name: 'AZURE_AI_SEARCH_ENDPOINT', value: searchEndpoint }
             { name: 'ALLOWED_ORIGINS', value: allowedOrigins }
+          ]
+          // Probes gate the deployment readiness signal on the in-app
+          // bootstrap (src/bootstrap.py) finishing successfully. The
+          // FastAPI lifespan runs Foundry + AI Search bootstrap before
+          // serving any route, so a 200 from /healthz proves bootstrap
+          // is done. Startup probe budget = periodSeconds × failureThreshold
+          // = 10s × 60 = 10 min, which absorbs RBAC role-assignment
+          // propagation lag (the longest-tail post-deploy gotcha).
+          probes: [
+            {
+              type: 'Startup'
+              httpGet: { path: '/healthz', port: 8000 }
+              periodSeconds: 10
+              failureThreshold: 60
+              timeoutSeconds: 5
+            }
+            {
+              type: 'Liveness'
+              httpGet: { path: '/healthz', port: 8000 }
+              periodSeconds: 30
+              failureThreshold: 3
+              timeoutSeconds: 5
+            }
           ]
         }
       ]

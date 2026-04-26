@@ -159,9 +159,10 @@ SPEC_TEMPLATE = """# {agent_name}
 
 > **This file IS your agent's system instructions.** The `## Instructions`
 > section below is synced **verbatim** to the Foundry portal by
-> `scripts/foundry-bootstrap.py` on every `azd up`. **Edit this file to
-> change agent behaviour.** Never put agent system instructions in Python
-> code — `prompt.py` builds *per-request* input, not system instructions.
+> `src/bootstrap.py` (run inside the Container App at FastAPI startup) on
+> every `azd up` / `azd deploy`. **Edit this file to change agent behaviour.**
+> Never put agent system instructions in Python code — `prompt.py` builds
+> *per-request* input, not system instructions.
 
 Foundry agent spec for the {sid} scenario's supervisor. The model comes
 from ``AZURE_AI_FOUNDRY_MODEL`` (emitted by Bicep) - do NOT add a

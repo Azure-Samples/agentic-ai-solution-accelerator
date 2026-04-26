@@ -105,9 +105,7 @@ agentic-ai-solution-accelerator/
 ├── AGENTS.md                     IDE-agnostic mirror of copilot-instructions (Cursor/Claude/Codex)
 └── scripts/
     ├── accelerator-lint.py       ~30 deterministic policy checks (local + CI), AST-only
-    ├── scaffold-scenario.py      materialize a new scenario skeleton (CLI behind /scaffold-from-brief)
-    ├── foundry-bootstrap.py      reads agents from manifest; creates/updates Foundry agents
-    └── seed-search.py            reads indexes from manifest; creates + seeds each
+    └── scaffold-scenario.py      materialize a new scenario skeleton (CLI behind /scaffold-from-brief)
 ```
 
 </details>

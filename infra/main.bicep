@@ -84,20 +84,29 @@ resource tier3InputGuard 'Microsoft.Resources/deployments@2022-09-01' = if (_tie
 @description('Resource token for unique naming')
 param resourceToken string = uniqueString(subscription().id, resourceGroup().id, envName)
 
-@description('Foundry model to deploy (OpenAI format).')
-param modelName string = 'gpt-5-mini'
-
-@description('Foundry model version.')
-param modelVersion string = '2025-08-07'
-
-@description('Foundry model deployment name (becomes MODEL_DEPLOYMENT_NAME).')
-param modelDeploymentName string = 'gpt-5-mini'
-
-@description('Foundry model deployment capacity (TPM in thousands for GlobalStandard).')
-param modelCapacity int = 30
-
-@description('Extra model deployments (JSON string array); piped straight into foundry.bicep. Empty "[]" means only the single default deployment. Written by scripts/sync-models-from-manifest.py from accelerator.yaml.')
-param extraModelDeploymentsJson string = '[]'
+// ---------------------------------------------------------------------------
+// Models block: parsed natively from accelerator.yaml at compile time via
+// `loadYamlContent`. Bicep reads the manifest directly so `azd up` is a
+// single-command operation with no host-side preprocessing or Python hooks.
+//
+// Contract (also enforced by scripts/accelerator-lint.py::models_block_shape):
+//   - Each entry: {slug, deployment_name, model, version, capacity, default?}
+//   - Exactly ONE entry has `default: true` and uses `slug: default` (reserved)
+//   - When the `models:` block is omitted entirely, fall through to a built-in
+//     default (gpt-5-mini @ 2025-08-07, capacity 30) so `azd up` works on a
+//     manifest with no `models:` block.
+// ---------------------------------------------------------------------------
+var manifest = loadYamlContent('../accelerator.yaml')
+var modelsBlock = manifest.?models ?? []
+var defaultEntries = filter(modelsBlock, m => (m.?default ?? false) == true)
+var hasManifestDefault = !empty(defaultEntries)
+var defaultModel = hasManifestDefault ? defaultEntries[0] : {
+  deployment_name: 'gpt-5-mini'
+  model: 'gpt-5-mini'
+  version: '2025-08-07'
+  capacity: 30
+}
+var extraModelEntries = filter(modelsBlock, m => (m.?default ?? false) != true)
 
 @description('Scenario id from accelerator.yaml.scenario.id. Flows into the `workload` resource tag so fleet reporting can attribute cost/usage per engagement without Bicep churn when partners swap scenarios.')
 param scenarioId string = 'sales-research'
@@ -159,11 +168,11 @@ module foundry 'modules/foundry.bicep' = {
     location: location
     tags: tags
     rbacPrincipalId: identity.outputs.principalId
-    modelName: modelName
-    modelVersion: modelVersion
-    modelDeploymentName: modelDeploymentName
-    modelCapacity: modelCapacity
-    extraModelDeploymentsJson: extraModelDeploymentsJson
+    modelName: defaultModel.model
+    modelVersion: defaultModel.version
+    modelDeploymentName: defaultModel.deployment_name
+    modelCapacity: defaultModel.capacity
+    extraModelDeployments: extraModelEntries
     enablePrivateLink: enablePrivateLink
     peSubnetId: peSubnetId
     privateDnsZoneIds: foundryDnsZoneIds
@@ -180,6 +189,7 @@ module containerApp 'modules/container-app.bicep' = {
     appInsightsConnectionString: monitor.outputs.appInsightsConnectionString
     foundryEndpoint: foundry.outputs.projectEndpoint
     modelDeploymentName: foundry.outputs.modelDeploymentName
+    modelMapJson: string(foundry.outputs.modelMap)
     searchEndpoint: search.outputs.endpoint
     externalIngress: externalIngress
     allowedOrigins: allowedOrigins

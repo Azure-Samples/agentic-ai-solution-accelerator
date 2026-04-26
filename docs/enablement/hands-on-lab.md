@@ -104,18 +104,7 @@ template clone.
    Copilot is not going to enforce the partner guardrails — stop and
    fix before continuing.
 
-3. Initialize the repo-local hook environment (one-time per clone):
-
-   - **Windows:** `pwsh -File scripts/setup-hooks.ps1`
-   - **macOS/Linux:** `sh scripts/setup-hooks.sh`
-
-   This creates `.azd-hooks/.venv`, which the `preprovision` / `postprovision`
-   hooks use during `azd up`. If you skip this step, `azd up` fails fast with
-   an instruction to run it.
-
-   > **If you use Conda:** activate the env that has Python 3.11+ **before** running `setup-hooks` (e.g. `conda activate <env>`), so `python` resolves on `PATH`. Once `.azd-hooks/.venv` exists, `azd up` no longer depends on Conda activation — the venv is self-contained.
-
-4. Authenticate + provision:
+3. Authenticate + provision:
 
    **About preflight:** the partner motion in `QUICKSTART.md` Step 4 has you run
    `/configure-landing-zone` and `/deploy-to-env` before `azd up`. The lab skips
@@ -136,14 +125,15 @@ template clone.
    ```
 
    `azd up` provisions Foundry, AI Search, Key Vault, Container
-   Apps, App Insights, and the user-assigned MI, then runs the
-   `preprovision` (model sync) and `postprovision`
-   (`foundry-bootstrap.py` + `seed-search.py`) hooks. Expect
-   ~10–15 minutes.
+   Apps, App Insights, and the user-assigned MI. The Container App
+   then runs its in-app bootstrap (`src/bootstrap.py`) at FastAPI
+   startup to create/verify Foundry agents and seed the AI Search
+   `accounts` index before `/healthz` returns 200. Expect ~10–15
+   minutes total.
 
    `azd up` will prompt you for an Azure region — pick one with `gpt-5-mini` `GlobalStandard` quota (verified in step 2 of [Prerequisites](#prerequisites)).
 
-   > **If postprovision fails with a 403 / authorization error** immediately after Bicep finishes, that's RBAC propagation lag — the role assignment Bicep just created hasn't fully propagated yet. Wait 2–3 minutes and rerun `azd provision`. The hooks are idempotent.
+   > **If `/healthz` returns 503 / startup probe fails** immediately after Bicep finishes, that's typically RBAC propagation lag — the role assignments Bicep just created haven't fully propagated. The startup probe budget is 10 minutes (60 × 10s); in normal conditions this absorbs the lag without intervention. If the probe still fails after the budget, see Troubleshooting #5 in `docs/getting-started/setup-and-prereqs.md`.
 
 **Check your work:**
 
@@ -318,7 +308,7 @@ this same chain.
 
 ## Lab 5 — Edit an agent's instructions the supported way
 
-**Where:** VS Code for the spec-file edit and `azd provision` (integrated terminal), then the **Foundry portal** for the "your manual edit got overwritten" demo. To open the Foundry portal: https://ai.azure.com → sign in with the same tenant `azd` deployed to → select the project named in `azd env get-values` (`AZURE_AI_FOUNDRY_PROJECT_NAME`) → **Agents** in the left nav → click the agent → **Instructions** tab.
+**Where:** VS Code for the spec-file edit and `azd deploy` (integrated terminal), then the **Foundry portal** for the "your manual edit got overwritten" demo. To open the Foundry portal: https://ai.azure.com → sign in with the same tenant `azd` deployed to → select the project named in `azd env get-values` (`AZURE_AI_FOUNDRY_PROJECT_NAME`) → **Agents** in the left nav → click the agent → **Instructions** tab.
 
 **Goal:** understand that the Foundry portal is not the source of
 truth.
@@ -328,19 +318,20 @@ truth.
    source of truth** for the agent's instructions.
 2. Make a small edit — change a guideline, add a sentence, whatever.
    Save.
-3. Run `azd provision`. The postprovision hook
-   `scripts/foundry-bootstrap.py` updates the agent in Foundry with
-   the new instructions.
+3. Run `azd deploy`. The image rebuilds, the Container App rolls a
+   new revision, and on startup `src/bootstrap.py` syncs the new
+   Instructions into Foundry.
 4. Now open the Foundry portal, find the same agent, and **manually
    edit** the instructions there. Save.
-5. Run `azd provision` again.
+5. Run `azd deploy` again (or restart the Container App revision —
+   Container Apps → Revisions → "Restart").
 
 **Check your work:**
 
 - Re-open the agent in the portal. Your manual edit is **gone** —
   overwritten by the spec file. This is the designed behavior:
   portal edits are transient. The supported rollback path for a
-  bad prompt is `git revert` the spec + `azd provision`, not
+  bad prompt is `git revert` the spec + `azd deploy`, not
   "restore from Foundry portal history".
 - `docs/customer-runbook.md` Section 6 (Model swap) is the condensed version of this
   behavior for the customer's ops team.
@@ -361,7 +352,7 @@ try again. The acceptance gate is the contract.
 
 ## Lab 6 — Swap the model
 
-**Where:** VS Code — editor to edit `accelerator.yaml`, integrated terminal for `azd provision` and the eval chain.
+**Where:** VS Code — editor to edit `accelerator.yaml`, integrated terminal for `azd up` and the eval chain.
 
 **Goal:** do a model swap the supported way.
 
@@ -369,10 +360,10 @@ try again. The acceptance gate is the contract.
    under `models:` with a different model your sandbox has quota
    for (e.g. `gpt-4.1-mini` instead of `gpt-5-mini`, with a valid
    `version` and a `capacity` within your quota).
-2. Run `azd provision`. The preprovision hook
-   `scripts/sync-models-from-manifest.py` rewrites the managed azd
-   env vars from the new manifest; Bicep re-deploys the Foundry
-   model deployment in place; postprovision re-verifies.
+2. Run `azd up`. Bicep parses the new manifest at compile time
+   (`loadYamlContent`), Foundry re-deploys the model in place, and
+   on Container App restart `src/bootstrap.py` re-resolves the
+   slug → deployment_name map.
 3. Re-run the eval chain from Lab 4:
 
    ```bash
@@ -387,10 +378,10 @@ try again. The acceptance gate is the contract.
 **Check your work:**
 
 - Try `azd env set AZURE_AI_FOUNDRY_MODEL_NAME=some-other-model`
-  and run `azd provision`. Notice: the preprovision sync clobbers
-  your override back to what `accelerator.yaml → models[]` says.
-  Raw env-var overrides are unsupported; manifest is the source of
-  truth.
+  and run `azd up`. Notice: Bicep ignores the env var entirely
+  because the model now comes from `accelerator.yaml -> models[]`
+  via `loadYamlContent` at compile time. Raw env-var overrides are
+  unsupported; the manifest is the source of truth.
 
 ---
 

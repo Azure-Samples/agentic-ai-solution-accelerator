@@ -18,7 +18,7 @@ Use the per-agent files below for the actual system instructions; everything els
 
 ## Bootstrap mechanics
 
-`scripts/foundry-bootstrap.py` reads one Markdown file per agent from this
+`src/bootstrap.py` reads one Markdown file per agent from this
 directory and creates or updates the corresponding agent in the Foundry
 project at `azd up` / `azd postprovision` time.
 
@@ -35,7 +35,7 @@ project at `azd up` / `azd postprovision` time.
 
 The model deployment is NOT declared here — every agent runs against the
 single model deployed by `infra/modules/foundry.bicep` (captured in the
-`AZURE_AI_FOUNDRY_MODEL` output and read by `scripts/foundry-bootstrap.py`).
+`AZURE_AI_FOUNDRY_MODEL` output and read by `src/bootstrap.py` at FastAPI startup).
 This keeps infra as the source of truth and prevents specs drifting away
 from what `azd up` actually provisions. The accelerator lint fails if any
 spec file contains a `**Model:**` field.

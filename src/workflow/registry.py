@@ -237,9 +237,9 @@ def read_scenario_raw(
 ) -> dict[str, Any]:
     """Return the raw ``scenario:`` block without resolving imports.
 
-    Used by scripts (seed-search, foundry-bootstrap, evals) that need the
-    declared values without booting the whole app. Raises ``ValueError`` if
-    the block is missing or the manifest is unreadable.
+    Used by callers (e.g. evals, scaffolding helpers, ``src.bootstrap``)
+    that need the declared values without booting the whole app. Raises
+    ``ValueError`` if the block is missing or the manifest is unreadable.
     """
     path = manifest_path or DEFAULT_MANIFEST
     data = _load_yaml(path)

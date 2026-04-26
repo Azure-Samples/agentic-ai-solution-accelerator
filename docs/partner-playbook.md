@@ -141,12 +141,12 @@ through the customization steps below.
 - Add additional worker agents with `/add-worker-agent` (or directly via
   `python scripts/scaffold-agent.py <agent_id> --scenario <scenario-id> --capability "<one-sentence capability>"`).
   Each new agent needs a matching `docs/agent-specs/<foundry_name>.md` spec;
-  `foundry-bootstrap.py` picks them up on the next `azd up`.
+  `src/bootstrap.py` picks them up at FastAPI startup on the next `azd up` / `azd deploy`.
 
 **What "good" looks like:**
 
 !!! tip "Authoring agent instructions"
-    **Agent system instructions live in `docs/agent-specs/<foundry_name>.md` under `## Instructions`.** Edit those Markdown files, not Python — `scripts/foundry-bootstrap.py` syncs them verbatim to the Foundry portal on `azd up`. `prompt.py` is for per-request input only.
+    **Agent system instructions live in `docs/agent-specs/<foundry_name>.md` under `## Instructions`.** Edit those Markdown files, not Python — `src/bootstrap.py` syncs them verbatim to the Foundry portal at FastAPI startup on `azd up` / `azd deploy`. `prompt.py` is for per-request input only.
 
 - `python scripts/accelerator-lint.py` passes with **0 blocking, 0 warning**
 - `pytest tests/` passes (supervisor-DAG test stays green)
@@ -193,17 +193,17 @@ named environment.
 3. From the customer's deployment-owner machine: `azd env new <customer-short-name>-dev`
    (e.g., `azd env new contoso-dev`) then `azd up`. First deploy takes ~15 min on a clean subscription. The
    `azd` hooks in `azure.yaml` run automatically as part of `azd up`:
-   - `preprovision` → `scripts/sync-models-from-manifest.py`
-   - `postprovision` → `scripts/foundry-bootstrap.py` **and**
-     `scripts/seed-search.py` (creates/verifies Foundry agents declared in
+   - `preprovision` → none (Bicep `loadYamlContent` parses `accelerator.yaml -> models[]` at compile time)
+   - `postprovision` → none. Foundry agent create/update **and**
+     AI Search index seeding both run inside the Container App at FastAPI startup via `src/bootstrap.py` (creates/verifies Foundry agents declared in
      `accelerator.yaml` + seeds every index declared in
      `scenario.retrieval.indexes[]`; the flagship scenario ships one
      `accounts` index, scaffolded scenarios declare their own)
 4. Smoke-test the deployed endpoint — either the container URL or the SDK
    path in `src/main.py`, depending on scenario shape.
 5. Confirm each Foundry agent appears in the portal with the placeholder
-   instructions ready for editing. Rerun `foundry-bootstrap.py` or
-   `seed-search.py` by hand only for recovery / troubleshooting — normal
+   instructions ready for editing. Restart the Container App revision (Container Apps -> Revisions -> Restart) or
+   rerun `azd deploy` for recovery / troubleshooting — normal
    `azd up` cycles handle both.
 6. **Establish the acceptance baseline** before exiting this stage. Run the full chain against the dev environment:
 
@@ -327,7 +327,7 @@ hand day-2 operations over.
 
 1. `/deploy-to-env <customer-short-name>-prod` (e.g., `contoso-prod`) to register the prod environment
 2. `azd env new <customer-short-name>-prod`; `azd up` in prod — the `postprovision`
-   hook re-runs `foundry-bootstrap.py` and `seed-search.py` automatically
+   startup bootstrap (`src/bootstrap.py`) re-runs Foundry agent create/update and AI Search seeding automatically
    against the prod project + search service
 3. Wire App Insights alerting on the KPIs the engagement committed to
    in `accelerator.yaml.kpis[]` (customer-owned — `kpis[]` carries
@@ -396,13 +396,13 @@ no spreadsheets, no screenshots of runs.
 | Scaffold a scenario from the CLI             | `python scripts/scaffold-scenario.py <id>`                           |
 | Scaffold an agent from the CLI               | `python scripts/scaffold-agent.py <agent_id> --scenario <scenario-id> --capability "<one-liner>"` |
 | Lint the repo against policy                 | `python scripts/accelerator-lint.py`                                 |
-| Create / update Foundry agents               | `python scripts/foundry-bootstrap.py`                                |
-| Seed the AI Search index                     | `python scripts/seed-search.py`                                      |
+| Create / update Foundry agents               | restart the Container App revision (`azd deploy` or portal)         |
+| Seed the AI Search index                     | restart the Container App revision (`azd deploy` or portal)         |
 | Check SDK pin freshness                      | `python scripts/ga-sdk-freshness.py`                                 |
 | Enforce acceptance thresholds                | `python scripts/enforce-acceptance.py`                               |
 
 These scripts are mostly Python / Azure-SDK-based; a few utility scripts
-(e.g., `explain-change.py`, `sync-models-from-manifest.py`) shell out to
+(e.g., `explain-change.py`) shell out to
 standard developer tooling (`git`, `azd`) — already installed if you
 followed the "Prerequisites" section of `docs/getting-started/setup-and-prereqs.md`.
 

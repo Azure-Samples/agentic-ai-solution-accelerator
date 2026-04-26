@@ -13,7 +13,7 @@ In-scope:
 - Flagship scenario code (`src/scenarios/sales_research/`)
 - Scenario framework (`src/main.py`, `src/workflow/`, `src/retrieval/`, `src/tools/`, `src/accelerator_baseline/`)
 - Shipped Bicep modules + azd templates (`infra/`)
-- Accelerator lint (`scripts/accelerator-lint.py`), scaffold CLI (`scripts/scaffold-scenario.py`), bootstrap scripts (`scripts/foundry-bootstrap.py`, `scripts/seed-search.py`)
+- Accelerator lint (`scripts/accelerator-lint.py`), scaffold CLI (`scripts/scaffold-scenario.py`), in-app FastAPI startup bootstrap (`src/bootstrap.py`)
 - Schema files (`accelerator.yaml` contract) and the manifest loader (`src/workflow/registry.py`)
 - Copilot instructions + chat modes (for prompt-injection-enabling issues)
 - Eval runners (`evals/quality/`, `evals/redteam/`)

@@ -20,7 +20,7 @@
 
 Be clear about the baseline before picking tools:
 
-- **Agent creation (`scripts/foundry-bootstrap.py`):** creates each Foundry agent with **model + instructions only**. No tools are attached through the bootstrap. `accelerator.yaml` agent entries carry `id` + `foundry_name` only — **there is no `agents[].tools[]` schema today**.
+- **Agent creation (`src/bootstrap.py`, runs at FastAPI startup):** creates each Foundry agent with **model + instructions only**. No tools are attached through the bootstrap. `accelerator.yaml` agent entries carry `id` + `foundry_name` only — **there is no `agents[].tools[]` schema today**.
 - **Flagship orchestration (`src/scenarios/sales_research/workflow.py`):** a Python-side `SupervisorDAG` invokes each Foundry agent independently by `agent_name` and composes their outputs. It is **not** the Foundry `Connected Agents` feature.
 - **Grounding:** `src/retrieval/ai_search.py` queries Azure AI Search from Python and injects chunks into the agent prompt. Search is **not attached as a Foundry tool** in the flagship — it's a retrieval layer in front of the agent call.
 - **Side-effect tools (`src/tools/`):** `crm_read_account`, `crm_write_contact`, `send_email`, `web_search` are **local Python stubs** executed by the workflow after the supervisor decides they're needed. They are HITL-gated (see `src/accelerator_baseline/hitl.py`) but they are **not** Foundry Azure Functions tools.
@@ -30,7 +30,7 @@ a *real* Foundry tool (File Search, Bing grounding, Code Interpreter,
 OpenAPI, MCP, etc.), the current path is **one of**:
 
 1. Attach it in the **Foundry portal** after `azd postprovision`, for engagements where the tool set is stable and portal-managed is acceptable.
-2. Extend `scripts/foundry-bootstrap.py` in the cloned repo to call `AIProjectClient.agents.create_agent(..., tools=[...])` with the tool schemas the engagement needs, and keep the tool list in the scenario manifest.
+2. Extend `src/bootstrap.py` in the cloned repo to call `AIProjectClient.agents.create_agent(..., tools=[...])` with the tool schemas the engagement needs, and keep the tool list in the scenario manifest.
 
 There is no shipped scaffold for path 2 yet — partners wire it per
 engagement. The accelerator ships the orchestration + grounding +
@@ -167,4 +167,4 @@ Adding or updating a tool row:
 2. Don't promote a tool from Preview to GA without a link to the GA announcement.
 3. Every tool gets a **Pick when…** **and** an **Avoid when…** cell — partners need both sides.
 4. Don't copy prices or hard region lists into the doc. Link the authoritative page.
-5. If the Foundry catalog adds a tool this repo should wire automatically (e.g. AI Search via manifest), update `scripts/foundry-bootstrap.py` and `accelerator.yaml` first — then this doc.
+5. If the Foundry catalog adds a tool this repo should wire automatically (e.g. AI Search via manifest), update `src/bootstrap.py` and `accelerator.yaml` first — then this doc.

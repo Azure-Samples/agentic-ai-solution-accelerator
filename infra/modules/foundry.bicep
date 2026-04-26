@@ -38,8 +38,8 @@ param modelDeploymentName string = 'gpt-5-mini'
 @description('Deployment capacity (TPM in thousands for GlobalStandard SKU).')
 param modelCapacity int = 30
 
-@description('Extra model deployments beyond the default (JSON string array). Each entry: {slug, deployment_name, model, version, capacity}. Default "[]" means only the default deployment is provisioned. Written by scripts/sync-models-from-manifest.py from the accelerator.yaml models block.')
-param extraModelDeploymentsJson string = '[]'
+@description('Extra model deployments beyond the default (object array). Each entry: {slug, deployment_name, model, version, capacity}. Default [] means only the default deployment is provisioned. Derived from the accelerator.yaml models block via loadYamlContent in main.bicep.')
+param extraModelDeployments array = []
 
 @description('Default project name inside the Foundry account.')
 param foundryProjectName string = 'accelerator-default'
@@ -124,8 +124,10 @@ resource modelDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-
 // `@batchSize(1)` serialises creates inside the loop so Foundry's
 // provisioning queue doesn't reject concurrent creates on cold
 // capacity. The explicit dependsOn also serialises the whole loop
-// behind the default deployment.
-var extraModelDeployments = json(extraModelDeploymentsJson)
+// behind the default deployment. The `extraModelDeployments` array
+// is derived from the manifest at compile time via loadYamlContent
+// in main.bicep — Bicep parses accelerator.yaml directly, no Python
+// preprocessing required.
 
 @batchSize(1)
 resource extraModelDeps 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = [for dep in extraModelDeployments: {
@@ -151,7 +153,7 @@ resource extraModelDeps 'Microsoft.CognitiveServices/accounts/deployments@2024-1
 
 // slug -> deployment_name map. The default deployment is always bound
 // to slug 'default'. Agents in accelerator.yaml reference a slug
-// (or omit it → 'default') and foundry-bootstrap.py resolves here.
+// (or omit it -> 'default') and src/bootstrap.py resolves here at FastAPI startup.
 var defaultSlugMap = {
   default: modelDeployment.name
 }

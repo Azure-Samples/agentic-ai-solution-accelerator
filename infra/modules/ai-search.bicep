@@ -31,7 +31,7 @@ resource search 'Microsoft.Search/searchServices@2023-11-01' = {
 }
 
 // Search Index Data Contributor + Search Service Contributor.
-// Data Contributor is required for seed-search.py to upload documents at
+// Data Contributor is required for src/bootstrap.py (running inside the Container App as the workload MI) to upload seed documents at FastAPI startup
 // provision time. Data Reader alone fails the seed step during `azd up`.
 var indexDataContributorId = '8ebe5a00-799e-43f5-93ac-243d3dce84a7'
 var serviceContributorId = '7ca78c08-252a-4471-8644-bb5ff32d4ba0'

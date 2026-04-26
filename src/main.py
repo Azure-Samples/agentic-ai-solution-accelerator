@@ -10,12 +10,18 @@ Key properties (enforced by scripts/accelerator-lint.py):
 - CORS allow-list driven by the ``ALLOWED_ORIGINS`` env var (comma-separated
   list of exact origins, or ``*`` for sandbox-only allow-all). Empty default
   is production-safe: no cross-origin browser calls until the deployer opts in.
+- Foundry agents + AI Search index are bootstrapped synchronously inside the
+  ``lifespan`` startup phase by :mod:`src.bootstrap`. The container does not
+  accept requests until bootstrap completes; on persistent failure the
+  exception aborts startup so ACA marks the revision unhealthy and ``azd up``
+  exits non-zero. Replaces the previous postprovision azd hook.
 """
 from __future__ import annotations
 
 import json
 import logging
 import os
+from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
 from fastapi import FastAPI, HTTPException, Request
@@ -24,6 +30,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import ValidationError
 
 from .accelerator_baseline.telemetry import Event, emit_event
+from .bootstrap import bootstrap as run_bootstrap
 from .config.settings import load_settings
 from .workflow.registry import ScenarioBundle, load_scenario
 
@@ -114,11 +121,30 @@ def _configure_cors(app: FastAPI) -> None:
     logger.info("CORS: allow-listed %d origin(s).", len(origins))
 
 
-app = FastAPI(title="Agentic AI Solution Accelerator", version="0.1.0")
+app = FastAPI(
+    title="Agentic AI Solution Accelerator",
+    version="0.1.0",
+    lifespan=None,  # set below once _bundle is loaded
+)
 _configure_otel()
 _configure_cors(app)
 _bundle = load_scenario()
 logger.info("loaded scenario %r at %s", _bundle.id, _bundle.endpoint_path)
+
+
+@asynccontextmanager
+async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    """Run deploy-time bootstrap before accepting traffic.
+
+    See :mod:`src.bootstrap` for the contract. Failure here propagates and
+    aborts uvicorn startup — that is the intended fail-closed signal for
+    ``azd up`` (ACA marks the revision unhealthy).
+    """
+    await run_bootstrap(_bundle)
+    yield
+
+
+app.router.lifespan_context = _lifespan
 app.add_api_route(
     _bundle.endpoint_path,
     _make_stream_endpoint(_bundle),

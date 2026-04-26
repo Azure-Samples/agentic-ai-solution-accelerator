@@ -80,8 +80,9 @@ module search 'br/public:avm/res/search/search-service:0.12.0' = {
     ] : []
 
     // Replaces the hand-rolled role-assignment resources in
-    // ../modules/ai-search.bicep. Role IDs match what seed-search.py
-    // needs at provision time:
+    // ../modules/ai-search.bicep. Role IDs match what src/bootstrap.py
+    // (the in-app FastAPI startup bootstrap, running as the workload MI)
+    // needs at startup time:
     //   8ebe5a00... Search Index Data Contributor
     //   7ca78c08... Search Service Contributor
     roleAssignments: [

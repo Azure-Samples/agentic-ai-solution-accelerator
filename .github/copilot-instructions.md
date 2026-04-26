@@ -104,7 +104,7 @@ Do not hand-scaffold. Run `python scripts/scaffold-agent.py <agent_id> --scenari
 ### Assigning a different model to an agent
 - Edit `accelerator.yaml`. Add a `models:` entry with a unique `slug` + `deployment_name` + `model`/`version`/`capacity` (Bicep provisions it on the next `azd up`), then set `scenario.agents[].model: <slug>` on the agent you want re-pointed.
 - The reserved slug `default` is always the default deployment; omitting `model:` on an agent falls through to it.
-- Pre-provision hook `scripts/sync-models-from-manifest.py` syncs the block to azd env vars; `scripts/foundry-bootstrap.py` resolves each agent's slug → deployment name at post-provision. Lint rules `models_block_shape` + `agent_model_refs_exist` block malformed manifests at PR time.
+- Pre-provision YAML parsing (Bicep `loadYamlContent` in `infra/main.bicep`) compiles the block into the ARM template; FastAPI startup bootstrap (`src/bootstrap.py`) resolves each agent's slug → deployment name. Lint rules `models_block_shape` + `agent_model_refs_exist` block malformed manifests at PR time.
 
 ---
 
