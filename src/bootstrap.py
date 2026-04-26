@@ -177,16 +177,16 @@ async def _bootstrap_foundry(bundle: ScenarioBundle) -> None:
         work.append((agent.foundry_name, deployment, instructions))
 
     from azure.identity.aio import DefaultAzureCredential
-    from azure.ai.projects.aio import AIProjectClient
+    from azure.ai.agents.aio import AgentsClient
 
     cred = DefaultAzureCredential()
     try:
-        client = AIProjectClient(endpoint=endpoint, credential=cred)
+        client = AgentsClient(endpoint=endpoint, credential=cred)
         try:
             existing: dict[str, Any] = {}
 
             async def _list() -> None:
-                async for a in client.agents.list_agents():
+                async for a in client.list_agents():
                     if a.name:
                         existing[a.name] = a
 
@@ -201,7 +201,7 @@ async def _bootstrap_foundry(bundle: ScenarioBundle) -> None:
                     agent_obj = existing[name]
 
                     async def _update(_id=agent_obj.id, _dep=deployment, _ins=instructions) -> None:
-                        await client.agents.update_agent(
+                        await client.update_agent(
                             agent_id=_id, model=_dep, instructions=_ins,
                         )
 
@@ -213,7 +213,7 @@ async def _bootstrap_foundry(bundle: ScenarioBundle) -> None:
                     logger.info("bootstrap.foundry: updated %s (model=%s)", name, deployment)
                 else:
                     async def _create(_name=name, _dep=deployment, _ins=instructions) -> None:
-                        await client.agents.create_agent(
+                        await client.create_agent(
                             name=_name, model=_dep, instructions=_ins,
                         )
 
