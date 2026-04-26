@@ -186,6 +186,7 @@ module containerApp 'modules/container-app.bicep' = {
     location: location
     tags: tags
     identityId: identity.outputs.id
+    identityClientId: identity.outputs.clientId
     appInsightsConnectionString: monitor.outputs.appInsightsConnectionString
     logAnalyticsId: monitor.outputs.logAnalyticsId
     foundryEndpoint: foundry.outputs.projectEndpoint

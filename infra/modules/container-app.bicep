@@ -2,6 +2,9 @@ param name string
 param location string
 param tags object
 param identityId string
+
+@description('Client (application) ID of the user-assigned managed identity attached to this Container App. Surfaced to the workload as the AZURE_CLIENT_ID env var so `azure.identity.DefaultAzureCredential` / `ManagedIdentityCredential` can target this specific UAMI — without it, both default to system-assigned MI lookup and fail with "Unable to load the proper Managed Identity" on UAMI-only apps.')
+param identityClientId string
 param appInsightsConnectionString string
 param foundryEndpoint string
 param modelDeploymentName string
@@ -90,6 +93,7 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
           image: 'mcr.microsoft.com/azuredocs/containerapps-helloworld:latest' // replaced by azd deploy
           resources: { cpu: json('1.0'), memory: '2Gi' }
           env: [
+            { name: 'AZURE_CLIENT_ID', value: identityClientId }
             { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
             { name: 'AZURE_AI_FOUNDRY_ENDPOINT', value: foundryEndpoint }
             { name: 'AZURE_AI_FOUNDRY_MODEL', value: modelDeploymentName }
