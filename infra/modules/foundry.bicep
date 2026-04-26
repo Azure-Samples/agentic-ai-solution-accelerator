@@ -74,6 +74,10 @@ resource account 'Microsoft.CognitiveServices/accounts@2024-10-01' = {
     type: 'SystemAssigned'
   }
   properties: {
+    // Required for the `accounts/projects` child resource. Without this the
+    // control plane returns BadRequest: "Project can only created under
+    // AIServices Kind account with allowProjectManagement set to true."
+    allowProjectManagement: true
     customSubDomainName: accountName
     publicNetworkAccess: enablePrivateLink ? 'Disabled' : 'Enabled'
     disableLocalAuth: true
