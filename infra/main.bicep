@@ -187,6 +187,7 @@ module containerApp 'modules/container-app.bicep' = {
     tags: tags
     identityId: identity.outputs.id
     appInsightsConnectionString: monitor.outputs.appInsightsConnectionString
+    logAnalyticsId: monitor.outputs.logAnalyticsId
     foundryEndpoint: foundry.outputs.projectEndpoint
     modelDeploymentName: foundry.outputs.modelDeploymentName
     modelMapJson: string(foundry.outputs.modelMap)

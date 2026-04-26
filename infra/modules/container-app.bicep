@@ -10,6 +10,9 @@ param searchEndpoint string
 @description('JSON object string mapping accelerator.yaml model slugs to deployed deployment_names. Consumed by src.bootstrap (parses AZURE_AI_FOUNDRY_MODEL_MAP) so each Foundry agent can be bound to its declared slug. Sourced from foundry.bicep `modelMap` output via main.bicep.')
 param modelMapJson string = '{}'
 
+@description('Resource ID of the Log Analytics workspace that the Container Apps Environment streams logs to. Required because `appLogsConfiguration.destination=log-analytics` mandates a `logAnalyticsConfiguration` block with `customerId` and `sharedKey`; we look up the workspace via `existing` and pull both off it instead of plumbing two extra params through main.bicep.')
+param logAnalyticsId string
+
 @description('When true, the Container App has a public FQDN (Tier 1/2). When false, ingress is internal-only and requires a vNet-integrated environment reachable via private endpoint or hub firewall (Tier 3).')
 param externalIngress bool = true
 
@@ -28,6 +31,10 @@ param allowedOrigins string = ''
 // See docs/patterns/azure-ai-landing-zone/README.md "Container App
 // reachability" section.
 
+resource logAnalytics 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
+  name: last(split(logAnalyticsId, '/'))
+}
+
 resource env 'Microsoft.App/managedEnvironments@2024-03-01' = {
   name: '${name}-env'
   location: location
@@ -35,6 +42,10 @@ resource env 'Microsoft.App/managedEnvironments@2024-03-01' = {
   properties: {
     appLogsConfiguration: {
       destination: 'log-analytics'
+      logAnalyticsConfiguration: {
+        customerId: logAnalytics.properties.customerId
+        sharedKey: logAnalytics.listKeys().primarySharedKey
+      }
     }
     workloadProfiles: [
       { name: 'Consumption', workloadProfileType: 'Consumption' }
