@@ -328,3 +328,68 @@ async def test_validation_failure_raises_as_required_exception():
     state = WorkerState(request={})
     with pytest.raises(ValueError, match="failed validation"):
         await _drain(dag, state)
+
+
+@pytest.mark.asyncio
+async def test_validation_retries_until_success():
+    """Single-shot LLM hiccup (e.g. dropped required field) should be absorbed
+    by validation_max_attempts default of 2 — fail once, succeed on retry."""
+    attempts: list[int] = []
+
+    def make_flaky_validate() -> Any:
+        def validate(data: dict) -> tuple[bool, str]:
+            attempts.append(1)
+            if len(attempts) == 1:
+                return False, "transient empty subject"
+            return True, ""
+        return validate
+
+    mod = SimpleNamespace(
+        AGENT_NAME="flaky",
+        build_prompt=lambda r: "p",
+        transform_response=lambda raw: {"raw": raw},
+        validate_response=make_flaky_validate(),
+    )
+    workers = {"flaky": WorkerSpec(id="flaky", module=mod, build_input=_build)}
+    rec = InvokeRecorder()
+    dag = SupervisorDAG(workers, invoke_agent=rec.build())
+    state = WorkerState(request={})
+    await _drain(dag, state)
+    assert len(attempts) == 2  # one failure + one success
+    assert rec.calls == ["flaky", "flaky"]  # invoke called twice
+    assert state.outputs["flaky"] == {"raw": '{"ok": true, "agent": "flaky"}'}
+
+
+@pytest.mark.asyncio
+async def test_validation_retries_exhausted_still_raises():
+    """validation_max_attempts is a finite budget; persistent failure still
+    propagates so genuinely broken agents don't silently mask regressions."""
+    bad = _make_module("bad", validates=False)
+    workers = {
+        "bad": WorkerSpec(id="bad", module=bad, build_input=_build,
+                          validation_max_attempts=3),
+    }
+    rec = InvokeRecorder()
+    dag = SupervisorDAG(workers, invoke_agent=rec.build())
+    state = WorkerState(request={})
+    with pytest.raises(ValueError, match="failed validation"):
+        await _drain(dag, state)
+    # Invoked exactly validation_max_attempts times before raising.
+    assert rec.calls == ["bad", "bad", "bad"]
+
+
+@pytest.mark.asyncio
+async def test_validation_max_attempts_one_disables_retry():
+    """validation_max_attempts=1 preserves pre-retry semantics for callers
+    that want strict single-shot validation."""
+    bad = _make_module("bad", validates=False)
+    workers = {
+        "bad": WorkerSpec(id="bad", module=bad, build_input=_build,
+                          validation_max_attempts=1),
+    }
+    rec = InvokeRecorder()
+    dag = SupervisorDAG(workers, invoke_agent=rec.build())
+    state = WorkerState(request={})
+    with pytest.raises(ValueError, match="failed validation"):
+        await _drain(dag, state)
+    assert rec.calls == ["bad"]

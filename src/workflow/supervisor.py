@@ -102,6 +102,16 @@ class WorkerSpec:
     grounding_query: GroundingQuery | None = None
     timeout_s: float | None = None
     required: bool = True
+    validation_max_attempts: int = 2
+    """How many times to invoke the agent if ``validate_response`` fails.
+
+    Defaults to 2 (one transparent retry). LLMs occasionally drop a required
+    field or violate a length constraint on a single sample even with stable
+    instructions; re-sampling once with no prompt change is enough to recover
+    in the vast majority of cases without masking genuine agent regressions.
+    Set to 1 to disable retry, or higher for flaky models. The same retrieval
+    and built input are reused across attempts — only the model sample is
+    redrawn — so retries do not multiply token spend on grounding."""
 
 
 class DAGValidationError(Exception):
@@ -380,14 +390,17 @@ class SupervisorDAG:
                     # alias another worker's cached chunks.
                     state.grounding_chunks[spec.id] = list(chunks)
             inp = spec.build_input(state)
-            raw = await self._invoke(
-                spec.module.AGENT_NAME, spec.module.build_prompt(inp), state
-            )
-            data = spec.module.transform_response(raw or "{}")
-            ok, err = spec.module.validate_response(data)
-            if not ok:
-                raise ValueError(f"{spec.module.AGENT_NAME}: {err}")
-            return data
+            prompt = spec.module.build_prompt(inp)
+            attempts = max(1, spec.validation_max_attempts)
+            last_err = ""
+            for _ in range(attempts):
+                raw = await self._invoke(spec.module.AGENT_NAME, prompt, state)
+                data = spec.module.transform_response(raw or "{}")
+                ok, err = spec.module.validate_response(data)
+                if ok:
+                    return data
+                last_err = err
+            raise ValueError(f"{spec.module.AGENT_NAME}: {last_err}")
 
         async def _with_sem() -> Any:
             if self._sem is None:
