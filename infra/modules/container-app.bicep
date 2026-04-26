@@ -19,6 +19,9 @@ param externalIngress bool = true
 @description('Comma-separated list of allowed CORS origins for the FastAPI ALLOWED_ORIGINS env var (e.g. "https://app.contoso.com,https://swa-app.azurestaticapps.net"). Empty (default) means no cross-origin browser calls — the API is server-to-server only. Use "*" for sandbox-only allow-all.')
 param allowedOrigins string = ''
 
+@description('Login server (e.g. acrlabdevxxxx.azurecr.io) of the Azure Container Registry that hosts the api image. Wired into Container App `configuration.registries[]` with the workload UAMI so pulls happen via managed identity (no admin user, no creds in env).')
+param containerRegistryLoginServer string
+
 // NOTE — Container Apps private endpoint is intentionally NOT wired in
 // Tier 3 by this module. The PE sub-resource for
 // `Microsoft.App/managedEnvironments` requires the env to be
@@ -73,6 +76,12 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
         transport: 'auto'
       }
       activeRevisionsMode: 'Single'
+      registries: [
+        {
+          server: containerRegistryLoginServer
+          identity: identityId
+        }
+      ]
     }
     template: {
       containers: [

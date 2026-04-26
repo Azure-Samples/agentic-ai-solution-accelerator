@@ -194,6 +194,18 @@ module containerApp 'modules/container-app.bicep' = {
     searchEndpoint: search.outputs.endpoint
     externalIngress: externalIngress
     allowedOrigins: allowedOrigins
+    containerRegistryLoginServer: registry.outputs.loginServer
+  }
+}
+
+module registry 'modules/acr.bicep' = {
+  name: 'registry'
+  params: {
+    // ACR registry names must be 5-50 chars, lowercase alphanumeric only.
+    name: replace('acr${envName}${resourceToken}', '-', '')
+    location: location
+    tags: tags
+    rbacPrincipalId: identity.outputs.principalId
   }
 }
 
@@ -208,3 +220,5 @@ output AZURE_AI_SEARCH_ENDPOINT string = search.outputs.endpoint
 output APPLICATIONINSIGHTS_CONNECTION_STRING string = monitor.outputs.appInsightsConnectionString
 output API_URL string = containerApp.outputs.fqdn
 output MANAGED_IDENTITY_CLIENT_ID string = identity.outputs.clientId
+output AZURE_CONTAINER_REGISTRY_ENDPOINT string = registry.outputs.loginServer
+output AZURE_CONTAINER_REGISTRY_NAME string = registry.outputs.name
