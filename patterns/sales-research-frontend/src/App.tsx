@@ -177,7 +177,7 @@ export default function App() {
           busy={busy}
           liveThoughts={liveThoughts}
         />
-        <ResultPanel briefing={briefing} />
+        <ResultPanel briefing={briefing} events={events} />
       </main>
 
       <footer className="app-footer">

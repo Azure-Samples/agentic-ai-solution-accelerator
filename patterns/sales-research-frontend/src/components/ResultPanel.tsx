@@ -1,9 +1,15 @@
-import { useState } from "react";
-import type { ResearchBriefing } from "../types/research";
+import { useMemo, useState } from "react";
+import type { ResearchBriefing, StreamEvent } from "../types/research";
+import { SectionLoader } from "./SectionLoader";
 
 interface Props {
   briefing: ResearchBriefing | null;
+  events: StreamEvent[];
 }
+
+// ---------------------------------------------------------------------------
+// Section helpers
+// ---------------------------------------------------------------------------
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -14,16 +20,109 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function KeyValueBlock({ data }: { data: Record<string, unknown> }) {
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function isStringArray(v: unknown): v is string[] {
+  return Array.isArray(v) && v.every((x) => typeof x === "string");
+}
+
+// Pretty title for a snake_case key: "fit_score" -> "Fit score"
+function humanise(key: string): string {
+  const s = key.replace(/_/g, " ").trim();
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : key;
+}
+
+// ---------------------------------------------------------------------------
+// Field-specific renderers
+//
+// Worker outputs ARE described by per-agent transform.py modules so we know
+// the shapes. These renderers turn each shape into proper UI instead of
+// JSON.stringify code blocks. Anything we don't recognise falls through to
+// ``GenericValue`` which still avoids raw JSON for common shapes.
+// ---------------------------------------------------------------------------
+
+function NewsItem({ item }: { item: Record<string, unknown> }) {
+  const title = String(item["title"] ?? "Untitled");
+  const date = item["date"] ? String(item["date"]) : null;
+  const summary = item["summary"] ? String(item["summary"]) : null;
+  const url = item["url"] ? String(item["url"]) : null;
+  return (
+    <article className="news-card">
+      <header>
+        <span className="news-title">{title}</span>
+      {Boolean(date) && <span className="badge">{date}</span>}
+      </header>
+      {Boolean(summary) && <p className="news-summary">{summary}</p>}
+      {Boolean(url) && (
+        <p className="muted news-source">
+          source: <code>{url}</code>
+        </p>
+      )}
+    </article>
+  );
+}
+
+function CommitteeTable({ rows }: { rows: Record<string, unknown>[] }) {
+  if (rows.length === 0) return <p className="muted">(none identified)</p>;
+  return (
+    <table className="mini-table">
+      <thead>
+        <tr>
+          <th>Role</th>
+          <th>Name</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row, i) => (
+          <tr key={i}>
+            <td>{String(row["role"] ?? "—")}</td>
+            <td>{String(row["name_if_known"] ?? row["name"] ?? "not available")}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function SignalList({ items }: { items: Record<string, unknown>[] }) {
+  if (items.length === 0) return <p className="muted">(no signals)</p>;
+  return (
+    <ul className="signal-list">
+      {items.map((s, i) => (
+        <li key={i}>
+          <span>{String(s["signal"] ?? "")}</span>
+          {Boolean(s["source"]) && (
+            <span className="muted signal-source">source: <code>{String(s["source"])}</code></span>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function StringList({ items }: { items: string[] }) {
+  if (items.length === 0) return <p className="muted">(none)</p>;
+  return (
+    <ul className="bullet-list">
+      {items.map((it, i) => (
+        <li key={i}>{it}</li>
+      ))}
+    </ul>
+  );
+}
+
+function FlatKeyValues({ data }: { data: Record<string, unknown> }) {
   const entries = Object.entries(data);
   if (entries.length === 0) return <p className="muted">(empty)</p>;
   return (
     <dl className="kv">
       {entries.map(([k, v]) => (
         <div key={k}>
-          <dt>{k}</dt>
+          <dt>{humanise(k)}</dt>
           <dd>
-            {typeof v === "string" ? v : <pre>{JSON.stringify(v, null, 2)}</pre>}
+            <GenericValue fieldKey={k} value={v} />
           </dd>
         </div>
       ))}
@@ -31,14 +130,206 @@ function KeyValueBlock({ data }: { data: Record<string, unknown> }) {
   );
 }
 
-export function ResultPanel({ briefing }: Props) {
+function CitationsList({ items }: { items: Record<string, unknown>[] }) {
+  if (items.length === 0) return <p className="muted">(no citations)</p>;
+  return (
+    <ul className="citation-list">
+      {items.map((c, i) => (
+        <li key={i}>
+          <code className="citation-url">{String(c["url"] ?? "—")}</code>
+          {Boolean(c["quote"]) && <span className="citation-quote">"{String(c["quote"])}"</span>}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// Routes a (key, value) pair to the most specific renderer available.
+function GenericValue({ fieldKey, value }: { fieldKey: string; value: unknown }) {
+  if (value === null || value === undefined || value === "") {
+    return <span className="muted">not available</span>;
+  }
+  if (typeof value === "string") {
+    // URL-ish: render as code
+    if (/^(https?:\/\/|document:)/.test(value)) return <code>{value}</code>;
+    return <>{value}</>;
+  }
+  if (typeof value === "number" || typeof value === "boolean") return <>{String(value)}</>;
+  if (Array.isArray(value)) {
+    if (value.length === 0) return <span className="muted">(none)</span>;
+    if (isStringArray(value)) return <StringList items={value} />;
+    if (value.every(isRecord)) {
+      // Detect known nested-array shapes by their first item's keys.
+      const sample = value[0] as Record<string, unknown>;
+      const keys = new Set(Object.keys(sample));
+      if (fieldKey === "recent_news" || (keys.has("title") && keys.has("summary"))) {
+        return (
+          <div className="news-list">
+            {(value as Record<string, unknown>[]).map((it, i) => (
+              <NewsItem key={i} item={it} />
+            ))}
+          </div>
+        );
+      }
+      if (fieldKey === "buying_committee" || (keys.has("role") && (keys.has("name_if_known") || keys.has("name")))) {
+        return <CommitteeTable rows={value as Record<string, unknown>[]} />;
+      }
+      if (fieldKey === "signal_evidence" || (keys.has("signal") && keys.has("source"))) {
+        return <SignalList items={value as Record<string, unknown>[]} />;
+      }
+      if (fieldKey === "citations" || (keys.has("url") && keys.has("quote"))) {
+        return <CitationsList items={value as Record<string, unknown>[]} />;
+      }
+      // Generic record array: render each as a small kv card.
+      return (
+        <div className="record-list">
+          {(value as Record<string, unknown>[]).map((row, i) => (
+            <div key={i} className="record-card">
+              <FlatKeyValues data={row} />
+            </div>
+          ))}
+        </div>
+      );
+    }
+    // Mixed array: comma-separated.
+    return <>{value.map((v) => String(v)).join(", ")}</>;
+  }
+  if (isRecord(value)) {
+    return <FlatKeyValues data={value} />;
+  }
+  return <code>{String(value)}</code>;
+}
+
+// ---------------------------------------------------------------------------
+// Section blocks — each consumes a top-level briefing field.
+// ---------------------------------------------------------------------------
+
+function ExecutiveSummary({ items }: { items: string[] | undefined }) {
+  if (!items) return null;
+  if (items.length === 0) return <p className="muted">(awaiting synthesis)</p>;
+  return (
+    <ul className="bullet-list">
+      {items.map((line, i) => (
+        <li key={i}>{line}</li>
+      ))}
+    </ul>
+  );
+}
+
+function NextSteps({ items }: { items: string[] | undefined }) {
+  if (!items) return null;
+  if (items.length === 0) return <p className="muted">(awaiting synthesis)</p>;
+  return (
+    <ol className="bullet-list">
+      {items.map((line, i) => (
+        <li key={i}>{line}</li>
+      ))}
+    </ol>
+  );
+}
+
+function HitlBlock({
+  approvals,
+  toolArgs,
+}: {
+  approvals: string[];
+  toolArgs: Record<string, Record<string, unknown>>;
+}) {
+  if (approvals.length === 0) return null;
+  return (
+    <Section title="Pending HITL approvals">
+      {approvals.map((tool) => {
+        const args = toolArgs[tool] ?? {};
+        return (
+          <div key={tool} className="hitl-card">
+            <header>
+              <code>{tool}</code>
+              <span className="badge warn">requires approval</span>
+            </header>
+            <FlatKeyValues data={args} />
+          </div>
+        );
+      })}
+    </Section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main panel
+// ---------------------------------------------------------------------------
+
+// Map worker_id -> briefing field name. Confirmed against
+// SalesResearchWorkflow._aggregate (workflow.py):
+//   account_planner       -> account_profile
+//   icp_fit_analyst       -> icp_fit
+//   competitive_context   -> competitive_play
+//   outreach_personalizer -> recommended_outreach
+const WORKER_TO_SECTION: Record<string, {
+  key: "account_profile" | "icp_fit" | "competitive_play" | "recommended_outreach";
+  label: string;
+  workerLabel: string;
+}> = {
+  account_planner: {
+    key: "account_profile",
+    label: "Account profile",
+    workerLabel: "researching company news, signals, and buying committee",
+  },
+  icp_fit_analyst: {
+    key: "icp_fit",
+    label: "ICP fit",
+    workerLabel: "scoring fit against your ICP",
+  },
+  competitive_context: {
+    key: "competitive_play",
+    label: "Competitive play",
+    workerLabel: "mapping competitor presence and differentiators",
+  },
+  outreach_personalizer: {
+    key: "recommended_outreach",
+    label: "Recommended outreach",
+    workerLabel: "drafting outreach for the persona",
+  },
+};
+
+const SECTION_ORDER: Array<keyof typeof WORKER_TO_SECTION> = [
+  "account_planner",
+  "icp_fit_analyst",
+  "competitive_context",
+  "outreach_personalizer",
+];
+
+export function ResultPanel({ briefing, events }: Props) {
   const [showRaw, setShowRaw] = useState(false);
-  if (!briefing) return null;
+
+  // Extract per-section data from worker partials so we can render
+  // sections progressively as they arrive — without waiting for the
+  // supervisor synthesis. Once ``briefing`` is set, it takes
+  // precedence (the supervisor may have refined the ordering).
+  const partialsByWorker = useMemo(() => {
+    const map: Record<string, unknown> = {};
+    for (const e of events) {
+      if (e.type === "partial") map[e.worker_id] = e.output;
+    }
+    return map;
+  }, [events]);
+
+  // Nothing to show until at least one partial OR the briefing arrives.
+  const hasAnything = briefing !== null || Object.keys(partialsByWorker).length > 0;
+  if (!hasAnything) return null;
+
+  function dataFor(workerId: keyof typeof WORKER_TO_SECTION): unknown | null {
+    const sectionKey = WORKER_TO_SECTION[workerId].key;
+    if (briefing) return briefing[sectionKey];
+    return partialsByWorker[workerId] ?? null;
+  }
 
   return (
     <div className="card">
       <div className="result-header">
-        <h2>Briefing</h2>
+        <h2>
+          Briefing
+          {!briefing && <span className="muted briefing-progress"> — assembling…</span>}
+        </h2>
         <label className="raw-toggle">
           <input
             type="checkbox"
@@ -50,52 +341,51 @@ export function ResultPanel({ briefing }: Props) {
       </div>
 
       {showRaw ? (
-        <pre className="raw-json">{JSON.stringify(briefing, null, 2)}</pre>
+        <pre className="raw-json">
+          {JSON.stringify(briefing ?? partialsByWorker, null, 2)}
+        </pre>
       ) : (
         <>
           <Section title="Executive summary">
-            <ul>
-              {briefing.executive_summary.map((line, i) => (
-                <li key={i}>{line}</li>
-              ))}
-            </ul>
+            {briefing ? (
+              <ExecutiveSummary items={briefing.executive_summary} />
+            ) : (
+              <SectionLoader label="Executive summary" subLabel="waiting on supervisor synthesis" />
+            )}
           </Section>
-          <Section title="Account profile">
-            <KeyValueBlock data={briefing.account_profile} />
-          </Section>
-          <Section title="ICP fit">
-            <KeyValueBlock data={briefing.icp_fit} />
-          </Section>
-          <Section title="Competitive play">
-            <KeyValueBlock data={briefing.competitive_play} />
-          </Section>
-          <Section title="Recommended outreach">
-            <KeyValueBlock data={briefing.recommended_outreach} />
-          </Section>
+
+          {SECTION_ORDER.map((workerId) => {
+            const meta = WORKER_TO_SECTION[workerId];
+            const data = dataFor(workerId);
+            return (
+              <Section key={workerId} title={meta.label}>
+                {data && isRecord(data) ? (
+                  <FlatKeyValues data={data} />
+                ) : (
+                  <SectionLoader label={meta.label} subLabel={meta.workerLabel} />
+                )}
+              </Section>
+            );
+          })}
+
           <Section title="Next steps">
-            <ol>
-              {briefing.next_steps.map((step, i) => (
-                <li key={i}>{step}</li>
-              ))}
-            </ol>
+            {briefing ? (
+              <NextSteps items={briefing.next_steps} />
+            ) : (
+              <SectionLoader label="Next steps" subLabel="waiting on supervisor synthesis" />
+            )}
           </Section>
-          {briefing.requires_approval.length > 0 && (
-            <Section title="Pending HITL approvals">
-              <ul>
-                {briefing.requires_approval.map((tool) => (
-                  <li key={tool}>
-                    <code>{tool}</code>
-                    <pre>
-                      {JSON.stringify(briefing.tool_args[tool] ?? {}, null, 2)}
-                    </pre>
-                  </li>
-                ))}
-              </ul>
-            </Section>
+
+          {briefing && (
+            <HitlBlock
+              approvals={briefing.requires_approval}
+              toolArgs={briefing.tool_args}
+            />
           )}
-          {briefing.usage && (
+
+          {briefing?.usage && (
             <Section title="Usage">
-              <KeyValueBlock data={briefing.usage as Record<string, unknown>} />
+              <FlatKeyValues data={briefing.usage as Record<string, unknown>} />
             </Section>
           )}
         </>
