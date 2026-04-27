@@ -5,9 +5,11 @@
 > role and follow it top-to-bottom. Come back here only if you lose the
 > thread.
 
-> **This page is a navigation map, not a source of truth.** Authoritative
-> instructions live in the linked docs. If the diagram and a linked doc
-> disagree, the linked doc wins.
+> **This page is a navigation map.** Stage *details* (how to run discovery,
+> how to scaffold, what "good" looks like) live in the linked docs and win
+> on conflict. The [node reference table](#node-reference-same-as-the-diagram)
+> below is canonical for **node → first-action doc → playbook stage**
+> mapping; if the diagram and the table disagree, the table wins.
 
 > **Responsibilities, not job titles.** At a small partner, one person
 > may wear both the Delivery Lead and Partner Engineer hats. The
@@ -23,10 +25,7 @@ Engineer · Customer Ops) across the seven stages of
 → provision → iterate → UAT → handover → measure).
 
 Each node's click target is its **first-action doc** — the thing you
-actually open to get moving. The [node reference table](#node-reference-same-as-the-diagram)
-below keeps the authoritative matrix (who · why · playbook stage ·
-first action) aligned with the diagram — if anything drifts, the
-table is the source of truth.
+actually open to get moving.
 
 ---
 

@@ -87,15 +87,15 @@ nav:
       - Handover template: handover/handover-packet-template.md
   - Partner engineer:
       - Workflow map: partner-workflow.md
-      - Discovery guide: discovery/how-to-use.md
       - Agent specs: agent-specs/README.md
       - Tool catalog: foundry-tool-catalog.md
       - Version matrix: version-matrix.md
-  - Patterns:
+  - Architecture & governance:
       - Reference architecture: patterns/architecture/README.md
+      - Azure AI landing zone: patterns/azure-ai-landing-zone/README.md
       - WAF alignment: patterns/waf-alignment/README.md
       - Responsible AI: patterns/rai/README.md
-      - Azure AI landing zone: patterns/azure-ai-landing-zone/README.md
+  - Implementation patterns:
       - Sales research frontend: patterns/sales-research-frontend/README.md
   - Reference scenarios:
       - Customer service actioning: references/customer-service-actioning/README.md
