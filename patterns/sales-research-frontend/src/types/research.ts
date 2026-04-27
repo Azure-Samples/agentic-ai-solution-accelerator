@@ -45,27 +45,35 @@ export interface ResearchBriefing {
 //
 // Event ordering contract:
 //   status (supervisor.routed)
+//   worker_started × N  ← one per worker as it is dispatched (so the
+//                         frontend can show a per-worker placeholder
+//                         immediately instead of waiting for the first
+//                         token, which can take 5-15s on cold replicas)
 //   chunk × *           ← interleaved with all other events while
 //                         workers / aggregator are streaming tokens
 //   partial × N         ← one per worker (final accumulated output)
 //   status (aggregating)
 //   chunk × *           ← supervisor LLM streaming during _aggregate
 //   briefing_ready      ← briefing renderable; stream NOT terminal
-//   [tool_skipped | tool_result | tool_error] × M
+//   [tool_skipped | tool_pending_approval | tool_result | tool_error] × M
 //   final               ← briefing carrier; stream NOT terminal
 //   done                ← terminal; stream is over
 //
 // ``error`` is reserved for FATAL failures (DAG aborts, aggregation
 // throws). Side-effect tool failures use ``tool_error`` and do NOT
-// abort the stream.
+// abort the stream. ``tool_pending_approval`` is what the lab/starter
+// emits when no HITL approver is configured — the proposed action is
+// surfaced for review without being executed.
 type WithSeq<T> = T & { seq?: number };
 export type StreamEvent =
   | WithSeq<{ type: "status"; stage: string; stages?: string[][] }>
-  | WithSeq<{ type: "chunk"; agent: string; delta: string }>
+  | WithSeq<{ type: "worker_started"; worker_id: string; agent: string }>
+  | WithSeq<{ type: "chunk"; agent: string; worker_id?: string | null; delta: string }>
   | WithSeq<{ type: "partial"; worker_id: string; output: unknown }>
   | WithSeq<{ type: "worker_skipped"; worker_id: string; error?: string; reason?: string }>
   | WithSeq<{ type: "briefing_ready"; briefing: ResearchBriefing }>
   | WithSeq<{ type: "tool_skipped"; tool: string; reason: string }>
+  | WithSeq<{ type: "tool_pending_approval"; tool: string; args: Record<string, unknown> }>
   | WithSeq<{ type: "tool_result"; tool: string; result: unknown }>
   | WithSeq<{ type: "tool_error"; tool: string; error: string }>
   | WithSeq<{ type: "final"; briefing: ResearchBriefing }>

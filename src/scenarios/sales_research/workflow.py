@@ -138,6 +138,15 @@ class SalesResearchWorkflow:
         self._primary_index_name = primary_index_name
         self._agent_versions: dict[str, str] = {}
         self._version_lock: Any = None  # lazily created asyncio.Lock
+        # Reverse map: Foundry agent_name -> workflow worker_id. Used to
+        # tag streaming ``chunk`` events with the worker_id so the frontend
+        # can correlate live tokens against ``partial`` events keyed by the
+        # same worker_id (the two were diverging — accel-icp-fit-analyst
+        # vs icp_fit_analyst — which left "is working…" cards stuck on
+        # screen after the worker had already finished).
+        self._agent_to_wid: dict[str, str] = {
+            spec.module.AGENT_NAME: wid for wid, spec in WORKERS.items()
+        }
         self._dag = SupervisorDAG(
             WORKERS,
             invoke_agent=self._invoke_agent,
@@ -198,6 +207,18 @@ class SalesResearchWorkflow:
 
                 approvals_needed = final.get("requires_approval", []) or []
                 tool_args_map = final.get("tool_args", {}) or {}
+                # Lab / partner-starter mode: when no approver is wired up
+                # AND HITL_DEV_MODE is off, we deliberately do NOT execute
+                # side-effect tools. Surfacing the proposed action as
+                # ``tool_pending_approval`` keeps the UX honest (no green
+                # "approved" lie, no red "error") and is the safe default
+                # for partner forks until they integrate their own
+                # approver (Teams bot, ITSM queue, etc.).
+                approver = os.getenv("HITL_APPROVER_ENDPOINT")
+                dev_mode = os.getenv("HITL_DEV_MODE", "").lower() in (
+                    "1", "true", "on",
+                )
+                hitl_configured = bool(approver) or dev_mode
                 for tool_name in approvals_needed:
                     if tool_name not in SIDE_EFFECT_TOOLS:
                         continue
@@ -208,6 +229,13 @@ class SalesResearchWorkflow:
                             "type": "tool_skipped",
                             "tool": tool_name,
                             "reason": "no tool_args produced by supervisor",
+                        })
+                        continue
+                    if not hitl_configured:
+                        await out_q.put({
+                            "type": "tool_pending_approval",
+                            "tool": tool_name,
+                            "args": dict(args),
                         })
                         continue
                     try:
@@ -402,6 +430,12 @@ class SalesResearchWorkflow:
                     state.chunks.put_nowait({
                         "type": "chunk",
                         "agent": agent_name,
+                        # Canonical UI key — matches partial.worker_id and
+                        # worker_started.worker_id. ``agent`` is retained
+                        # for telemetry / debug. ``None`` for the
+                        # supervisor (post-DAG aggregator) since it isn't
+                        # a registered worker.
+                        "worker_id": self._agent_to_wid.get(agent_name),
                         "delta": delta,
                     })
                 except asyncio.QueueFull:  # pragma: no cover - defensive

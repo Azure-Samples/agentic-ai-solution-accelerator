@@ -5,12 +5,11 @@ import { labelForAgent, statusForAgent } from "../data/agentStatus";
 interface Props {
   events: StreamEvent[];
   busy: boolean;
-  // Per-agent live thinking buffer (chunks accumulated since the agent
-  // started but before it emitted ``partial``). We don't render the raw
-  // text — it's JSON fragments — but the accumulated length drives a
-  // rotating, human-readable status copy per agent so the user knows
-  // the model is making progress during 30-60s gpt-5-mini calls.
-  liveThoughts?: [agent: string, text: string][];
+  // Per-worker live progress: [worker_id_or_agent, char_count]. We
+  // only need the count to drive a rotating, human-readable status
+  // copy per agent, which avoids re-rendering multi-MB strings on
+  // every chunk during long runs.
+  liveThoughts?: [agent: string, charCount: number][];
 }
 
 function describe(event: StreamEvent): { label: string; tone: string } {
@@ -31,6 +30,8 @@ function describe(event: StreamEvent): { label: string; tone: string } {
       return { label: "Briefing ready — rendering", tone: "ok" };
     case "tool_skipped":
       return { label: `tool skipped · ${event.tool} (${event.reason})`, tone: "warn" };
+    case "tool_pending_approval":
+      return { label: `tool pending approval · ${event.tool}`, tone: "warn" };
     case "tool_result":
       return { label: `tool result · ${event.tool}`, tone: "ok" };
     case "tool_error":
@@ -42,7 +43,9 @@ function describe(event: StreamEvent): { label: string; tone: string } {
     // ``chunk`` is routed before reaching this list, but TypeScript
     // wants the union exhausted.
     case "chunk":
-      return { label: `chunk · ${labelForAgent(event.agent)}`, tone: "info" };
+      return { label: `chunk · ${labelForAgent(event.worker_id ?? event.agent)}`, tone: "info" };
+    case "worker_started":
+      return { label: `${labelForAgent(event.worker_id)} started`, tone: "info" };
     // ``done`` and ``stream_interrupted`` are protocol-level — App.tsx
     // routes them away from the event log too, but the union must be
     // exhausted for the type checker.
@@ -85,13 +88,13 @@ export function StreamingViewer({ events, busy, liveThoughts }: Props) {
       </ol>
       {liveThoughts && liveThoughts.length > 0 && (
         <div className="live-thoughts" ref={thoughtsRef}>
-          {liveThoughts.map(([agent, text]) => (
+          {liveThoughts.map(([agent, charCount]) => (
             <div key={agent} className="live-thought">
               <span className="thought-agent">
                 <span className="pulse" aria-hidden="true" />{" "}
                 {labelForAgent(agent)} is working…
               </span>
-              <p className="thought-status">{statusForAgent(agent, text.length)}</p>
+              <p className="thought-status">{statusForAgent(agent, charCount)}</p>
             </div>
           ))}
         </div>

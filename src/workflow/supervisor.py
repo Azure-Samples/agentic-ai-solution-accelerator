@@ -312,6 +312,12 @@ class SupervisorDAG:
         for wid, d in list(indeg.items()):
             if d == 0:
                 _launch(wid)
+                spec = self._workers[wid]
+                yield {
+                    "type": "worker_started",
+                    "worker_id": wid,
+                    "agent": spec.module.AGENT_NAME,
+                }
 
         while pending:
             done_tasks, _ = await asyncio.wait(
@@ -371,6 +377,11 @@ class SupervisorDAG:
                         for d in ready_spec.depends_on
                     ):
                         _launch(dep_wid)
+                        yield {
+                            "type": "worker_started",
+                            "worker_id": dep_wid,
+                            "agent": ready_spec.module.AGENT_NAME,
+                        }
 
         # Drain any in-flight retrieval tasks that outlived their workers
         # (e.g. a retrieval completed after its worker was skipped).

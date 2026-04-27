@@ -11,10 +11,12 @@ interface Props {
 // Section helpers
 // ---------------------------------------------------------------------------
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ id, title, children }: { id?: string; title: string; children: React.ReactNode }) {
   return (
-    <section className="result-section">
-      <h3>{title}</h3>
+    <section id={id} className="result-section">
+      <header className="section-header">
+        <h3>{title}</h3>
+      </header>
       {children}
     </section>
   );
@@ -228,32 +230,6 @@ function NextSteps({ items }: { items: string[] | undefined }) {
   );
 }
 
-function HitlBlock({
-  approvals,
-  toolArgs,
-}: {
-  approvals: string[];
-  toolArgs: Record<string, Record<string, unknown>>;
-}) {
-  if (approvals.length === 0) return null;
-  return (
-    <Section title="Pending HITL approvals">
-      {approvals.map((tool) => {
-        const args = toolArgs[tool] ?? {};
-        return (
-          <div key={tool} className="hitl-card">
-            <header>
-              <code>{tool}</code>
-              <span className="badge warn">requires approval</span>
-            </header>
-            <FlatKeyValues data={args} />
-          </div>
-        );
-      })}
-    </Section>
-  );
-}
-
 // ---------------------------------------------------------------------------
 // Main panel
 // ---------------------------------------------------------------------------
@@ -346,7 +322,7 @@ export function ResultPanel({ briefing, events }: Props) {
         </pre>
       ) : (
         <>
-          <Section title="Executive summary">
+          <Section id="section-summary" title="Executive summary">
             {briefing ? (
               <ExecutiveSummary items={briefing.executive_summary} />
             ) : (
@@ -358,7 +334,7 @@ export function ResultPanel({ briefing, events }: Props) {
             const meta = WORKER_TO_SECTION[workerId];
             const data = dataFor(workerId);
             return (
-              <Section key={workerId} title={meta.label}>
+              <Section key={workerId} id={`section-${workerId}`} title={meta.label}>
                 {data && isRecord(data) ? (
                   <FlatKeyValues data={data} />
                 ) : (
@@ -368,20 +344,13 @@ export function ResultPanel({ briefing, events }: Props) {
             );
           })}
 
-          <Section title="Next steps">
+          <Section id="section-next_steps" title="Next steps">
             {briefing ? (
               <NextSteps items={briefing.next_steps} />
             ) : (
               <SectionLoader label="Next steps" subLabel="waiting on supervisor synthesis" />
             )}
           </Section>
-
-          {briefing && (
-            <HitlBlock
-              approvals={briefing.requires_approval}
-              toolArgs={briefing.tool_args}
-            />
-          )}
 
           {briefing?.usage && (
             <Section title="Usage">
