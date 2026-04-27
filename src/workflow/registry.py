@@ -40,10 +40,10 @@ class AgentRetrieval:
       ``grounding_chunks`` into the worker's input dict; the prompt builder
       copies them into the system prompt. Backward-compat path; suitable for
       scenarios where you want the orchestrator to control retrieval.
-    - ``foundry_tool``: the Foundry agent has an AzureAISearchTool attached
-      that points at the FoundryIQ Index asset created by bootstrap. The
-      Search service handles vector + semantic retrieval server-side;
-      ``_retrieve`` is skipped for this worker.
+    - ``foundry_tool``: the Foundry agent has an MCPTool attached that
+      points at the FoundryIQ Knowledge Base via a Bicep-provisioned
+      RemoteTool MCP connection. AI Search handles vector + semantic
+      retrieval server-side; ``_retrieve`` is skipped for this worker.
     """
 
     mode: str  # 'none' | 'python_injected' | 'foundry_tool'

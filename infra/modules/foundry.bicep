@@ -295,8 +295,8 @@ output projectEndpoint string = 'https://${account.name}.services.ai.azure.com/a
 output projectName string = project.name
 // Project system-assigned MI principal id. Used by main.bicep to grant
 // the project access to AI Search (Search Index Data Reader) so the
-// FoundryIQ Index asset can resolve documents from the connected
-// Search index when the agent's AzureAISearchTool fires.
+// FoundryIQ Knowledge Base can resolve documents from the connected
+// Search index via the RemoteTool MCP connection.
 output projectPrincipalId string = project.identity.principalId
 output modelDeploymentName string = modelDeployment.name
 output modelName string = modelName

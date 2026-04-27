@@ -26,8 +26,8 @@ Vector wiring (FoundryIQ pattern):
 
 Bootstrap embeds seed docs at provision time so ``contentVector`` is
 populated for the initial corpus; the same vectorizer fires at query time
-when an agent's ``AzureAISearchTool`` runs a vector query through the
-project-level ``accel-search`` connection.
+when the FoundryIQ Knowledge Base runs a vector query through the
+project-level MCP connection.
 """
 from __future__ import annotations
 

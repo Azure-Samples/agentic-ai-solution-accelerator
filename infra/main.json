@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.40.2.10011",
-      "templateHash": "13616033492241719736"
+      "templateHash": "4448132981423367287"
     }
   },
   "parameters": {
@@ -89,6 +89,20 @@
       "defaultValue": "accel-search",
       "metadata": {
         "description": "Name of the project-level Cognitive Search connection inside the Foundry project. Bootstrap (FoundryIQ Index asset) references this name when wiring the agent tool."
+      }
+    },
+    "kbMcpConnectionName": {
+      "type": "string",
+      "defaultValue": "accel-kb-mcp",
+      "metadata": {
+        "description": "Name of the project-level RemoteTool MCP connection. Bootstrap wires this as the MCPTool.project_connection_id on retrieval-mode agents so AI Search knowledge shows under the agent Knowledge section in the Foundry portal."
+      }
+    },
+    "knowledgeBaseName": {
+      "type": "string",
+      "defaultValue": "accel-accounts-kb",
+      "metadata": {
+        "description": "Name of the FoundryIQ knowledge base on the AI Search service. Bootstrap creates this KB at startup; the MCP connection target URL references it."
       }
     }
   },
@@ -233,6 +247,7 @@
     "searchServiceContribRoleId": "7ca78c08-252a-4471-8644-bb5ff32d4ba0",
     "cognitiveServicesOpenAIUserRoleId": "5e0bd9bd-7b93-4f28-af87-19fc36ad61bd",
     "rbacAdminRoleId": "f58310d9-a9f6-439a-9e8d-f62e7b41a168",
+    "aiProjectManagerRoleId": "b556d68e-0be0-4f35-a333-ad7ee1ce17ea",
     "searchRolesAssignableExpr": "[format('@Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {{{0}, {1}, {2}}}', variables('searchIndexDataReaderRoleId'), variables('searchIndexDataContribRoleId'), variables('searchServiceContribRoleId'))]"
   },
   "resources": [
@@ -304,6 +319,25 @@
       "dependsOn": [
         "[extensionResourceId(resourceId('Microsoft.Search/searchServices', variables('searchName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.Search/searchServices', variables('searchName')), variables('foundryAccountName'), 'projectReadsSearchIndex'))]",
         "[resourceId('Microsoft.Resources/deployments', 'search')]"
+      ]
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts/projects/connections",
+      "apiVersion": "2025-12-01",
+      "name": "[format('{0}/{1}/{2}', variables('foundryAccountName'), variables('foundryActualProjectName'), parameters('kbMcpConnectionName'))]",
+      "properties": {
+        "authType": "ProjectManagedIdentity",
+        "category": "RemoteTool",
+        "target": "[format('{0}/knowledgebases/{1}/mcp?api-version=2025-11-01-preview', reference(resourceId('Microsoft.Resources/deployments', 'search'), '2025-04-01').outputs.endpoint.value, parameters('knowledgeBaseName'))]",
+        "isSharedToAll": true,
+        "audience": "https://search.azure.com/",
+        "metadata": {
+          "ApiType": "Azure"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'search')]",
+        "[resourceId('Microsoft.CognitiveServices/accounts/projects/connections', variables('foundryAccountName'), variables('foundryActualProjectName'), parameters('searchConnectionName'))]"
       ]
     },
     {
@@ -1427,6 +1461,12 @@
           "foundrySearchConnectionName": {
             "value": "[parameters('searchConnectionName')]"
           },
+          "kbMcpConnectionName": {
+            "value": "[parameters('kbMcpConnectionName')]"
+          },
+          "knowledgeBaseName": {
+            "value": "[parameters('knowledgeBaseName')]"
+          },
           "externalIngress": {
             "value": "[parameters('externalIngress')]"
           },
@@ -1444,7 +1484,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.40.2.10011",
-              "templateHash": "4670643139068987891"
+              "templateHash": "7293719527169707312"
             }
           },
           "parameters": {
@@ -1506,6 +1546,20 @@
               "type": "string",
               "metadata": {
                 "description": "Project-level connection name of the AI Search connection inside the Foundry project. Surfaced to the workload as AZURE_AI_FOUNDRY_SEARCH_CONNECTION_NAME so bootstrap can reference the connection when creating the FoundryIQ Index asset."
+              }
+            },
+            "kbMcpConnectionName": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Name of the project-level RemoteTool MCP connection for the FoundryIQ knowledge base. Surfaced as AZURE_AI_FOUNDRY_KB_MCP_CONNECTION_NAME so bootstrap can wire MCPTool.project_connection_id on retrieval agents."
+              }
+            },
+            "knowledgeBaseName": {
+              "type": "string",
+              "defaultValue": "",
+              "metadata": {
+                "description": "Deterministic name of the FoundryIQ knowledge base on AI Search. Surfaced as AZURE_AI_FOUNDRY_KB_NAME so bootstrap can create the KB with a known name that matches the MCP connection target URL."
               }
             },
             "modelMapJson": {
@@ -1647,6 +1701,14 @@
                         {
                           "name": "AZURE_AI_SEARCH_RESOURCE_ID",
                           "value": "[parameters('searchResourceId')]"
+                        },
+                        {
+                          "name": "AZURE_AI_FOUNDRY_KB_MCP_CONNECTION_NAME",
+                          "value": "[parameters('kbMcpConnectionName')]"
+                        },
+                        {
+                          "name": "AZURE_AI_FOUNDRY_KB_NAME",
+                          "value": "[parameters('knowledgeBaseName')]"
                         },
                         {
                           "name": "ALLOWED_ORIGINS",
@@ -1849,6 +1911,14 @@
     "AZURE_AI_FOUNDRY_SEARCH_CONNECTION_NAME": {
       "type": "string",
       "value": "[parameters('searchConnectionName')]"
+    },
+    "AZURE_AI_FOUNDRY_KB_MCP_CONNECTION_NAME": {
+      "type": "string",
+      "value": "[parameters('kbMcpConnectionName')]"
+    },
+    "AZURE_AI_FOUNDRY_KB_NAME": {
+      "type": "string",
+      "value": "[parameters('knowledgeBaseName')]"
     },
     "APPLICATIONINSIGHTS_CONNECTION_STRING": {
       "type": "string",

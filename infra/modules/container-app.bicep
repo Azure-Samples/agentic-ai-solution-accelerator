@@ -22,8 +22,14 @@ param searchResourceId string
 @description('Embedding model deployment name in the Foundry account. Surfaced to the workload as AZURE_AI_FOUNDRY_EMBEDDING_DEPLOYMENT so bootstrap can configure the AI Search vector field vectorizer.')
 param embeddingDeploymentName string
 
-@description('Project-level connection name of the AI Search connection inside the Foundry project. Surfaced to the workload as AZURE_AI_FOUNDRY_SEARCH_CONNECTION_NAME so bootstrap can reference the connection when creating the FoundryIQ Index asset.')
+@description('Project-level connection name of the AI Search connection inside the Foundry project. Surfaced to the workload as AZURE_AI_FOUNDRY_SEARCH_CONNECTION_NAME for AAD-based search access.')
 param foundrySearchConnectionName string
+
+@description('Name of the project-level RemoteTool MCP connection for the FoundryIQ knowledge base. Surfaced as AZURE_AI_FOUNDRY_KB_MCP_CONNECTION_NAME so bootstrap can wire MCPTool.project_connection_id on retrieval agents.')
+param kbMcpConnectionName string = ''
+
+@description('Deterministic name of the FoundryIQ knowledge base on AI Search. Surfaced as AZURE_AI_FOUNDRY_KB_NAME so bootstrap can create the KB with a known name that matches the MCP connection target URL.')
+param knowledgeBaseName string = ''
 
 @description('JSON object string mapping accelerator.yaml model slugs to deployed deployment_names. Consumed by src.bootstrap (parses AZURE_AI_FOUNDRY_MODEL_MAP) so each Foundry agent can be bound to its declared slug. Sourced from foundry.bicep `modelMap` output via main.bicep.')
 param modelMapJson string = '{}'
@@ -119,6 +125,8 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
             { name: 'AZURE_AI_FOUNDRY_SEARCH_CONNECTION_NAME', value: foundrySearchConnectionName }
             { name: 'AZURE_AI_SEARCH_ENDPOINT', value: searchEndpoint }
             { name: 'AZURE_AI_SEARCH_RESOURCE_ID', value: searchResourceId }
+            { name: 'AZURE_AI_FOUNDRY_KB_MCP_CONNECTION_NAME', value: kbMcpConnectionName }
+            { name: 'AZURE_AI_FOUNDRY_KB_NAME', value: knowledgeBaseName }
             { name: 'ALLOWED_ORIGINS', value: allowedOrigins }
           ]
           // Probes gate the deployment readiness signal on the in-app

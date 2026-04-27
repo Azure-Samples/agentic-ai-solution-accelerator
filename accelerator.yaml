@@ -114,11 +114,12 @@ scenario:
     - id: account_planner
       foundry_name: accel-account-planner
       retrieval:
-        # FoundryIQ pattern — Foundry agent attaches an AzureAISearchTool
-        # bound to the project Index asset (created by bootstrap from the
-        # `index` field below). The Search service handles vector + semantic
-        # retrieval server-side; the supervisor does NOT inject Python
-        # grounding_chunks into the prompt for this agent.
+        # FoundryIQ Knowledge Base pattern — bootstrap creates a Knowledge
+        # Source + Knowledge Base on AI Search, then wires the agent with an
+        # MCPTool pointing at the Bicep-provisioned RemoteTool MCP connection.
+        # AI Search shows under the agent's **Knowledge** section in the
+        # Foundry portal. The supervisor does NOT inject Python grounding
+        # into the prompt for this agent.
         mode: foundry_tool
         index: accounts
         top_k: 5

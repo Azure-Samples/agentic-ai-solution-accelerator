@@ -20,9 +20,9 @@
 
 Be clear about the baseline before picking tools:
 
-- **Agent creation (`src/bootstrap.py`, runs at FastAPI startup):** creates each Foundry agent with **model + instructions only**. No tools are attached through the bootstrap. `accelerator.yaml` agent entries carry `id` + `foundry_name` only — **there is no `agents[].tools[]` schema today**.
+- **Agent creation (`src/bootstrap.py`, runs at FastAPI startup):** creates each Foundry agent with **model + instructions + MCPTool** for retrieval agents. For agents with `retrieval.mode: foundry_tool`, bootstrap creates a Knowledge Source + Knowledge Base on AI Search, then wires an MCPTool pointing at the Bicep-provisioned RemoteTool MCP connection. AI Search retrieval shows under the agent's **Knowledge** section in the Foundry portal.
 - **Flagship orchestration (`src/scenarios/sales_research/workflow.py`):** a Python-side `SupervisorDAG` invokes each Foundry agent independently by `agent_name` and composes their outputs. It is **not** the Foundry `Connected Agents` feature.
-- **Grounding:** `src/retrieval/ai_search.py` queries Azure AI Search from Python and injects chunks into the agent prompt. Search is **not attached as a Foundry tool** in the flagship — it's a retrieval layer in front of the agent call.
+- **Grounding (retrieval agents):** handled server-side by the FoundryIQ Knowledge Base via MCPTool. For non-retrieval agents, no grounding is applied.
 - **Side-effect tools (`src/tools/`):** `crm_read_account`, `crm_write_contact`, `send_email`, `web_search` are **local Python stubs** executed by the workflow after the supervisor decides they're needed. They are HITL-gated (see `src/accelerator_baseline/hitl.py`) but they are **not** Foundry Azure Functions tools.
 
 **Why this matters for the catalog.** When the partner wants to attach

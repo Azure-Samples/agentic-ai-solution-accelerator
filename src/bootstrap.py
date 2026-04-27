@@ -51,7 +51,7 @@ from .workflow.registry import ROOT, ScenarioAgent, ScenarioBundle
 logger = logging.getLogger("accelerator.bootstrap")
 
 # Search RBAC roles granted to each Foundry agent's instance MI so its
-# AzureAISearchTool calls can resolve the AI Search index at query time.
+# retrieval calls can resolve the AI Search index at query time.
 # Must match the ABAC condition allow-list in infra/main.bicep
 # (workloadAssignsSearchRoles role assignment).
 _AGENT_SEARCH_ROLES: dict[str, str] = {
@@ -161,169 +161,235 @@ async def _retry(
             await asyncio.sleep(sleep)
 
 
-def _foundry_iq_asset_name(index_name: str) -> str:
-    """Deterministic FoundryIQ asset name derived from the AI Search index name."""
-    return f"{index_name}-knowledge"
+# ---------------------------------------------------------------------------
+# FoundryIQ Knowledge Base bootstrap (preview REST API)
+#
+# Creates a Knowledge Source + Knowledge Base on AI Search, then wires each
+# retrieval-mode agent with an MCPTool pointing at the Bicep-provisioned
+# RemoteTool MCP connection.  Uses direct REST calls against the AI Search
+# ``2025-11-01-preview`` API so we stay inside the GA-only SDK constraint
+# (azure-search-documents <11.6.0) while using preview retrieval features.
+# ---------------------------------------------------------------------------
+
+_KB_API_VERSION = "2025-11-01-preview"
 
 
-_FOUNDRY_IQ_ASSET_VERSION = "1"
+async def _rest_put(
+    url: str, body: dict, token: str, *, label: str,
+) -> dict:
+    """Idempotent PUT against an Azure REST endpoint. Returns JSON body."""
+    import aiohttp
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+    async with aiohttp.ClientSession() as session:
+        async with session.put(url, json=body, headers=headers) as resp:
+            text = await resp.text()
+            if resp.status >= 400:
+                raise RuntimeError(
+                    f"{label}: PUT {url} returned {resp.status}: {text}"
+                )
+            return json.loads(text) if text else {}
 
 
-async def _bootstrap_indexes(bundle: ScenarioBundle) -> dict[str, str]:
-    """Register a FoundryIQ Index asset on the project for each retrieval-using agent.
+async def _bootstrap_knowledge(bundle: ScenarioBundle) -> None:
+    """Create a Knowledge Source + Knowledge Base on AI Search.
 
-    Returns a map ``{search_index_name: asset_id}`` so ``_bootstrap_foundry``
-    can wire the right ``index_asset_id`` into each agent's
-    ``AzureAISearchTool``.
+    Uses the ``2025-11-01-preview`` REST API directly (no preview SDK).
+    Idempotent — both PUT endpoints are create-or-update.
 
-    Idempotent — ``indexes.create_or_update`` overwrites the same
-    ``(name, version)`` pair across runs and the asset id is stable.
+    The Knowledge Base name is deterministic from ``AZURE_AI_FOUNDRY_KB_NAME``
+    (set by Bicep) and must match the MCP connection target URL that Bicep
+    provisioned.
     """
     foundry_tool_agents = [
         a for a in bundle.agents
         if a.retrieval is not None and a.retrieval.mode == "foundry_tool"
     ]
     if not foundry_tool_agents:
-        return {}
+        logger.info("bootstrap.knowledge: no retrieval agents; skipping")
+        return
 
-    endpoint = os.environ.get("AZURE_AI_FOUNDRY_ENDPOINT")
-    if not endpoint:
-        raise RuntimeError("AZURE_AI_FOUNDRY_ENDPOINT is not set")
-    connection_name = os.environ.get("AZURE_AI_FOUNDRY_SEARCH_CONNECTION_NAME")
-    if not connection_name:
+    search_endpoint = os.environ.get("AZURE_AI_SEARCH_ENDPOINT", "").rstrip("/")
+    kb_name = os.environ.get("AZURE_AI_FOUNDRY_KB_NAME", "")
+    aoai_endpoint = os.environ.get("AZURE_AI_FOUNDRY_OPENAI_ENDPOINT", "")
+    model_deployment = os.environ.get("AZURE_AI_FOUNDRY_MODEL", "")
+
+    if not search_endpoint:
+        raise RuntimeError("AZURE_AI_SEARCH_ENDPOINT is not set")
+    if not kb_name:
         raise RuntimeError(
-            "AZURE_AI_FOUNDRY_SEARCH_CONNECTION_NAME is not set — Bicep "
-            "should export it from the project AzureAISearch connection."
+            "AZURE_AI_FOUNDRY_KB_NAME is not set — Bicep should export "
+            "the deterministic knowledge base name."
         )
 
-    from azure.ai.projects.aio import AIProjectClient
-    from azure.ai.projects.models import AzureAISearchIndex
     from azure.identity.aio import DefaultAzureCredential
 
-    asset_ids: dict[str, str] = {}
     cred = DefaultAzureCredential()
     try:
-        proj = AIProjectClient(endpoint=endpoint, credential=cred)
-        try:
-            seen_indexes: set[str] = set()
-            for agent in foundry_tool_agents:
-                assert agent.retrieval is not None  # type narrowing
-                idx_name = agent.retrieval.index
-                if not idx_name:
-                    raise RuntimeError(
-                        f"{agent.id}: retrieval.mode=foundry_tool requires "
-                        "retrieval.index"
-                    )
-                if idx_name in seen_indexes:
-                    continue
+        token = (await cred.get_token(
+            "https://search.azure.com/.default"
+        )).token
+
+        # Collect unique index names from retrieval agents.
+        seen_indexes: set[str] = set()
+        for agent in foundry_tool_agents:
+            assert agent.retrieval is not None
+            idx_name = agent.retrieval.index
+            if idx_name and idx_name not in seen_indexes:
                 seen_indexes.add(idx_name)
 
-                asset_name = _foundry_iq_asset_name(idx_name)
+        # ---- 1. Create Knowledge Source(s) per search index ----
+        ks_names: list[str] = []
+        for idx_name in seen_indexes:
+            ks_name = f"{idx_name}-ks"
+            ks_url = (
+                f"{search_endpoint}/knowledgesources/{ks_name}"
+                f"?api-version={_KB_API_VERSION}"
+            )
+            ks_body: dict[str, Any] = {
+                "name": ks_name,
+                "kind": "searchIndex",
+                "description": (
+                    f"Knowledge source wrapping AI Search index '{idx_name}'."
+                ),
+                "searchIndexParameters": {
+                    "searchIndexName": idx_name,
+                    "sourceDataFields": [
+                        {"name": "source"},
+                        {"name": "company_name"},
+                    ],
+                },
+            }
 
-                async def _create(_idx=idx_name, _asset=asset_name) -> Any:
-                    return await proj.indexes.create_or_update(
-                        _asset,
-                        _FOUNDRY_IQ_ASSET_VERSION,
-                        AzureAISearchIndex(
-                            connection_name=connection_name,
-                            index_name=_idx,
-                            description=(
-                                f"FoundryIQ knowledge over AI Search index "
-                                f"'{_idx}'."
-                            ),
-                        ),
-                    )
+            async def _create_ks(
+                _url=ks_url, _body=ks_body, _ks=ks_name,
+            ) -> dict:
+                t = (await cred.get_token(
+                    "https://search.azure.com/.default"
+                )).token
+                return await _rest_put(_url, _body, t, label=f"ks.{_ks}")
 
-                created = await _retry(
-                    _create,
-                    name=f"foundry.indexes.{asset_name}",
-                    budget_seconds=_retry_budget_seconds(),
-                )
-                asset_id = getattr(created, "id", None)
-                if not asset_id:
-                    # The Foundry Indexes API (AzureML-backed) does not
-                    # populate the ``id`` field on the response. The runtime
-                    # Responses API resolves indexes via the canonical
-                    # ``<name>/versions/<version>`` form. The agents
-                    # control-plane API also accepts this form.
-                    asset_id = (
-                        f"{asset_name}/versions/{_FOUNDRY_IQ_ASSET_VERSION}"
-                    )
-                    logger.info(
-                        "bootstrap.indexes: %s server returned no asset id; "
-                        "synthesized %s",
-                        asset_name,
-                        asset_id,
-                    )
-                asset_ids[idx_name] = asset_id
-                logger.info(
-                    "bootstrap.indexes: %s -> %s", asset_name, asset_id,
-                )
-        finally:
-            await proj.close()
+            await _retry(
+                _create_ks,
+                name=f"knowledge_source.{ks_name}",
+                budget_seconds=_retry_budget_seconds(),
+            )
+            ks_names.append(ks_name)
+            logger.info("bootstrap.knowledge: knowledge source OK: %s", ks_name)
+
+        # ---- 2. Create Knowledge Base referencing all sources ----
+        kb_url = (
+            f"{search_endpoint}/knowledgebases/{kb_name}"
+            f"?api-version={_KB_API_VERSION}"
+        )
+        kb_body: dict[str, Any] = {
+            "name": kb_name,
+            "description": (
+                "FoundryIQ knowledge base for the accelerator. "
+                "Orchestrates agentic retrieval over AI Search indexes."
+            ),
+            "knowledgeSources": [{"name": ks} for ks in ks_names],
+            "retrievalReasoningEffort": {"kind": "low"},
+        }
+        # Wire the LLM model if AOAI endpoint + deployment are available.
+        if aoai_endpoint and model_deployment:
+            kb_body["models"] = [{
+                "kind": "azureOpenAI",
+                "azureOpenAIParameters": {
+                    "resourceUri": aoai_endpoint.rstrip("/"),
+                    "deploymentId": model_deployment,
+                    "modelName": model_deployment,
+                },
+            }]
+
+        async def _create_kb() -> dict:
+            t = (await cred.get_token(
+                "https://search.azure.com/.default"
+            )).token
+            return await _rest_put(kb_url, kb_body, t, label=f"kb.{kb_name}")
+
+        await _retry(
+            _create_kb,
+            name=f"knowledge_base.{kb_name}",
+            budget_seconds=_retry_budget_seconds(),
+        )
+        logger.info(
+            "bootstrap.knowledge: knowledge base OK: %s (%d source(s))",
+            kb_name, len(ks_names),
+        )
     finally:
         await cred.close()
-    return asset_ids
 
 
-def _build_search_tool(
-    agent: ScenarioAgent, asset_ids: dict[str, str]
-) -> Any | None:
-    """Construct an ``AzureAISearchTool`` for an agent, or ``None``.
+def _build_mcp_tool(agent: ScenarioAgent) -> Any | None:
+    """Construct an ``MCPTool`` for a retrieval-mode agent, or ``None``.
 
-    Returns ``None`` if the agent has no foundry_tool retrieval. Raises if
-    retrieval is configured but the asset isn't available — bootstrap should
-    fail loudly rather than silently produce a tool-less agent.
+    Uses the FoundryIQ knowledge base MCP connection provisioned by Bicep.
+    The ``project_connection_id`` is the connection **name** (not ARM ID).
     """
     if agent.retrieval is None or agent.retrieval.mode != "foundry_tool":
         return None
-    asset_id = asset_ids.get(agent.retrieval.index)
-    if not asset_id:
+
+    mcp_conn_name = os.environ.get("AZURE_AI_FOUNDRY_KB_MCP_CONNECTION_NAME")
+    search_endpoint = os.environ.get("AZURE_AI_SEARCH_ENDPOINT", "").rstrip("/")
+    kb_name = os.environ.get("AZURE_AI_FOUNDRY_KB_NAME", "")
+
+    if not mcp_conn_name:
         raise RuntimeError(
-            f"{agent.id}: retrieval requested index "
-            f"{agent.retrieval.index!r} but no FoundryIQ asset registered"
+            "AZURE_AI_FOUNDRY_KB_MCP_CONNECTION_NAME is not set — Bicep "
+            "should export the RemoteTool MCP connection name."
         )
-    from azure.ai.projects.models import (
-        AISearchIndexResource,
-        AzureAISearchQueryType,
-        AzureAISearchTool,
-        AzureAISearchToolResource,
+    if not search_endpoint or not kb_name:
+        raise RuntimeError(
+            "AZURE_AI_SEARCH_ENDPOINT and AZURE_AI_FOUNDRY_KB_NAME must "
+            "be set for MCPTool construction."
+        )
+
+    from azure.ai.projects.models import MCPTool
+
+    mcp_url = (
+        f"{search_endpoint}/knowledgebases/{kb_name}"
+        f"/mcp?api-version={_KB_API_VERSION}"
     )
-    qt_raw = (agent.retrieval.query_type or "vector_semantic_hybrid").lower()
-    qt_enum = {
-        "simple": AzureAISearchQueryType.SIMPLE,
-        "semantic": AzureAISearchQueryType.SEMANTIC,
-        "vector": AzureAISearchQueryType.VECTOR,
-        "vector_simple_hybrid": AzureAISearchQueryType.VECTOR_SIMPLE_HYBRID,
-        "vector_semantic_hybrid": AzureAISearchQueryType.VECTOR_SEMANTIC_HYBRID,
-    }.get(qt_raw, AzureAISearchQueryType.VECTOR_SEMANTIC_HYBRID)
-    return AzureAISearchTool(
-        azure_ai_search=AzureAISearchToolResource(
-            indexes=[AISearchIndexResource(
-                index_asset_id=asset_id,
-                query_type=qt_enum,
-                top_k=agent.retrieval.top_k,
-            )]
-        )
+    return MCPTool(
+        server_label="knowledge-base",
+        server_url=mcp_url,
+        require_approval="never",
+        allowed_tools=["knowledge_base_retrieve"],
+        project_connection_id=mcp_conn_name,
     )
 
 
 def _tool_fingerprint(tool: Any | None) -> tuple:
-    """Order-stable fingerprint of an AzureAISearchTool for idempotency diff."""
+    """Order-stable fingerprint of an agent tool for idempotency diff."""
     if tool is None:
         return ()
+    tool_type = getattr(tool, "type", None)
+    if tool_type == "mcp":
+        return (
+            "mcp",
+            getattr(tool, "server_label", "") or "",
+            getattr(tool, "project_connection_id", "") or "",
+        )
+    # Legacy AzureAISearchTool fallback — handles readback of agents that
+    # were created before the MCPTool migration (prior versions on server).
     res = getattr(tool, "azure_ai_search", None)
-    if res is None:
-        return ("azure_ai_search",)
-    indexes = getattr(res, "indexes", None) or []
-    parts: list[tuple] = []
-    for ix in indexes:
-        parts.append((
-            getattr(ix, "index_asset_id", None) or "",
-            str(getattr(ix, "query_type", "") or ""),
-            int(getattr(ix, "top_k", 0) or 0),
-        ))
-    return ("azure_ai_search", tuple(parts))
+    if res is not None:
+        indexes = getattr(res, "indexes", None) or []
+        parts: list[tuple] = []
+        for ix in indexes:
+            parts.append((
+                getattr(ix, "project_connection_id", None)
+                or getattr(ix, "index_asset_id", None) or "",
+                getattr(ix, "index_name", None) or "",
+                str(getattr(ix, "query_type", "") or ""),
+                int(getattr(ix, "top_k", 0) or 0),
+            ))
+        return ("azure_ai_search", tuple(parts))
+    return ("unknown",)
 
 
 def _existing_tools_fingerprint(definition: Any) -> tuple:
@@ -333,8 +399,6 @@ def _existing_tools_fingerprint(definition: Any) -> tuple:
     tools = getattr(definition, "tools", None) or []
     if not tools:
         return ()
-    # We only know how to compare azure_ai_search tools — anything else means
-    # external state we don't manage; treat as unmatched so we rewrite.
     if len(tools) != 1:
         return ("__unknown_count__", len(tools))
     return _tool_fingerprint(tools[0])
@@ -347,8 +411,8 @@ async def _grant_agent_search_access(
 
     Each Foundry agent (PromptAgent) is created with its own
     ``instance_identity.principal_id`` — a fresh service principal not known
-    at Bicep time. Without explicit RBAC, the agent's AzureAISearchTool
-    call fails at query time with ``tool_user_error: Access denied``.
+    at Bicep time. Without explicit RBAC, the agent's Knowledge Base
+    retrieval fails at query time with ``tool_user_error: Access denied``.
 
     Bootstrap closes the loop: after ``create_version`` returns, we read the
     instance principalId off the version envelope and assign the three
@@ -445,10 +509,7 @@ async def _grant_agent_search_access(
         await auth.close()
 
 
-async def _bootstrap_foundry(
-    bundle: ScenarioBundle, asset_ids: dict[str, str] | None = None,
-) -> None:
-    asset_ids = asset_ids or {}
+async def _bootstrap_foundry(bundle: ScenarioBundle) -> None:
     endpoint = os.environ.get("AZURE_AI_FOUNDRY_ENDPOINT")
     if not endpoint:
         raise RuntimeError("AZURE_AI_FOUNDRY_ENDPOINT is not set")
@@ -472,7 +533,7 @@ async def _bootstrap_foundry(
             )
         instructions = _parse_spec(spec_path)
         deployment = model_map.get("default", "")
-        tool = _build_search_tool(agent, asset_ids)
+        tool = _build_mcp_tool(agent)
         work.append((agent, deployment, instructions, tool))
 
     # SDK contract (GA-only — enforced by scripts/accelerator-lint.py
@@ -901,11 +962,11 @@ async def _canary_query(bundle: ScenarioBundle) -> None:
     Drives one ``agent.run()`` per foundry_tool agent through the
     ``agent_framework.azure.AzureAIClient`` SDK and asserts the response
     references at least one citation (URL or doc id) — the cheapest signal
-    that the model actually invoked its attached AzureAISearchTool.
+    that the model actually invoked its attached Knowledge Base MCPTool.
 
     Only runs when ``BOOTSTRAP_CANARY=1`` because each call costs a model
     + Search round-trip. Failure raises so ACA marks the revision unhealthy
-    if the gpt-5-mini + AzureAISearchTool combo regresses.
+    if the gpt-5-mini + MCPTool retrieval combo regresses.
     """
     if os.environ.get("BOOTSTRAP_CANARY") != "1":
         return
@@ -985,18 +1046,20 @@ async def bootstrap(bundle: ScenarioBundle) -> None:
 
     logger.info("bootstrap: starting (budget=%.0fs)", _retry_budget_seconds())
     started = time.monotonic()
-    # Order is load-bearing: the AI Search vector index must exist before
-    # FoundryIQ can wrap it as a project Index asset, and the asset must
-    # exist before the Foundry agent's AzureAISearchTool can reference its
-    # ``index_asset_id``.
+    # Order is load-bearing:
+    # 1. AI Search vector index — must exist before anything can query it.
+    # 2. Knowledge Source + Knowledge Base (FoundryIQ) — REST API calls on
+    #    AI Search that wrap the index into FoundryIQ's agentic retrieval.
+    # 3. Foundry agents — wired with MCPTool pointing at the Bicep-
+    #    provisioned RemoteTool MCP connection (shows under **Knowledge**
+    #    in the Foundry portal).
     await _bootstrap_search(bundle)
-    asset_ids = await _bootstrap_indexes(bundle)
-    await _bootstrap_foundry(bundle, asset_ids)
+    await _bootstrap_knowledge(bundle)
+    await _bootstrap_foundry(bundle)
     await _canary_query(bundle)
     logger.info(
-        "bootstrap: complete in %.1fs (%d agents, %d index(es), %d FoundryIQ asset(s))",
+        "bootstrap: complete in %.1fs (%d agents, %d index(es))",
         time.monotonic() - started,
         len(bundle.agents),
         len(bundle.retrieval_indexes),
-        len(asset_ids),
     )

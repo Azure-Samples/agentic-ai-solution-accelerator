@@ -219,6 +219,8 @@ module containerApp 'modules/container-app.bicep' = {
     searchResourceId: search.outputs.id
     embeddingDeploymentName: foundry.outputs.embeddingDeploymentName
     foundrySearchConnectionName: searchConnectionName
+    kbMcpConnectionName: kbMcpConnectionName
+    knowledgeBaseName: knowledgeBaseName
     externalIngress: externalIngress
     allowedOrigins: allowedOrigins
     containerRegistryLoginServer: registry.outputs.loginServer
@@ -228,9 +230,9 @@ module containerApp 'modules/container-app.bicep' = {
 // ---------------------------------------------------------------------------
 // Cross-resource wiring for FoundryIQ over Azure AI Search.
 //
-// Three things have to be in place for an agent's AzureAISearchTool to
-// resolve documents at query-time when its FoundryIQ index uses an AAD
-// vectorizer:
+// Four things have to be in place for an agent's FoundryIQ Knowledge Base
+// retrieval to resolve documents at query-time when the search index uses
+// an AAD vectorizer:
 //   1. The Foundry project's MI must be able to read the AI Search index
 //      ("Search Index Data Reader" on the Search service scope).
 //   2. The AI Search service's MI must be able to call Azure OpenAI for
@@ -238,12 +240,21 @@ module containerApp 'modules/container-app.bicep' = {
 //      Foundry account scope).
 //   3. A project-level connection of category `CognitiveSearch` pointed at
 //      the Search service, with `authType: AAD` so callers don't pass keys.
+//   4. A project-level RemoteTool MCP connection that links the Foundry
+//      agent to the FoundryIQ knowledge base hosted on AI Search via the
+//      Model Context Protocol.
 //
 // These cross the search/foundry module boundary, so they live inline in
 // main.bicep instead of being squeezed into either single-resource module.
 // ---------------------------------------------------------------------------
-@description('Name of the project-level Cognitive Search connection inside the Foundry project. Bootstrap (FoundryIQ Index asset) references this name when wiring the agent tool.')
+@description('Name of the project-level Cognitive Search connection inside the Foundry project. Used for AAD-based search access from the project.')
 param searchConnectionName string = 'accel-search'
+
+@description('Name of the project-level RemoteTool MCP connection. Bootstrap wires this as the MCPTool.project_connection_id on retrieval-mode agents so AI Search knowledge shows under the agent Knowledge section in the Foundry portal.')
+param kbMcpConnectionName string = 'accel-kb-mcp'
+
+@description('Name of the FoundryIQ knowledge base on the AI Search service. Bootstrap creates this KB at startup; the MCP connection target URL references it.')
+param knowledgeBaseName string = 'accel-accounts-kb'
 
 // Built-in role IDs (Azure RBAC).
 var searchIndexDataReaderRoleId = '1407120a-92aa-4202-b7e9-c0e197c71c8f' // Search Index Data Reader
@@ -251,6 +262,7 @@ var searchIndexDataContribRoleId = '8ebe5a00-799e-43f5-93ac-243d3dce84a7' // Sea
 var searchServiceContribRoleId = '7ca78c08-252a-4471-8644-bb5ff32d4ba0' // Search Service Contributor
 var cognitiveServicesOpenAIUserRoleId = '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd' // Cognitive Services OpenAI User
 var rbacAdminRoleId = 'f58310d9-a9f6-439a-9e8d-f62e7b41a168' // Role Based Access Control Administrator
+var aiProjectManagerRoleId = 'b556d68e-0be0-4f35-a333-ad7ee1ce17ea'   // Azure AI Project Manager (needed for RemoteTool connection CRUD from bootstrap if Bicep connection creation fails)
 
 // `existing` lookups using compile-time-determinable names so the
 // role-assignment GUIDs and connection parent are valid at the start
@@ -319,6 +331,29 @@ resource searchConnection 'Microsoft.CognitiveServices/accounts/projects/connect
   ]
 }
 
+// (3b) MCP RemoteTool connection — links the Foundry agent to the
+// FoundryIQ knowledge base hosted on AI Search via the Model Context
+// Protocol. The target URL references the deterministic KB name that
+// bootstrap creates at startup; the connection itself is just a
+// configuration record and does not validate the URL at creation time.
+resource kbMcpConnection 'Microsoft.CognitiveServices/accounts/projects/connections@2025-12-01' = {
+  parent: foundryProjectExisting
+  name: kbMcpConnectionName
+  properties: {
+    authType: 'ProjectManagedIdentity'
+    category: 'RemoteTool'
+    target: '${search.outputs.endpoint}/knowledgebases/${knowledgeBaseName}/mcp?api-version=2025-11-01-preview'
+    isSharedToAll: true
+    audience: 'https://search.azure.com/'
+    metadata: {
+      ApiType: 'Azure'
+    }
+  }
+  dependsOn: [
+    searchConnection
+  ]
+}
+
 // (4) Workload MI -> Role Based Access Control Administrator on Search,
 // constrained to assigning ONLY the three Search-data roles below.
 // Bootstrap (src/bootstrap.py::_grant_agent_search_access) uses this to
@@ -371,6 +406,8 @@ output AZURE_AI_FOUNDRY_RAI_POLICY string = foundry.outputs.raiPolicyName
 output AZURE_AI_SEARCH_ENDPOINT string = search.outputs.endpoint
 output AZURE_AI_SEARCH_RESOURCE_ID string = search.outputs.id
 output AZURE_AI_FOUNDRY_SEARCH_CONNECTION_NAME string = searchConnection.name
+output AZURE_AI_FOUNDRY_KB_MCP_CONNECTION_NAME string = kbMcpConnection.name
+output AZURE_AI_FOUNDRY_KB_NAME string = knowledgeBaseName
 output APPLICATIONINSIGHTS_CONNECTION_STRING string = monitor.outputs.appInsightsConnectionString
 output API_URL string = containerApp.outputs.fqdn
 output MANAGED_IDENTITY_CLIENT_ID string = identity.outputs.clientId

@@ -1,106 +1,98 @@
-import { useCallback, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ResearchBriefing, StreamEvent } from "../types/research";
-import { SectionLoader } from "./SectionLoader";
-
-interface Props {
-  briefing: ResearchBriefing | null;
-  events: StreamEvent[];
-}
+import { JOKE_ROTATE_MS, PARTNER_JOKES } from "../data/jokes";
 
 // ---------------------------------------------------------------------------
-// Markdown serialiser — converts structured data to pasteable markdown.
-// Handles the known shapes (string[], Record, nested arrays) so each
-// section's copy button produces clean output for Teams / Outlook / CRM.
+// Partial JSON parser — extracts complete fields from streaming LLM output
 // ---------------------------------------------------------------------------
 
-function valueToMarkdown(value: unknown, indent = 0): string {
-  if (value === null || value === undefined || value === "") return "_not available_";
-  if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
-  if (Array.isArray(value)) {
-    if (value.length === 0) return "_(none)_";
-    if (value.every((x) => typeof x === "string")) {
-      return value.map((s) => `- ${s}`).join("\n");
-    }
-    if (value.every((x) => typeof x === "object" && x !== null && !Array.isArray(x))) {
-      return (value as Record<string, unknown>[])
-        .map((row) => recordToMarkdown(row, indent))
-        .join("\n\n");
-    }
-    return value.map((v) => `- ${String(v)}`).join("\n");
+function tryParsePartialJson(raw: string): Record<string, unknown> | null {
+  if (!raw || raw.length < 3) return null;
+  // Strip markdown code fences
+  let text = raw.replace(/^```json?\s*/m, "").replace(/\s*```\s*$/m, "").trim();
+
+  // Skip any preamble text before the JSON object — models sometimes
+  // emit reasoning or tool-call fragments before the response JSON.
+  const firstBrace = text.indexOf("{");
+  if (firstBrace < 0) return null;
+  if (firstBrace > 0) text = text.slice(firstBrace);
+
+  // Try full parse first
+  try {
+    const parsed = JSON.parse(text);
+    if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) return parsed;
+    return null;
+  } catch { /* fall through to fixup */ }
+
+  // Close unmatched brackets/braces
+  let inStr = false;
+  let escaped = false;
+  const closers: string[] = [];
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (escaped) { escaped = false; continue; }
+    if (c === "\\") { escaped = true; continue; }
+    if (c === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (c === "{") closers.push("}");
+    else if (c === "[") closers.push("]");
+    else if (c === "}" || c === "]") closers.pop();
   }
-  if (typeof value === "object") {
-    return recordToMarkdown(value as Record<string, unknown>, indent);
-  }
-  return String(value);
-}
-
-function recordToMarkdown(data: Record<string, unknown>, indent = 0): string {
-  const prefix = "  ".repeat(indent);
-  return Object.entries(data)
-    .map(([k, v]) => {
-      const label = k.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
-      if (typeof v === "object" && v !== null && !Array.isArray(v)) {
-        return `${prefix}**${label}:**\n${valueToMarkdown(v, indent + 1)}`;
-      }
-      if (Array.isArray(v)) {
-        return `${prefix}**${label}:**\n${valueToMarkdown(v, indent + 1)}`;
-      }
-      return `${prefix}**${label}:** ${valueToMarkdown(v)}`;
-    })
-    .join("\n");
-}
-
-function sectionToMarkdown(title: string, data: unknown): string {
-  return `## ${title}\n\n${valueToMarkdown(data)}`;
+  if (inStr) text += '"';
+  // Trim dangling key (e.g. `"key":` with no value yet) — remove
+  // trailing `"someKey":` that hasn't received a value token yet.
+  text = text.replace(/,?\s*"[^"]*"\s*:\s*$/, "");
+  // Trim trailing comma before closing
+  text = text.replace(/,\s*$/, "");
+  while (closers.length > 0) text += closers.pop();
+  try {
+    const parsed = JSON.parse(text);
+    if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) return parsed;
+  } catch { /* give up */ }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
-// Copy button
+// Section configuration — accent colors, numbered badges
 // ---------------------------------------------------------------------------
 
-function CopyButton({ title, data }: { title: string; data: unknown }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = useCallback(async () => {
-    try {
-      const md = sectionToMarkdown(title, data);
-      await navigator.clipboard.writeText(md);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard API may fail in insecure contexts — silent fallback.
-    }
-  }, [title, data]);
-
-  return (
-    <button
-      type="button"
-      className="copy-md-btn"
-      onClick={handleCopy}
-      title="Copy as markdown"
-      aria-label={`Copy ${title} as markdown`}
-    >
-      {copied ? "✓ Copied" : "Copy"}
-    </button>
-  );
+interface SectionMeta {
+  num: number;
+  label: string;
+  accent: string;
+  briefingKey?: keyof ResearchBriefing;
+  workerId?: string;
+  workerLabel?: string;
 }
 
-// ---------------------------------------------------------------------------
-// Section helpers
-// ---------------------------------------------------------------------------
+const SECTIONS: SectionMeta[] = [
+  { num: 1, label: "Executive Summary", accent: "#3b82f6" },
+  {
+    num: 2, label: "Account Profile", accent: "#6366f1",
+    briefingKey: "account_profile", workerId: "account_planner",
+    workerLabel: "researching company news, signals, and buying committee",
+  },
+  {
+    num: 3, label: "ICP Fit Analysis", accent: "#10b981",
+    briefingKey: "icp_fit", workerId: "icp_fit_analyst",
+    workerLabel: "scoring fit against your ICP",
+  },
+  {
+    num: 4, label: "Competitive Play", accent: "#ef4444",
+    briefingKey: "competitive_play", workerId: "competitive_context",
+    workerLabel: "mapping competitor presence and differentiators",
+  },
+  {
+    num: 5, label: "Recommended Outreach", accent: "#14b8a6",
+    briefingKey: "recommended_outreach", workerId: "outreach_personalizer",
+    workerLabel: "drafting outreach for the persona",
+  },
+  { num: 6, label: "Next Steps", accent: "#f59e0b" },
+];
 
-function Section({ id, title, data, children }: { id?: string; title: string; data?: unknown; children: React.ReactNode }) {
-  return (
-    <section id={id} className="result-section">
-      <header className="section-header">
-        <h3>{title}</h3>
-        {data !== undefined && data !== null && <CopyButton title={title} data={data} />}
-      </header>
-      {children}
-    </section>
-  );
-}
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -110,19 +102,61 @@ function isStringArray(v: unknown): v is string[] {
   return Array.isArray(v) && v.every((x) => typeof x === "string");
 }
 
-// Pretty title for a snake_case key: "fit_score" -> "Fit score"
 function humanise(key: string): string {
   const s = key.replace(/_/g, " ").trim();
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : key;
 }
 
 // ---------------------------------------------------------------------------
+// Copy-as-markdown
+// ---------------------------------------------------------------------------
+
+function valueToMarkdown(v: unknown, depth = 0): string {
+  if (v === null || v === undefined) return "_not available_";
+  if (typeof v === "string") return v;
+  if (typeof v === "number" || typeof v === "boolean") return String(v);
+  if (Array.isArray(v)) {
+    if (v.length === 0) return "_(none)_";
+    if (isStringArray(v)) return v.map((s) => `- ${s}`).join("\n");
+    if (v.every(isRecord))
+      return v
+        .map((row) => recordToMarkdown(row as Record<string, unknown>, depth))
+        .join("\n\n");
+    return v.map(String).join(", ");
+  }
+  if (isRecord(v)) return recordToMarkdown(v, depth);
+  return String(v);
+}
+
+function recordToMarkdown(rec: Record<string, unknown>, depth = 0): string {
+  return Object.entries(rec)
+    .map(([k, val]) => `**${humanise(k)}:** ${valueToMarkdown(val, depth + 1)}`)
+    .join("\n");
+}
+
+function CopyButton({ data, label }: { data: unknown; label: string }) {
+  const [copied, setCopied] = useState(false);
+  async function handleCopy(e: React.MouseEvent) {
+    e.stopPropagation();
+    const md = `## ${label}\n\n${valueToMarkdown(data)}`;
+    await navigator.clipboard.writeText(md);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+  return (
+    <button
+      type="button"
+      className="copy-md-btn"
+      onClick={handleCopy}
+      title="Copy as Markdown"
+    >
+      {copied ? "\u2713 Copied" : "\ud83d\udccb Copy"}
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Field-specific renderers
-//
-// Worker outputs ARE described by per-agent transform.py modules so we know
-// the shapes. These renderers turn each shape into proper UI instead of
-// JSON.stringify code blocks. Anything we don't recognise falls through to
-// ``GenericValue`` which still avoids raw JSON for common shapes.
 // ---------------------------------------------------------------------------
 
 function NewsItem({ item }: { item: Record<string, unknown> }) {
@@ -134,7 +168,7 @@ function NewsItem({ item }: { item: Record<string, unknown> }) {
     <article className="news-card">
       <header>
         <span className="news-title">{title}</span>
-      {Boolean(date) && <span className="badge">{date}</span>}
+        {Boolean(date) && <span className="badge">{date}</span>}
       </header>
       {Boolean(summary) && <p className="news-summary">{summary}</p>}
       {Boolean(url) && (
@@ -159,8 +193,12 @@ function CommitteeTable({ rows }: { rows: Record<string, unknown>[] }) {
       <tbody>
         {rows.map((row, i) => (
           <tr key={i}>
-            <td>{String(row["role"] ?? "—")}</td>
-            <td>{String(row["name_if_known"] ?? row["name"] ?? "not available")}</td>
+            <td>{String(row["role"] ?? "\u2014")}</td>
+            <td>
+              {String(
+                row["name_if_known"] ?? row["name"] ?? "not available",
+              )}
+            </td>
           </tr>
         ))}
       </tbody>
@@ -176,7 +214,9 @@ function SignalList({ items }: { items: Record<string, unknown>[] }) {
         <li key={i}>
           <span>{String(s["signal"] ?? "")}</span>
           {Boolean(s["source"]) && (
-            <span className="muted signal-source">source: <code>{String(s["source"])}</code></span>
+            <span className="muted signal-source">
+              source: <code>{String(s["source"])}</code>
+            </span>
           )}
         </li>
       ))}
@@ -215,36 +255,54 @@ function FlatKeyValues({ data }: { data: Record<string, unknown> }) {
 function CitationsList({ items }: { items: Record<string, unknown>[] }) {
   if (items.length === 0) return <p className="muted">(no citations)</p>;
   return (
-    <ul className="citation-list">
-      {items.map((c, i) => (
-        <li key={i}>
-          <code className="citation-url">{String(c["url"] ?? "—")}</code>
-          {Boolean(c["quote"]) && <span className="citation-quote">"{String(c["quote"])}"</span>}
-        </li>
-      ))}
-    </ul>
+    <ol className="citation-list">
+      {items.map((c, i) => {
+        const url = c["url"] ? String(c["url"]) : null;
+        const quote = c["quote"] ? String(c["quote"]) : null;
+        const title = c["title"] ? String(c["title"]) : null;
+        const label = title || (url ? new URL(url).hostname.replace(/^www\./, "") : `Source ${i + 1}`);
+        return (
+          <li key={i} className="citation-item">
+            <span className="citation-num">{i + 1}</span>
+            {url ? (
+              <a href={url} target="_blank" rel="noopener noreferrer" className="citation-link">{label}</a>
+            ) : (
+              <span className="citation-label">{label}</span>
+            )}
+            {quote && <span className="citation-quote">&ldquo;{quote}&rdquo;</span>}
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
-// Routes a (key, value) pair to the most specific renderer available.
-function GenericValue({ fieldKey, value }: { fieldKey: string; value: unknown }) {
+function GenericValue({
+  fieldKey,
+  value,
+}: {
+  fieldKey: string;
+  value: unknown;
+}) {
   if (value === null || value === undefined || value === "") {
     return <span className="muted">not available</span>;
   }
   if (typeof value === "string") {
-    // URL-ish: render as code
     if (/^(https?:\/\/|document:)/.test(value)) return <code>{value}</code>;
     return <>{value}</>;
   }
-  if (typeof value === "number" || typeof value === "boolean") return <>{String(value)}</>;
+  if (typeof value === "number" || typeof value === "boolean")
+    return <>{String(value)}</>;
   if (Array.isArray(value)) {
     if (value.length === 0) return <span className="muted">(none)</span>;
     if (isStringArray(value)) return <StringList items={value} />;
     if (value.every(isRecord)) {
-      // Detect known nested-array shapes by their first item's keys.
       const sample = value[0] as Record<string, unknown>;
       const keys = new Set(Object.keys(sample));
-      if (fieldKey === "recent_news" || (keys.has("title") && keys.has("summary"))) {
+      if (
+        fieldKey === "recent_news" ||
+        (keys.has("title") && keys.has("summary"))
+      )
         return (
           <div className="news-list">
             {(value as Record<string, unknown>[]).map((it, i) => (
@@ -252,17 +310,21 @@ function GenericValue({ fieldKey, value }: { fieldKey: string; value: unknown })
             ))}
           </div>
         );
-      }
-      if (fieldKey === "buying_committee" || (keys.has("role") && (keys.has("name_if_known") || keys.has("name")))) {
+      if (
+        fieldKey === "buying_committee" ||
+        (keys.has("role") && (keys.has("name_if_known") || keys.has("name")))
+      )
         return <CommitteeTable rows={value as Record<string, unknown>[]} />;
-      }
-      if (fieldKey === "signal_evidence" || (keys.has("signal") && keys.has("source"))) {
+      if (
+        fieldKey === "signal_evidence" ||
+        (keys.has("signal") && keys.has("source"))
+      )
         return <SignalList items={value as Record<string, unknown>[]} />;
-      }
-      if (fieldKey === "citations" || (keys.has("url") && keys.has("quote"))) {
+      if (
+        fieldKey === "citations" ||
+        (keys.has("url") && keys.has("quote"))
+      )
         return <CitationsList items={value as Record<string, unknown>[]} />;
-      }
-      // Generic record array: render each as a small kv card.
       return (
         <div className="record-list">
           {(value as Record<string, unknown>[]).map((row, i) => (
@@ -273,94 +335,365 @@ function GenericValue({ fieldKey, value }: { fieldKey: string; value: unknown })
         </div>
       );
     }
-    // Mixed array: comma-separated.
     return <>{value.map((v) => String(v)).join(", ")}</>;
   }
-  if (isRecord(value)) {
-    return <FlatKeyValues data={value} />;
-  }
+  if (isRecord(value)) return <FlatKeyValues data={value} />;
   return <code>{String(value)}</code>;
 }
 
 // ---------------------------------------------------------------------------
-// Section blocks — each consumes a top-level briefing field.
+// Section-specific layouts (hybrid typed + generic fallback)
 // ---------------------------------------------------------------------------
 
-function ExecutiveSummary({ items }: { items: string[] | undefined }) {
-  if (!items) return null;
-  if (items.length === 0) return <p className="muted">(awaiting synthesis)</p>;
+const ACCOUNT_OVERVIEW_KEYS = new Set([
+  "company_name", "industry", "employee_count", "revenue", "hq_location",
+  "domain", "website", "headquarters", "size", "sector", "founded",
+  "description", "company_overview", "annual_revenue", "location",
+]);
+const ACCOUNT_SPECIAL_KEYS = new Set([
+  ...ACCOUNT_OVERVIEW_KEYS,
+  "buying_committee", "recent_news", "signal_evidence", "citations",
+]);
+
+function AccountProfileLayout({ data }: { data: Record<string, unknown> }) {
+  const overview: Record<string, unknown> = {};
+  const rest: Record<string, unknown> = {};
+  // Extract company_overview / description as prose text
+  let prose = "";
+  for (const [k, v] of Object.entries(data)) {
+    if (k === "company_overview" || k === "description") {
+      if (typeof v === "string" && v.length > 0) prose = v;
+    } else if (ACCOUNT_OVERVIEW_KEYS.has(k)) {
+      overview[k] = v;
+    } else if (!ACCOUNT_SPECIAL_KEYS.has(k)) {
+      rest[k] = v;
+    }
+  }
+  const committee = data.buying_committee;
+  const news = data.recent_news;
+  const signals = data.signal_evidence;
+  const citations = data.citations;
+  const hasOverview = Object.keys(overview).length > 0;
+  const hasCommittee = Array.isArray(committee) && committee.length > 0;
+
   return (
-    <ul className="bullet-list">
-      {items.map((line, i) => (
-        <li key={i}>{line}</li>
-      ))}
-    </ul>
+    <div className="section-content">
+      {prose && <div className="company-prose">{prose}</div>}
+      {(hasOverview || hasCommittee) && (
+        <div className="two-col-grid">
+          {hasOverview && (
+            <div className="sub-card" style={{ borderLeftColor: "#6366f1" }}>
+              <h4 className="sub-card-title">Key Facts</h4>
+              <FlatKeyValues data={overview} />
+            </div>
+          )}
+          {hasCommittee && (
+            <div className="sub-card" style={{ borderLeftColor: "#818cf8" }}>
+              <h4 className="sub-card-title">Buying Committee</h4>
+              <div className="committee-chips">
+                {(committee as Record<string, unknown>[]).map((row, i) => (
+                  <span key={i} className="committee-chip">
+                    <span className="committee-chip-role">
+                      {String(row["role"] ?? "—")}
+                    </span>
+                    {String(row["name_if_known"] ?? row["name"] ?? "")}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      {Array.isArray(news) && news.length > 0 && (
+        <div className="sub-block">
+          <h4 className="sub-block-title">Recent News</h4>
+          <div className="news-list">
+            {(news as Record<string, unknown>[]).map((it, i) => (
+              <NewsItem key={i} item={it} />
+            ))}
+          </div>
+        </div>
+      )}
+      {Array.isArray(signals) && signals.length > 0 && (
+        <div className="sub-block">
+          <h4 className="sub-block-title">Signal Evidence</h4>
+          <SignalList items={signals as Record<string, unknown>[]} />
+        </div>
+      )}
+      {Array.isArray(citations) && citations.length > 0 && (
+        <div className="sub-block">
+          <h4 className="sub-block-title">Citations</h4>
+          <CitationsList items={citations as Record<string, unknown>[]} />
+        </div>
+      )}
+      {Object.keys(rest).length > 0 && <FlatKeyValues data={rest} />}
+    </div>
   );
 }
 
-function NextSteps({ items }: { items: string[] | undefined }) {
-  if (!items) return null;
-  if (items.length === 0) return <p className="muted">(awaiting synthesis)</p>;
+const ICP_SCORE_KEYS = new Set([
+  "fit_score", "score", "icp_score", "overall_score",
+]);
+const ICP_CRITERIA_KEYS = new Set([
+  "fit_criteria", "criteria", "scoring_criteria", "fit_signals",
+]);
+const ICP_GAP_KEYS = new Set([
+  "gaps", "gap_analysis", "missing_criteria", "risks",
+]);
+const ICP_SPECIAL_KEYS: ReadonlySet<string> = new Set([
+  ...ICP_SCORE_KEYS, ...ICP_CRITERIA_KEYS, ...ICP_GAP_KEYS,
+]);
+void ICP_SPECIAL_KEYS; // referenced only in future guard clauses
+
+function IcpFitLayout({ data }: { data: Record<string, unknown> }) {
+  let fitScore: unknown;
+  let criteria: unknown;
+  let gaps: unknown;
+  const rest: Record<string, unknown> = {};
+
+  for (const [k, v] of Object.entries(data)) {
+    if (ICP_SCORE_KEYS.has(k)) fitScore = v;
+    else if (ICP_CRITERIA_KEYS.has(k)) criteria = v;
+    else if (ICP_GAP_KEYS.has(k)) gaps = v;
+    else rest[k] = v;
+  }
+
+  const scoreNum = typeof fitScore === "number" ? fitScore
+    : typeof fitScore === "string" ? parseFloat(fitScore) : NaN;
+  const scoreBg = !isNaN(scoreNum) && scoreNum >= 7 ? "#10b981"
+    : !isNaN(scoreNum) && scoreNum >= 4 ? "#f59e0b" : "#ef4444";
+
   return (
-    <ol className="bullet-list">
-      {items.map((line, i) => (
-        <li key={i}>{line}</li>
-      ))}
-    </ol>
+    <div className="section-content">
+      {fitScore !== undefined && (
+        <div className="score-gauge">
+          <div className="score-circle" style={{ background: scoreBg }}>
+            {String(fitScore)}
+          </div>
+          <div>
+            <div className="score-label">ICP Fit Score</div>
+            <div style={{ fontSize: "0.85rem", color: "var(--muted)", marginTop: 2 }}>
+              {!isNaN(scoreNum) && scoreNum >= 7 ? "Strong fit" : !isNaN(scoreNum) && scoreNum >= 4 ? "Moderate fit" : "Weak fit"}
+            </div>
+          </div>
+        </div>
+      )}
+      {(criteria != null || gaps != null) ? (
+        <div className="two-col-grid">
+          {criteria != null && (
+            <div className="sub-card" style={{ borderLeftColor: "#10b981" }}>
+              <h4 className="sub-card-title">✓ Fit Criteria</h4>
+              <GenericValue fieldKey="fit_criteria" value={criteria} />
+            </div>
+          )}
+          {gaps != null && (
+            <div className="sub-card" style={{ borderLeftColor: "#f59e0b" }}>
+              <h4 className="sub-card-title">⚠ Gaps / Risks</h4>
+              <GenericValue fieldKey="gaps" value={gaps} />
+            </div>
+          )}
+        </div>
+      ) : null}
+      {Object.keys(rest).length > 0 && <FlatKeyValues data={rest} />}
+    </div>
   );
+}
+
+const COMP_COMPETITOR_KEYS = new Set([
+  "competitors", "incumbent_vendors", "competitive_landscape",
+]);
+const COMP_DIFF_KEYS = new Set([
+  "differentiators", "our_differentiators", "key_differentiators",
+]);
+const COMP_OBJ_KEYS = new Set([
+  "objection_handlers", "objections", "common_objections",
+]);
+const COMP_SPECIAL_KEYS: ReadonlySet<string> = new Set([
+  ...COMP_COMPETITOR_KEYS, ...COMP_DIFF_KEYS, ...COMP_OBJ_KEYS,
+]);
+void COMP_SPECIAL_KEYS; // referenced only in future guard clauses
+
+function CompetitiveLayout({ data }: { data: Record<string, unknown> }) {
+  let competitors: unknown;
+  let differentiators: unknown;
+  let objections: unknown;
+  const rest: Record<string, unknown> = {};
+
+  for (const [k, v] of Object.entries(data)) {
+    if (COMP_COMPETITOR_KEYS.has(k)) competitors = v;
+    else if (COMP_DIFF_KEYS.has(k)) differentiators = v;
+    else if (COMP_OBJ_KEYS.has(k)) objections = v;
+    else rest[k] = v;
+  }
+
+  // Render competitors as horizontal cards with stance badges
+  const renderCompetitors = () => {
+    if (competitors == null) return null;
+    if (Array.isArray(competitors) && competitors.every(isRecord)) {
+      return (
+        <div className="competitor-row">
+          {(competitors as Record<string, unknown>[]).map((c, i) => {
+            const name = String(c["name"] ?? c["vendor"] ?? c["competitor"] ?? `Competitor ${i + 1}`);
+            const stance = String(c["stance"] ?? c["position"] ?? c["type"] ?? "").toLowerCase();
+            const stanceClass = stance.includes("incumbent") ? "stance-incumbent"
+              : stance.includes("challenger") ? "stance-challenger" : "stance-default";
+            return (
+              <div key={i} className="competitor-card">
+                <div className="competitor-name">{name}</div>
+                {stance && <span className={`stance-badge ${stanceClass}`}>{stance}</span>}
+                {c["notes"] ? <div className="muted" style={{ fontSize: "0.82rem", marginTop: 4 }}>{String(c["notes"])}</div> : null}
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+    // Fallback for string arrays or other shapes
+    return <GenericValue fieldKey="competitors" value={competitors} />;
+  };
+
+  // Render differentiators as numbered pills
+  const renderDiffs = () => {
+    if (differentiators == null) return null;
+    if (isStringArray(differentiators as unknown)) {
+      return (
+        <div className="diff-pills">
+          {(differentiators as string[]).map((d, i) => (
+            <span key={i} className="diff-pill">
+              <span className="diff-pill-num">{i + 1}</span>
+              {d}
+            </span>
+          ))}
+        </div>
+      );
+    }
+    return <GenericValue fieldKey="differentiators" value={differentiators} />;
+  };
+
+  return (
+    <div className="section-content">
+      {competitors != null && (
+        <div className="sub-block">
+          <h4 className="sub-block-title">Competitive Landscape</h4>
+          {renderCompetitors()}
+        </div>
+      )}
+      {differentiators != null && (
+        <div className="sub-block">
+          <h4 className="sub-block-title">Our Differentiators</h4>
+          {renderDiffs()}
+        </div>
+      )}
+      {objections != null && (
+        <div className="sub-block">
+          <h4 className="sub-block-title">Objection Handlers</h4>
+          <GenericValue fieldKey="objections" value={objections} />
+        </div>
+      )}
+      {Object.keys(rest).length > 0 && <FlatKeyValues data={rest} />}
+    </div>
+  );
+}
+
+const OUTREACH_SUBJECT_KEYS = new Set([
+  "subject_line", "subject", "email_subject",
+]);
+const OUTREACH_BODY_KEYS = new Set([
+  "email_body", "body", "message_body", "email_draft",
+]);
+const OUTREACH_CTA_KEYS = new Set([
+  "call_to_action", "cta", "next_step",
+]);
+const OUTREACH_SPECIAL_KEYS: ReadonlySet<string> = new Set([
+  ...OUTREACH_SUBJECT_KEYS, ...OUTREACH_BODY_KEYS, ...OUTREACH_CTA_KEYS,
+]);
+
+function OutreachLayout({ data }: { data: Record<string, unknown> }) {
+  let subject = "";
+  let body = "";
+  let cta = "";
+  const rest: Record<string, unknown> = {};
+
+  for (const [k, v] of Object.entries(data)) {
+    if (OUTREACH_SUBJECT_KEYS.has(k) && typeof v === "string") subject = v;
+    else if (OUTREACH_BODY_KEYS.has(k) && typeof v === "string") body = v;
+    else if (OUTREACH_CTA_KEYS.has(k) && typeof v === "string") cta = v;
+    else if (!OUTREACH_SPECIAL_KEYS.has(k)) rest[k] = v;
+  }
+
+  const hasEmail = subject || body;
+
+  return (
+    <div className="section-content">
+      {hasEmail ? (
+        <div className="email-preview">
+          {subject && (
+            <div className="email-subject">
+              <span>✉</span> {subject}
+            </div>
+          )}
+          {body && <div className="email-body">{body}</div>}
+          {cta && <div style={{ padding: "0 14px 14px" }}><span className="email-cta">{cta}</span></div>}
+        </div>
+      ) : null}
+      {Object.keys(rest).length > 0 && (
+        <div style={{ marginTop: hasEmail ? 12 : 0 }}>
+          <FlatKeyValues data={rest} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function renderSectionContent(
+  sectionNum: number,
+  data: Record<string, unknown>,
+) {
+  switch (sectionNum) {
+    case 2:
+      return <AccountProfileLayout data={data} />;
+    case 3:
+      return <IcpFitLayout data={data} />;
+    case 4:
+      return <CompetitiveLayout data={data} />;
+    case 5:
+      return <OutreachLayout data={data} />;
+    default:
+      return <FlatKeyValues data={data} />;
+  }
 }
 
 // ---------------------------------------------------------------------------
 // Main panel
 // ---------------------------------------------------------------------------
 
-// Map worker_id -> briefing field name. Confirmed against
-// SalesResearchWorkflow._aggregate (workflow.py):
-//   account_planner       -> account_profile
-//   icp_fit_analyst       -> icp_fit
-//   competitive_context   -> competitive_play
-//   outreach_personalizer -> recommended_outreach
-const WORKER_TO_SECTION: Record<string, {
-  key: "account_profile" | "icp_fit" | "competitive_play" | "recommended_outreach";
-  label: string;
-  workerLabel: string;
-}> = {
-  account_planner: {
-    key: "account_profile",
-    label: "Account profile",
-    workerLabel: "researching company news, signals, and buying committee",
-  },
-  icp_fit_analyst: {
-    key: "icp_fit",
-    label: "ICP fit",
-    workerLabel: "scoring fit against your ICP",
-  },
-  competitive_context: {
-    key: "competitive_play",
-    label: "Competitive play",
-    workerLabel: "mapping competitor presence and differentiators",
-  },
-  outreach_personalizer: {
-    key: "recommended_outreach",
-    label: "Recommended outreach",
-    workerLabel: "drafting outreach for the persona",
-  },
-};
+interface Props {
+  briefing: ResearchBriefing | null;
+  events: StreamEvent[];
+  isComplete: boolean;
+  busy: boolean;
+  workerThoughts: Record<string, string>;
+}
 
-const SECTION_ORDER: Array<keyof typeof WORKER_TO_SECTION> = [
-  "account_planner",
-  "icp_fit_analyst",
-  "competitive_context",
-  "outreach_personalizer",
-];
+// Tab metadata for the 4 worker sections
+const TABS = SECTIONS.filter((s) => s.num >= 2 && s.num <= 5);
 
-export function ResultPanel({ briefing, events }: Props) {
+export function ResultPanel({ briefing, events, busy, workerThoughts }: Props) {
   const [showRaw, setShowRaw] = useState(false);
+  const [activeTab, setActiveTab] = useState(2);
+  const [manualOverride, setManualOverride] = useState(false);
 
-  // Extract per-section data from worker partials so we can render
-  // sections progressively as they arrive — without waiting for the
-  // supervisor synthesis. Once ``briefing`` is set, it takes
-  // precedence (the supervisor may have refined the ordering).
+  // Centralized joke rotation — single instance in the header
+  const [jokeIdx, setJokeIdx] = useState(0);
+  useEffect(() => {
+    if (!busy) return;
+    const t = window.setInterval(() => {
+      setJokeIdx((prev) => (prev + 1) % PARTNER_JOKES.length);
+    }, JOKE_ROTATE_MS);
+    return () => window.clearInterval(t);
+  }, [busy]);
+
+  // Extract per-section data from worker partials for progressive render
   const partialsByWorker = useMemo(() => {
     const map: Record<string, unknown> = {};
     for (const e of events) {
@@ -369,32 +702,122 @@ export function ResultPanel({ briefing, events }: Props) {
     return map;
   }, [events]);
 
-  // Nothing to show until at least one partial OR the briefing arrives.
-  const hasAnything = briefing !== null || Object.keys(partialsByWorker).length > 0;
-  if (!hasAnything) return null;
+  // Progressive: parse partial JSON from streaming chunks
+  const streamingPartials = useMemo(() => {
+    const map: Record<string, Record<string, unknown>> = {};
+    for (const [wid, text] of Object.entries(workerThoughts)) {
+      if (partialsByWorker[wid]) continue; // already have final output
+      const parsed = tryParsePartialJson(text);
+      if (parsed && Object.keys(parsed).length > 0) map[wid] = parsed;
+    }
+    return map;
+  }, [workerThoughts, partialsByWorker]);
 
-  function dataFor(workerId: keyof typeof WORKER_TO_SECTION): unknown | null {
-    const sectionKey = WORKER_TO_SECTION[workerId].key;
-    if (briefing) return briefing[sectionKey];
-    return partialsByWorker[workerId] ?? null;
+  // Track which sections are showing streaming (not final) data
+  const streamingSections = useMemo(() => {
+    const set = new Set<string>();
+    for (const wid of Object.keys(streamingPartials)) {
+      if (!partialsByWorker[wid]) set.add(wid);
+    }
+    return set;
+  }, [streamingPartials, partialsByWorker]);
+
+  function dataFor(meta: SectionMeta): unknown | null {
+    if (meta.briefingKey) {
+      if (briefing) return briefing[meta.briefingKey];
+      if (meta.workerId) {
+        // Prefer completed partial, fall back to streaming partial
+        return partialsByWorker[meta.workerId]
+          ?? streamingPartials[meta.workerId]
+          ?? null;
+      }
+    }
+    return null;
   }
 
+  // Auto-advance: switch to the latest tab that has data (unless user clicked)
+  const tabDataCount = useMemo(() => {
+    return TABS.filter((t) => {
+      if (!t.briefingKey) return false;
+      const d = briefing
+        ? briefing[t.briefingKey]
+        : (t.workerId ? (partialsByWorker[t.workerId] ?? streamingPartials[t.workerId] ?? null) : null);
+      return d !== null && isRecord(d);
+    }).length;
+  }, [partialsByWorker, streamingPartials, briefing]);
+
+  const prevDataCountRef = useRef(0);
+
+  useEffect(() => {
+    if (tabDataCount > prevDataCountRef.current && !manualOverride) {
+      const tabsWithData = TABS.filter((t) => {
+        if (!t.briefingKey) return false;
+        const d = briefing
+          ? briefing[t.briefingKey]
+          : (t.workerId ? (partialsByWorker[t.workerId] ?? streamingPartials[t.workerId] ?? null) : null);
+        return d !== null && isRecord(d);
+      });
+      if (tabsWithData.length > 0) {
+        setActiveTab(tabsWithData[tabsWithData.length - 1].num);
+      }
+    }
+    prevDataCountRef.current = tabDataCount;
+  }, [tabDataCount, manualOverride, briefing, partialsByWorker, streamingPartials]);
+
+  // Reset manual override on new submission
+  useEffect(() => {
+    if (busy && Object.keys(partialsByWorker).length === 0) {
+      setManualOverride(false);
+      prevDataCountRef.current = 0;
+    }
+  }, [busy, partialsByWorker]);
+
+  // --- All hooks above this line ---
+  const hasAnything =
+    briefing !== null || Object.keys(partialsByWorker).length > 0 || Object.keys(streamingPartials).length > 0;
+  if (!hasAnything && !busy) return null;
+
+  const activeData = dataFor(TABS.find((t) => t.num === activeTab) ?? TABS[0]);
+  const activeHasData = activeData !== null && isRecord(activeData);
+
+  const execItems = briefing?.executive_summary;
+  const hasExec = !!execItems && execItems.length > 0;
+  const nextItems = briefing?.next_steps;
+  const hasNext = !!nextItems && nextItems.length > 0;
+
   return (
-    <div className="card">
+    <div className="result-card">
       <div className="result-header">
         <h2>
-          Briefing
-          {!briefing && <span className="muted briefing-progress"> — assembling…</span>}
+          {"\ud83d\udcca"} Research Briefing
+          {!briefing && busy && (
+            <span className="muted briefing-progress">
+              {" "}&mdash; assembling&hellip;
+            </span>
+          )}
         </h2>
-        <label className="raw-toggle">
-          <input
-            type="checkbox"
-            checked={showRaw}
-            onChange={(e) => setShowRaw(e.target.checked)}
-          />
-          Show raw JSON
-        </label>
+        <div className="result-header-actions">
+          <label className="raw-toggle">
+            <input
+              type="checkbox"
+              checked={showRaw}
+              onChange={(e) => setShowRaw(e.target.checked)}
+            />
+            Raw JSON
+          </label>
+        </div>
       </div>
+
+      {/* Single centralized joke — only when busy */}
+      {busy && !briefing && (
+        <div className="joke-banner">
+          <span className="pulse" />
+          <span>
+            <span className="joke-prefix">While you wait … </span>
+            <span className="joke-text" key={jokeIdx}>{PARTNER_JOKES[jokeIdx]}</span>
+          </span>
+        </div>
+      )}
 
       {showRaw ? (
         <pre className="raw-json">
@@ -402,40 +825,140 @@ export function ResultPanel({ briefing, events }: Props) {
         </pre>
       ) : (
         <>
-          <Section id="section-summary" title="Executive summary" data={briefing?.executive_summary}>
-            {briefing ? (
-              <ExecutiveSummary items={briefing.executive_summary} />
+          {/* Executive Summary — full width at top */}
+          <div className="exec-strip">
+            <div className="exec-strip-header">
+              <span className="section-badge" style={{ background: "#3b82f6", color: "#fff" }}>1</span>
+              <span className="exec-strip-title">Executive Summary</span>
+              {hasExec && <CopyButton data={execItems} label="Executive Summary" />}
+            </div>
+            {hasExec ? (
+              <div className="exec-callout">
+                <ul className="bullet-list">
+                  {execItems!.map((line, i) => (
+                    <li key={i}>{line}</li>
+                  ))}
+                </ul>
+              </div>
             ) : (
-              <SectionLoader label="Executive summary" subLabel="waiting on supervisor synthesis" />
+              <div className="pending-placeholder">
+                <span className="pulse" />
+                <span className="muted">Waiting on supervisor…</span>
+              </div>
             )}
-          </Section>
+          </div>
 
-          {SECTION_ORDER.map((workerId) => {
-            const meta = WORKER_TO_SECTION[workerId];
-            const data = dataFor(workerId);
-            return (
-              <Section key={workerId} id={`section-${workerId}`} title={meta.label} data={data}>
-                {data && isRecord(data) ? (
-                  <FlatKeyValues data={data} />
+          {/* Tab bar for sections 2-5 */}
+          <div className="tab-bar">
+            {TABS.map((meta) => {
+              const d = dataFor(meta);
+              const ready = d !== null && isRecord(d);
+              return (
+                <button
+                  key={meta.num}
+                  type="button"
+                  className={`tab-btn${activeTab === meta.num ? " active" : ""}${ready ? " has-data" : ""}`}
+                  onClick={() => { setActiveTab(meta.num); setManualOverride(true); }}
+                  style={{ "--tab-accent": meta.accent } as React.CSSProperties}
+                >
+                  <span className="tab-badge" style={{ background: meta.accent }}>{meta.num}</span>
+                  <span className="tab-label">{meta.label}</span>
+                  {ready && <span className="tab-ready-dot" />}
+                  {!ready && busy && <span className="pulse tab-pulse" />}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Active tab content */}
+          <div className="tab-content" style={{ "--tab-accent": TABS.find((t) => t.num === activeTab)?.accent } as React.CSSProperties}>
+            {activeHasData ? (
+              <div className="tab-content-inner">
+                <div className="tab-content-header">
+                  {/* Show streaming indicator if data is from partial chunks */}
+                  {(() => {
+                    const activeMeta = TABS.find((t) => t.num === activeTab);
+                    const isStreaming = activeMeta?.workerId && streamingSections.has(activeMeta.workerId);
+                    return isStreaming ? (
+                      <span className="streaming-badge"><span className="pulse" /> streaming…</span>
+                    ) : (
+                      <CopyButton data={activeData} label={activeMeta?.label ?? ""} />
+                    );
+                  })()}
+                </div>
+                {renderSectionContent(activeTab, activeData as Record<string, unknown>)}
+              </div>
+            ) : (
+              (() => {
+                const activeMeta = TABS.find((t) => t.num === activeTab);
+                const rawText = activeMeta?.workerId ? workerThoughts[activeMeta.workerId] : undefined;
+                const hasRaw = !!rawText && rawText.length > 10;
+                return hasRaw ? (
+                  <div className="tab-content-inner streaming-raw">
+                    <div className="tab-content-header">
+                      <span className="streaming-badge"><span className="pulse" /> streaming…</span>
+                    </div>
+                    <pre className="streaming-raw-text">{rawText}</pre>
+                  </div>
                 ) : (
-                  <SectionLoader label={meta.label} subLabel={meta.workerLabel} />
-                )}
-              </Section>
-            );
-          })}
-
-          <Section id="section-next_steps" title="Next steps" data={briefing?.next_steps}>
-            {briefing ? (
-              <NextSteps items={briefing.next_steps} />
-            ) : (
-              <SectionLoader label="Next steps" subLabel="waiting on supervisor synthesis" />
+                  <div className="pending-placeholder">
+                    <span className="pulse" />
+                    <span className="muted">
+                      {activeMeta?.workerLabel ?? "Pending…"}
+                    </span>
+                  </div>
+                );
+              })()
             )}
-          </Section>
+          </div>
+
+          {/* Next Steps — full width at bottom */}
+          <div className="next-strip">
+            <div className="exec-strip-header">
+              <span className="section-badge" style={{ background: "#f59e0b", color: "#fff" }}>6</span>
+              <span className="exec-strip-title">Next Steps</span>
+              {hasNext && <CopyButton data={nextItems} label="Next Steps" />}
+            </div>
+            {hasNext ? (
+              <ol className="bullet-list next-steps-list">
+                {nextItems!.map((line, i) => (
+                  <li key={i}>{line}</li>
+                ))}
+              </ol>
+            ) : (
+              <div className="pending-placeholder">
+                <span className="pulse" />
+                <span className="muted">Waiting on supervisor…</span>
+              </div>
+            )}
+          </div>
+
+          {briefing?.requires_approval &&
+            briefing.requires_approval.length > 0 && (
+              <div className="hitl-section">
+                <h4 className="sub-block-title">Pending Approvals</h4>
+                {briefing.requires_approval.map((tool) => {
+                  const args = briefing.tool_args[tool] ?? {};
+                  return (
+                    <div key={tool} className="hitl-card">
+                      <header>
+                        <code>{tool}</code>
+                        <span className="badge warn">requires approval</span>
+                      </header>
+                      <FlatKeyValues data={args} />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
           {briefing?.usage && (
-            <Section title="Usage">
-              <FlatKeyValues data={briefing.usage as Record<string, unknown>} />
-            </Section>
+            <details className="usage-details">
+              <summary className="muted">Token usage</summary>
+              <FlatKeyValues
+                data={briefing.usage as Record<string, unknown>}
+              />
+            </details>
           )}
         </>
       )}

@@ -44,6 +44,7 @@ import enum
 import json
 import logging
 import os
+import time
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any, AsyncIterator
@@ -253,10 +254,12 @@ class SupervisorDAG:
         retrieval_tasks: dict[str, asyncio.Task] = {}
         pending: set[asyncio.Task] = set()
         task_to_wid: dict[asyncio.Task, str] = {}
+        worker_start_times: dict[str, float] = {}
 
         def _launch(wid: str) -> None:
             spec = self._workers[wid]
             state.status[wid] = WorkerStatus.RUNNING
+            worker_start_times[wid] = time.monotonic()
             task = asyncio.create_task(
                 self._run_one(state, spec, retrieval_tasks),
                 name=f"worker:{wid}",
@@ -363,7 +366,8 @@ class SupervisorDAG:
                 )
                 state.outputs[wid] = out
                 state.status[wid] = WorkerStatus.SUCCEEDED
-                yield {"type": "partial", "worker_id": wid, "output": out}
+                elapsed = round(time.monotonic() - worker_start_times.get(wid, 0), 1)
+                yield {"type": "partial", "worker_id": wid, "output": out, "elapsed_s": elapsed}
 
                 for dep_wid in reverse[wid]:
                     if state.status.get(dep_wid) != WorkerStatus.PENDING:

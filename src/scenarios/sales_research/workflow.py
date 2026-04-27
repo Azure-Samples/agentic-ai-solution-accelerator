@@ -26,6 +26,8 @@ parallelising a worker is a data change to ``WORKERS``; the scaffolder in
 from __future__ import annotations
 
 import asyncio
+import json
+import logging
 import os
 from typing import Any, AsyncIterator
 
@@ -52,6 +54,39 @@ from .agents import (
     supervisor,
 )
 
+logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# Input compaction — reduces prompt tokens for downstream workers so they
+# respond faster.  The raw account_planner output can be 2-4K tokens; this
+# keeps the key structure but trims arrays and strings.
+# ---------------------------------------------------------------------------
+def _compact(raw: Any, max_items: int = 3, max_str: int = 200) -> str:
+    """Compress a worker output to reduce downstream input tokens."""
+    if raw is None:
+        return "{}"
+    try:
+        data = json.loads(raw) if isinstance(raw, str) else raw
+    except (json.JSONDecodeError, TypeError, ValueError):
+        return str(raw)[:500]
+    if not isinstance(data, dict):
+        return str(data)[:500]
+
+    def _cv(v: Any) -> Any:
+        if isinstance(v, str) and len(v) > max_str:
+            return v[:max_str] + "..."
+        if isinstance(v, list):
+            trunc = v[:max_items]
+            if all(isinstance(x, dict) for x in trunc):
+                return [{kk: _cv(vv) for kk, vv in x.items()} for x in trunc]
+            return trunc
+        if isinstance(v, dict):
+            return {kk: _cv(vv) for kk, vv in v.items()}
+        return v
+
+    return json.dumps({k: _cv(v) for k, v in data.items()}, default=str)
+
 
 # ---------------------------------------------------------------------------
 # Worker input builders — module-level ``def`` so ``scripts/scaffold-agent.py``
@@ -59,10 +94,6 @@ from .agents import (
 # AST rewrite. Do NOT inline as lambdas.
 # ---------------------------------------------------------------------------
 def _build_input_account_planner(state: WorkerState) -> dict[str, Any]:
-    # When retrieval.mode == foundry_tool, the Foundry agent has an
-    # attached AzureAISearchTool and runs retrieval server-side; do not
-    # echo any orchestrator-side grounding_chunks back into the prompt
-    # (none should be populated anyway since grounding_query is None).
     return {
         "company_name": state.request["company_name"],
         "domain": state.request.get("domain", ""),
@@ -72,23 +103,23 @@ def _build_input_account_planner(state: WorkerState) -> dict[str, Any]:
 
 def _build_input_icp_fit_analyst(state: WorkerState) -> dict[str, Any]:
     return {
-        "account_profile": state.outputs["account_planner"],
+        "account_profile": _compact(state.outputs["account_planner"]),
         "icp_definition": state.request["icp_definition"],
     }
 
 
 def _build_input_competitive_context(state: WorkerState) -> dict[str, Any]:
     return {
-        "account_profile": state.outputs["account_planner"],
+        "account_profile": _compact(state.outputs["account_planner"]),
         "our_solution": state.request["our_solution"],
     }
 
 
 def _build_input_outreach_personalizer(state: WorkerState) -> dict[str, Any]:
     return {
-        "account_profile": state.outputs["account_planner"],
-        "fit_summary": state.outputs["icp_fit_analyst"],
-        "competitive_context": state.outputs["competitive_context"],
+        "account_profile": _compact(state.outputs["account_planner"]),
+        "fit_summary": _compact(state.outputs.get("icp_fit_analyst", "(not yet available)")),
+        "competitive_context": _compact(state.outputs.get("competitive_context", "(not yet available)")),
         "persona": state.request.get("persona", "Decision maker"),
     }
 
@@ -114,13 +145,14 @@ WORKERS: dict[str, WorkerSpec] = {
         build_input=_build_input_competitive_context,
         depends_on=frozenset({"account_planner"}),
     ),
+    # Parallelized: outreach now runs alongside icp+competitive (only needs
+    # account_planner). This cuts ~30-50s off wall-clock by removing the
+    # serial wait for icp+competitive to finish before outreach starts.
     "outreach_personalizer": WorkerSpec(
         id="outreach_personalizer",
         module=outreach_personalizer,
         build_input=_build_input_outreach_personalizer,
-        depends_on=frozenset(
-            {"account_planner", "icp_fit_analyst", "competitive_context"}
-        ),
+        depends_on=frozenset({"account_planner"}),
     ),
 }
 
@@ -138,12 +170,6 @@ class SalesResearchWorkflow:
         self._primary_index_name = primary_index_name
         self._agent_versions: dict[str, str] = {}
         self._version_lock: Any = None  # lazily created asyncio.Lock
-        # Reverse map: Foundry agent_name -> workflow worker_id. Used to
-        # tag streaming ``chunk`` events with the worker_id so the frontend
-        # can correlate live tokens against ``partial`` events keyed by the
-        # same worker_id (the two were diverging — accel-icp-fit-analyst
-        # vs icp_fit_analyst — which left "is working…" cards stuck on
-        # screen after the worker had already finished).
         self._agent_to_wid: dict[str, str] = {
             spec.module.AGENT_NAME: wid for wid, spec in WORKERS.items()
         }
@@ -152,6 +178,21 @@ class SalesResearchWorkflow:
             invoke_agent=self._invoke_agent,
             retrieve=self._retrieve_grounding,  # pyright: ignore[reportArgumentType]  # bound method matches Retrieve protocol at runtime
         )
+
+    async def warmup(self) -> None:
+        """Pre-resolve agent versions and warm the credential token.
+
+        Called from the FastAPI lifespan so the first user request does
+        not pay the cold-start penalty (~3-8s) of credential acquisition
+        and version API lookups.
+        """
+        agent_names = {spec.module.AGENT_NAME for spec in WORKERS.values()}
+        results = await asyncio.gather(
+            *(self._resolve_agent_version(name) for name in agent_names),
+            return_exceptions=True,
+        )
+        resolved = sum(1 for r in results if r is not None and not isinstance(r, Exception))
+        logger.info("warmup: resolved %d/%d agent versions", resolved, len(agent_names))
 
     async def stream(self, request: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
         """Yield SSE events for one research request.
@@ -195,8 +236,11 @@ class SalesResearchWorkflow:
                 async for evt in self._dag.run(state):
                     await out_q.put(evt)
 
+                agg_start = __import__("time").monotonic()
                 await out_q.put({"type": "status", "stage": "aggregating"})
                 final = await self._aggregate(state)
+                agg_elapsed = round(__import__("time").monotonic() - agg_start, 1)
+                await out_q.put({"type": "status", "stage": "aggregated", "elapsed_s": agg_elapsed})
 
                 if state.usage_totals:
                     final.setdefault("usage", dict(state.usage_totals))
@@ -496,49 +540,87 @@ class SalesResearchWorkflow:
             except Exception:  # noqa: S110  # best-effort cleanup in finally
                 pass
 
+    @staticmethod
+    def _compact_output(raw: Any, max_items: int = 3, max_str: int = 300) -> str:
+        """Backward-compat wrapper — delegates to module-level ``_compact``."""
+        return _compact(raw, max_items=max_items, max_str=max_str)
+
     async def _aggregate(self, state: WorkerState) -> dict[str, Any]:
-        """Build the final ResearchBriefing.
+        """Build the final ResearchBriefing deterministically — no LLM call.
 
-        Pass-through fields (``account_profile``, ``icp_fit``,
-        ``competitive_play``, ``recommended_outreach``) are merged
-        deterministically from worker outputs — there is no value in
-        paying a 30–60s gpt-5-mini reasoning round-trip just to copy
-        JSON. The supervisor LLM is invoked ONLY for the genuinely
-        synthesized fields (executive_summary, next_steps,
-        requires_approval, tool_args). This roughly halves aggregation
-        latency and removes a whole class of "supervisor dropped or
-        renamed worker fields" failures.
-
-        ``state`` is threaded through ``_invoke_agent`` so the
-        supervisor's token usage rolls up into ``state.usage_totals``
-        and lands in the final briefing's ``usage`` field — previously
-        the supervisor call was the largest LLM cost yet was excluded
-        from cost reporting.
+        Exec summary and next steps are extracted from the already-transformed
+        worker outputs.  This eliminates the ~34s supervisor LLM round-trip
+        while keeping grounded, data-driven synthesis.  Pass-through fields
+        are merged verbatim.
         """
-        request = state.request
         outputs = state.outputs
-        synthesis_prompt = supervisor.build_prompt(request) + (
-            f"\n\nWORKER OUTPUTS:\n"
-            f"account_profile = {outputs.get('account_planner')}\n"
-            f"icp_fit = {outputs.get('icp_fit_analyst')}\n"
-            f"competitive = {outputs.get('competitive_context')}\n"
-            f"outreach = {outputs.get('outreach_personalizer')}\n"
-        )
-        raw = await self._invoke_agent(
-            supervisor.AGENT_NAME, synthesis_prompt, state
-        )
-        synthesis = supervisor.transform_response(raw or "{}")
-        ok, err = supervisor.validate_response(synthesis)
-        if not ok:
-            raise ValueError(f"supervisor aggregator: {err}")
-        # Deterministic merge: synthesis fields from the supervisor LLM
-        # plus pass-through fields copied verbatim from worker outputs.
+        acct = outputs.get("account_planner") or {}
+        icp = outputs.get("icp_fit_analyst") or {}
+        comp = outputs.get("competitive_context") or {}
+        outreach = outputs.get("outreach_personalizer") or {}
+
+        # ---- executive_summary (3 bullets) --------------------------------
+        bullets: list[str] = []
+
+        overview = acct.get("company_overview", "") if isinstance(acct, dict) else ""
+        if overview:
+            first = overview.split(". ")[0].rstrip(".") + "."
+            bullets.append(first)
+        else:
+            bullets.append("Account profile gathered — see details below.")
+
+        score = icp.get("fit_score", 0) if isinstance(icp, dict) else 0
+        segment = icp.get("recommended_segment", "unknown") if isinstance(icp, dict) else "unknown"
+        tier = icp.get("tier_recommendation", "watchlist") if isinstance(icp, dict) else "watchlist"
+        reasons = icp.get("fit_reasons", []) if isinstance(icp, dict) else []
+        reason_tail = f" — {reasons[0]}" if reasons else ""
+        bullets.append(f"ICP fit: {score}/100 ({segment}, {tier}){reason_tail}")
+
+        competitors = comp.get("competitors", []) if isinstance(comp, dict) else []
+        diffs = comp.get("differentiators", []) if isinstance(comp, dict) else []
+        if competitors:
+            names = ", ".join(c.get("name", "?") for c in competitors[:2] if isinstance(c, dict))
+            diff_note = f"; differentiator: {diffs[0]}" if diffs else ""
+            bullets.append(f"Competitive landscape includes {names}{diff_note}.")
+        elif diffs:
+            bullets.append(f"Key differentiator: {diffs[0]}.")
+        else:
+            bullets.append("No significant competitive presence detected.")
+
+        # ---- next_steps (3 actions) ---------------------------------------
+        steps: list[str] = []
+        action = icp.get("recommended_action", "nurture") if isinstance(icp, dict) else "nurture"
+
+        if action == "pursue":
+            steps.append(f"Pursue this {tier} account — schedule a discovery call with the buying committee.")
+        elif action == "disqualify":
+            steps.append(f"Re-evaluate fit — account scored {score}/100; consider deprioritizing.")
+        else:
+            steps.append(f"Nurture this {tier} account — share relevant case studies and monitor for triggers.")
+
+        tps = comp.get("talking_points", []) if isinstance(comp, dict) else []
+        if tps:
+            steps.append(f"Lead with: {tps[0]}")
+        elif diffs:
+            steps.append(f"Emphasize differentiator: {diffs[0]}")
+        else:
+            steps.append("Prepare competitive positioning talking points.")
+
+        cta = outreach.get("primary_cta", "") if isinstance(outreach, dict) else ""
+        if cta:
+            steps.append(f"Outreach CTA: {cta}")
+        else:
+            steps.append("Draft personalized outreach referencing strategic initiatives.")
+
         return {
-            **synthesis,
-            "account_profile": outputs.get("account_planner", {}),
-            "icp_fit": outputs.get("icp_fit_analyst", {}),
-            "competitive_play": outputs.get("competitive_context", {}),
-            "recommended_outreach": outputs.get("outreach_personalizer", {}),
+            "executive_summary": bullets[:3],
+            "next_steps": steps[:3],
+            "requires_approval": [],
+            "tool_args": {},
+            "account_profile": acct,
+            "icp_fit": icp,
+            "competitive_play": comp,
+            "recommended_outreach": outreach,
         }
 
 

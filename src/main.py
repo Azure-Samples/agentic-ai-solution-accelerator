@@ -179,6 +179,13 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     ``azd up`` (ACA marks the revision unhealthy).
     """
     await run_bootstrap(_bundle)
+    # Pre-warm credential and agent version cache so the first user
+    # request does not pay a cold-start penalty.
+    if hasattr(_bundle.workflow, "warmup"):
+        try:
+            await _bundle.workflow.warmup()
+        except Exception:
+            pass  # best-effort; first request will retry
     yield
 
 
