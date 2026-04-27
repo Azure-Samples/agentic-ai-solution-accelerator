@@ -66,17 +66,55 @@ def _make_stream_endpoint(bundle: ScenarioBundle):
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
         async def gen() -> AsyncIterator[bytes]:
+            # Stream protocol contract
+            # ------------------------
+            # Every data event carries a monotonic ``seq`` so the client can
+            # detect truncation by ANY intermediate hop (Vite dev proxy,
+            # ACA ingress, browser fetch). The stream ALWAYS ends with a
+            # terminal ``{"type":"done", "seq":N}`` event — if the client
+            # reads EOF without ``done`` it knows the connection was cut
+            # mid-flight and must surface that to the user instead of
+            # silently treating it as success.
+            #
+            # Heartbeats from the workflow are converted here to SSE
+            # comment lines (``: ka\\n\\n``) which are protocol-level and
+            # do NOT reach the EventSource/onmessage handler — keeping
+            # the data event stream clean for UI consumers.
+            seq = 0
             try:
                 async for event in workflow.stream(payload.model_dump()):
                     if await request.is_disconnected():
                         break
-                    yield f"data: {json.dumps(event)}\n\n".encode()
+                    if isinstance(event, dict) and event.get("type") == "heartbeat":
+                        yield b": ka\n\n"
+                        continue
+                    seq += 1
+                    yield f"data: {json.dumps({**event, 'seq': seq})}\n\n".encode()
             except Exception as exc:
                 emit_event(Event(name="response.returned", ok=False, error=str(exc)))
-                err = {"type": "error", "message": str(exc)}
+                seq += 1
+                err = {"type": "error", "message": str(exc), "seq": seq}
                 yield f"data: {json.dumps(err)}\n\n".encode()
+            # Terminal marker — emitted on BOTH the happy path and after a
+            # fatal error. Clients use absence-of-``done`` to detect a
+            # truncated stream.
+            seq += 1
+            yield f"data: {json.dumps({'type': 'done', 'seq': seq})}\n\n".encode()
 
-        return StreamingResponse(gen(), media_type="text/event-stream")
+        return StreamingResponse(
+            gen(),
+            media_type="text/event-stream",
+            headers={
+                # Tell ACA ingress / nginx-style proxies NOT to buffer the
+                # response. Without this some intermediaries hold the body
+                # until close, defeating SSE entirely.
+                "X-Accel-Buffering": "no",
+                # Prevent any cache / transform layer from coalescing or
+                # mangling the chunked body.
+                "Cache-Control": "no-cache, no-transform",
+                "Connection": "keep-alive",
+            },
+        )
 
     stream_endpoint.__name__ = f"{bundle.id.replace('-', '_')}_stream"
     return stream_endpoint

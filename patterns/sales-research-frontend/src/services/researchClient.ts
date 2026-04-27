@@ -48,6 +48,9 @@ export async function runResearch(
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let lastSeq = 0;
+  let lastEventType: string | undefined;
+  let sawDone = false;
 
   try {
     while (true) {
@@ -63,6 +66,9 @@ export async function runResearch(
         sep = buffer.indexOf("\n\n");
 
         // Each SSE message can have multiple `data:` lines; concat per spec.
+        // SSE comment lines start with ":" and are protocol-level
+        // keepalives (the backend emits ": ka\n\n" every 15s of silence)
+        // — we drop them entirely; they never reach the UI.
         const dataLines = rawMessage
           .split("\n")
           .filter((line) => line.startsWith("data:"))
@@ -72,6 +78,14 @@ export async function runResearch(
         const payload = dataLines.join("\n");
         try {
           const parsed = JSON.parse(payload) as StreamEvent;
+          if ("seq" in parsed && typeof parsed.seq === "number") {
+            lastSeq = parsed.seq;
+          }
+          if (parsed.type === "done") {
+            sawDone = true;
+          } else {
+            lastEventType = parsed.type;
+          }
           onEvent(parsed);
         } catch (err) {
           onEvent({
@@ -80,6 +94,17 @@ export async function runResearch(
           });
         }
       }
+    }
+    // EOF without a terminal ``done`` event = stream was cut by an
+    // intermediary. Surface this clearly so the UI does not silently
+    // treat partial output as a degraded success. Aborts (user
+    // cancelled) throw and skip this branch.
+    if (!sawDone) {
+      onEvent({
+        type: "stream_interrupted",
+        last_seq: lastSeq,
+        last_event: lastEventType,
+      });
     }
   } finally {
     reader.releaseLock();

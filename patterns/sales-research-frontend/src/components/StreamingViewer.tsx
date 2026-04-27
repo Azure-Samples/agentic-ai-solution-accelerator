@@ -39,12 +39,20 @@ function describe(event: StreamEvent): { label: string; tone: string } {
       return { label: "final briefing assembled", tone: "ok" };
     case "error":
       return { label: `error · ${event.message}`, tone: "err" };
-    // ``chunk`` and ``heartbeat`` are routed before reaching this list,
-    // but TypeScript wants the union exhausted.
+    // ``chunk`` is routed before reaching this list, but TypeScript
+    // wants the union exhausted.
     case "chunk":
       return { label: `chunk · ${event.agent}`, tone: "info" };
-    case "heartbeat":
-      return { label: "heartbeat", tone: "info" };
+    // ``done`` and ``stream_interrupted`` are protocol-level — App.tsx
+    // routes them away from the event log too, but the union must be
+    // exhausted for the type checker.
+    case "done":
+      return { label: "stream complete", tone: "ok" };
+    case "stream_interrupted":
+      return {
+        label: `stream interrupted · last seq ${event.last_seq}${event.last_event ? ` (${event.last_event})` : ""}`,
+        tone: "err",
+      };
   }
 }
 

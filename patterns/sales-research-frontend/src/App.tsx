@@ -13,6 +13,9 @@ export default function App() {
   const [toolWarnings, setToolWarnings] = useState<
     { tool: string; error: string }[]
   >([]);
+  const [interruption, setInterruption] = useState<
+    { last_seq: number; last_event?: string } | null
+  >(null);
   // Live "thinking" buffer per agent — accumulated from `chunk` events
   // so the UI can show streaming progress while a worker is producing
   // its 30-60s response. Cleared on each new submit.
@@ -27,6 +30,7 @@ export default function App() {
     setBriefing(null);
     setError(null);
     setToolWarnings([]);
+    setInterruption(null);
     setWorkerThoughts({});
 
     const controller = new AbortController();
@@ -47,15 +51,28 @@ export default function App() {
             }));
             return;
           }
-          // Heartbeats are connection-keepalive only; ignore for UI.
-          if (evt.type === "heartbeat") return;
+          // ``stream_interrupted`` is synthesised by the client when
+          // the response body EOFs without a terminal ``done`` event.
+          // That means an intermediary (Vite dev proxy, ACA ingress,
+          // browser fetch, etc.) cut the connection mid-flight. Show
+          // an explicit banner so the user sees "this failed" instead
+          // of "this finished with partial results".
+          if (evt.type === "stream_interrupted") {
+            setInterruption({
+              last_seq: evt.last_seq,
+              last_event: evt.last_event,
+            });
+            return;
+          }
+          // ``done`` is the terminal protocol marker. Nothing to render
+          // — its absence is what matters (handled above).
+          if (evt.type === "done") return;
 
           setEvents((prev) => [...prev, evt]);
           // ``briefing_ready`` makes the briefing renderable BEFORE
           // any side-effect tools fire, so a HITL/permission failure
           // afterwards no longer wipes the four agents' output.
-          // ``final`` is the terminal event and carries the same
-          // briefing — handle both so older backends still render.
+          // ``final`` carries the same briefing — handle both.
           if (evt.type === "briefing_ready" || evt.type === "final") {
             setBriefing(evt.briefing);
           }
@@ -84,15 +101,11 @@ export default function App() {
     abortRef.current?.abort();
   }
 
-  // Defensive fallback: if the backend never emits ``briefing_ready``
-  // or ``final`` (e.g. fatal error during aggregation), surface the
-  // raw worker outputs so the four agents' work isn't lost from view.
-  // We don't fabricate a ResearchBriefing — we just expose the
-  // partials directly, clearly labelled as partial results.
+  // Partials that arrived before the stream died — exposed so the
+  // interruption banner can tell the user how far we got.
   const partials = events
     .filter((e): e is Extract<StreamEvent, { type: "partial" }> => e.type === "partial")
     .map((e) => ({ worker_id: e.worker_id, output: e.output }));
-  const showPartialFallback = !briefing && partials.length > 0;
 
   // An agent is "still thinking" if we've seen chunks but no partial yet.
   const completedWorkers = new Set(partials.map((p) => p.worker_id));
@@ -117,6 +130,36 @@ export default function App() {
             <strong>Error:</strong> {error}
           </div>
         )}
+        {interruption && !briefing && (
+          <div className="card error" role="alert">
+            <strong>Stream disconnected before the briefing was ready.</strong>
+            <p className="muted">
+              The connection was cut by an intermediary after{" "}
+              <code>seq={interruption.last_seq}</code>
+              {interruption.last_event && (
+                <>
+                  {" "}
+                  (last event: <code>{interruption.last_event}</code>)
+                </>
+              )}
+              . {partials.length > 0
+                ? `${partials.length} of 4 worker output(s) arrived before the cut — see them under "Streaming activity" below.`
+                : "No worker output arrived before the cut."}
+              {" "}This is a transport issue, not a model failure — try again,
+              or check the dev proxy / ingress timeouts.
+            </p>
+          </div>
+        )}
+        {interruption && briefing && (
+          <div className="card warn" role="status">
+            <strong>Stream disconnected after the briefing was ready.</strong>
+            <p className="muted">
+              The briefing below is complete, but the connection was cut at{" "}
+              <code>seq={interruption.last_seq}</code> before we could confirm
+              completion. Side-effect tool results may be missing.
+            </p>
+          </div>
+        )}
         {toolWarnings.length > 0 && (
           <div className="card warn" role="status">
             <strong>Side-effect tools needed approval — briefing is below.</strong>
@@ -135,21 +178,6 @@ export default function App() {
           liveThoughts={liveThoughts}
         />
         <ResultPanel briefing={briefing} />
-        {showPartialFallback && (
-          <div className="card">
-            <h2>Partial results (no final briefing)</h2>
-            <p className="muted">
-              The backend did not emit a final briefing. The raw outputs
-              from each worker that did complete are shown below.
-            </p>
-            {partials.map((p) => (
-              <details key={p.worker_id} className="partial-block">
-                <summary>{p.worker_id}</summary>
-                <pre className="raw-json">{JSON.stringify(p.output, null, 2)}</pre>
-              </details>
-            ))}
-          </div>
-        )}
       </main>
 
       <footer className="app-footer">
