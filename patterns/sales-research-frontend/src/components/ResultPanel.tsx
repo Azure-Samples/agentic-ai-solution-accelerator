@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { ResearchBriefing, StreamEvent } from "../types/research";
 import { SectionLoader } from "./SectionLoader";
 
@@ -8,14 +8,94 @@ interface Props {
 }
 
 // ---------------------------------------------------------------------------
+// Markdown serialiser — converts structured data to pasteable markdown.
+// Handles the known shapes (string[], Record, nested arrays) so each
+// section's copy button produces clean output for Teams / Outlook / CRM.
+// ---------------------------------------------------------------------------
+
+function valueToMarkdown(value: unknown, indent = 0): string {
+  if (value === null || value === undefined || value === "") return "_not available_";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "_(none)_";
+    if (value.every((x) => typeof x === "string")) {
+      return value.map((s) => `- ${s}`).join("\n");
+    }
+    if (value.every((x) => typeof x === "object" && x !== null && !Array.isArray(x))) {
+      return (value as Record<string, unknown>[])
+        .map((row) => recordToMarkdown(row, indent))
+        .join("\n\n");
+    }
+    return value.map((v) => `- ${String(v)}`).join("\n");
+  }
+  if (typeof value === "object") {
+    return recordToMarkdown(value as Record<string, unknown>, indent);
+  }
+  return String(value);
+}
+
+function recordToMarkdown(data: Record<string, unknown>, indent = 0): string {
+  const prefix = "  ".repeat(indent);
+  return Object.entries(data)
+    .map(([k, v]) => {
+      const label = k.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
+      if (typeof v === "object" && v !== null && !Array.isArray(v)) {
+        return `${prefix}**${label}:**\n${valueToMarkdown(v, indent + 1)}`;
+      }
+      if (Array.isArray(v)) {
+        return `${prefix}**${label}:**\n${valueToMarkdown(v, indent + 1)}`;
+      }
+      return `${prefix}**${label}:** ${valueToMarkdown(v)}`;
+    })
+    .join("\n");
+}
+
+function sectionToMarkdown(title: string, data: unknown): string {
+  return `## ${title}\n\n${valueToMarkdown(data)}`;
+}
+
+// ---------------------------------------------------------------------------
+// Copy button
+// ---------------------------------------------------------------------------
+
+function CopyButton({ title, data }: { title: string; data: unknown }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      const md = sectionToMarkdown(title, data);
+      await navigator.clipboard.writeText(md);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard API may fail in insecure contexts — silent fallback.
+    }
+  }, [title, data]);
+
+  return (
+    <button
+      type="button"
+      className="copy-md-btn"
+      onClick={handleCopy}
+      title="Copy as markdown"
+      aria-label={`Copy ${title} as markdown`}
+    >
+      {copied ? "✓ Copied" : "Copy"}
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Section helpers
 // ---------------------------------------------------------------------------
 
-function Section({ id, title, children }: { id?: string; title: string; children: React.ReactNode }) {
+function Section({ id, title, data, children }: { id?: string; title: string; data?: unknown; children: React.ReactNode }) {
   return (
     <section id={id} className="result-section">
       <header className="section-header">
         <h3>{title}</h3>
+        {data !== undefined && data !== null && <CopyButton title={title} data={data} />}
       </header>
       {children}
     </section>
@@ -322,7 +402,7 @@ export function ResultPanel({ briefing, events }: Props) {
         </pre>
       ) : (
         <>
-          <Section id="section-summary" title="Executive summary">
+          <Section id="section-summary" title="Executive summary" data={briefing?.executive_summary}>
             {briefing ? (
               <ExecutiveSummary items={briefing.executive_summary} />
             ) : (
@@ -334,7 +414,7 @@ export function ResultPanel({ briefing, events }: Props) {
             const meta = WORKER_TO_SECTION[workerId];
             const data = dataFor(workerId);
             return (
-              <Section key={workerId} id={`section-${workerId}`} title={meta.label}>
+              <Section key={workerId} id={`section-${workerId}`} title={meta.label} data={data}>
                 {data && isRecord(data) ? (
                   <FlatKeyValues data={data} />
                 ) : (
@@ -344,7 +424,7 @@ export function ResultPanel({ briefing, events }: Props) {
             );
           })}
 
-          <Section id="section-next_steps" title="Next steps">
+          <Section id="section-next_steps" title="Next steps" data={briefing?.next_steps}>
             {briefing ? (
               <NextSteps items={briefing.next_steps} />
             ) : (

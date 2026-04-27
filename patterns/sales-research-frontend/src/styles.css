@@ -730,3 +730,18 @@ main.main-with-output {
   border-radius: 0;
 }
 
+
+/* Copy-as-markdown button */
+.copy-md-btn {
+  font-size: 0.75rem;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 999px;
+  cursor: pointer;
+  color: var(--muted);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.copy-md-btn:hover { border-color: var(--primary); color: var(--primary); }
+
