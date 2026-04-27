@@ -42,10 +42,20 @@ spec file contains a `**Model:**` field.
 
 ## Important
 
-These files are ONLY used at bootstrap time. After `azd up` completes, agent
-instructions live in the **Foundry portal** — that is the runtime source of
-truth. The `.md` files here remain as a reproducible starting point so a
-partner who clones the template gets a working system immediately.
+**Authoring source of truth:** the `.md` files in this directory.
+**Runtime location:** Foundry portal — `src/bootstrap.py` syncs each spec verbatim
+to the matching Foundry agent at FastAPI startup on every `azd up` /
+`azd deploy` / revision restart. The portal holds the runtime copy *between*
+deploys but is not a durable authoring surface — manual portal edits are
+**transient** and will be overwritten on the next sync.
+
+The supported authoring loop is: edit the `.md` → `azd deploy` → re-run evals.
+The supported rollback path is: `git revert` the spec file → `azd deploy`.
+
+If an engagement intentionally opts out of bootstrap sync (sets
+`BOOTSTRAP_SKIP=1` so the portal becomes the authoring surface for that
+deployment), the deviation must be recorded in the handover packet's
+"Customer-specific deviations" section.
 
 Do NOT reference these `.md` files at runtime. Do NOT import from them.
 

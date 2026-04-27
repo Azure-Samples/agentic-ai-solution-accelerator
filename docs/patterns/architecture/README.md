@@ -74,7 +74,7 @@ partner lifts into their own pipeline once they've customised it.
 
 | Invariant | Rule |
 |---|---|
-| Agent instructions live in Foundry portal, not code | `agent_specs_no_hardcoded_model`, spec + prompt modules reference by Foundry agent name |
+| Agent instructions authored in `docs/agent-specs/*.md`, synced to Foundry at startup | `agent_specs_no_hardcoded_model`, spec + prompt modules reference by Foundry agent name |
 | `accelerator.yaml` resolves to importable modules | `manifest_imports_resolve` |
 | Every side-effect tool has a HITL checkpoint | `tool_registers_hitl` |
 | Retrieval index schema matches Bicep | `search_index_schema_matches_bicep` |
@@ -105,7 +105,7 @@ Raising past 3–5 coordinated workers is out of scope for v1 — evaluation sur
 
 | Anti-pattern | Why |
 |---|---|
-| Agent instructions in Python source | Instructions live in Foundry portal — code references by ID only. |
+| Agent instructions in Python source | Authoring source is `docs/agent-specs/*.md`; `src/bootstrap.py` syncs them to Foundry at startup. Code references agents by ID only. |
 | Side-effect tool without HITL checkpoint | HITL is a hard invariant for every `side_effect_tools` entry in `accelerator.yaml`. |
 | Inline SDK pins in `src/Dockerfile` | Source of truth is `pyproject.toml` + `ga-versions.yaml`; lint blocks. |
 | Direct model SDK calls bypassing telemetry | Go through `agent_framework` clients so OTel + cost tracking stay live. |

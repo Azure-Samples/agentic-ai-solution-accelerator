@@ -105,9 +105,9 @@ The accelerator ships with defaults; this engagement almost certainly
 diverged. List every divergence here so the customer's ops team isn't
 surprised when they `diff` against the upstream template.
 
-- **Portal-managed prompts (not in source):**
-  `[PARTNER-FILL REQUIRED: which agent prompts are managed in the
-  Foundry portal instead of source, and why]`
+- **Portal-managed prompts (engagement opted out of bootstrap sync via `BOOTSTRAP_SKIP=1` — non-default):**
+  `[PARTNER-FILL: which agent prompts are managed in the Foundry portal
+  instead of `docs/agent-specs/*.md`, and why. Default behavior is repo-as-source-of-truth — only fill this if the engagement explicitly disabled bootstrap sync.]`
 - **Key Vault secret references added beyond the accelerator defaults:**
   `[PARTNER-FILL REQUIRED: secret name → what it's for → who owns
   rotation]`

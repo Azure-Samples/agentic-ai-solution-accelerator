@@ -7,7 +7,7 @@ What ships in v1 and where it lives. Customisation within these rails is fine; d
 ## Principle 1 — Safety at the model boundary
 
 - **Content filter locked at strict default on every deployment.** `infra/modules/foundry.bicep` sets the `accelerator-default-policy` RAI policy (Hate / Sexual / Violence / Self-harm at Medium). `scripts/accelerator-lint.py::content_filter_iac_only` blocks any portal-only relaxation.
-- **Jailbreak-resistant system instructions live in Foundry portal.** Source code references agents by Foundry agent name (e.g. `accel-sales-research-supervisor`); instructions never appear inline in Python.
+- **Jailbreak-resistant system instructions authored in `docs/agent-specs/<foundry_name>.md`.** `src/bootstrap.py` syncs each spec verbatim to the Foundry portal at FastAPI startup on every deploy. Source code references agents by Foundry agent name (e.g. `accel-sales-research-supervisor`); instructions never appear inline in Python.
 - **Prompt-injection surface scoped at retrieval.** `src/retrieval/ai_search.py` only returns fields declared in the scenario retrieval schema; the red-team suite probes data exfiltration via response shaping and tool abuse.
 
 ## Principle 2 — Grounded responses with attribution

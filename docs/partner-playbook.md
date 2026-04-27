@@ -145,10 +145,10 @@ through the customization steps below.
 
 - `python scripts/accelerator-lint.py` passes with **0 blocking, 0 warning**
 - `pytest tests/` passes (supervisor-DAG test stays green)
-- Agent instructions in each `prompt.py` are **placeholders** with a clear
-  TODO — the real instructions live in the Foundry portal (see
-  `docs/agent-specs/README.md`). Do **not** hardcode customer-specific
-  prompts in repo code.
+- Each `prompt.py` is a **per-request input builder only** — no system
+  instructions inline. The agent's system instructions live in
+  `docs/agent-specs/<foundry_name>.md` (see [agent-specs README](agent-specs/README.md))
+  and `src/bootstrap.py` syncs them to Foundry on every deploy.
 - Every worker agent has `transform.py` returning a normalized dict and
   `validate.py` enforcing the schema. Reject any PR that skips either step.
 
@@ -251,13 +251,14 @@ which must pass before merge:
 - `build + type check` — backend build and typing gate wired in
   `.github/workflows/deploy.yml`
 
-**Where the real agent instructions live:** Foundry portal. Treat the repo
-as the audit trail: every PR that edits a `prompt.py`, a tool, or an
-acceptance threshold should note in its commit message what corresponding
-portal change was made (or is still pending). The `/explain-change` chatmode
-is a **read-only CI preflight** — it tells you which lint rules and evals
-will fire for the current diff; it does not write changelogs or capture
-portal edits.
+**Where agent instructions live:** `docs/agent-specs/<foundry_name>.md` is
+the **authoring source of truth**; `src/bootstrap.py` syncs the spec verbatim
+to the Foundry portal at FastAPI startup on every `azd up` / `azd deploy`.
+Treat the repo as the audit trail — every PR that edits a `prompt.py`, an
+agent spec, a tool, or an acceptance threshold is the durable record. The
+`/explain-change` chatmode is a **read-only CI preflight** — it tells you
+which lint rules and evals will fire for the current diff; it does not write
+changelogs.
 
 **What "good" looks like:**
 
