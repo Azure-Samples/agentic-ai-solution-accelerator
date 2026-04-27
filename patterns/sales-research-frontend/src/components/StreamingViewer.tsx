@@ -1,34 +1,34 @@
 import { useEffect, useRef } from "react";
 import type { StreamEvent } from "../types/research";
+import { labelForAgent, statusForAgent } from "../data/agentStatus";
 
 interface Props {
   events: StreamEvent[];
   busy: boolean;
   // Per-agent live thinking buffer (chunks accumulated since the agent
-  // started but before it emitted ``partial``). The viewer renders the
-  // tail of each buffer so the user can see the model is working —
-  // critical for 30-60s gpt-5-mini calls that would otherwise look hung.
+  // started but before it emitted ``partial``). We don't render the raw
+  // text — it's JSON fragments — but the accumulated length drives a
+  // rotating, human-readable status copy per agent so the user knows
+  // the model is making progress during 30-60s gpt-5-mini calls.
   liveThoughts?: [agent: string, text: string][];
 }
-
-// How many trailing characters of streaming text to show. The full
-// payload is JSON 5-15 kB and not useful to display — but the tail is
-// useful as a "still alive" signal.
-const THOUGHT_TAIL_CHARS = 600;
 
 function describe(event: StreamEvent): { label: string; tone: string } {
   switch (event.type) {
     case "status":
       return { label: `status · ${event.stage}`, tone: "info" };
     case "partial":
-      return { label: `worker complete · ${event.worker_id}`, tone: "ok" };
+      return {
+        label: `${labelForAgent(event.worker_id)} finished`,
+        tone: "ok",
+      };
     case "worker_skipped":
       return {
-        label: `worker skipped · ${event.worker_id}${event.error ? ` (${event.error})` : ""}`,
+        label: `${labelForAgent(event.worker_id)} skipped${event.error ? ` (${event.error})` : ""}`,
         tone: "warn",
       };
     case "briefing_ready":
-      return { label: "briefing ready (rendering)", tone: "ok" };
+      return { label: "Briefing ready — rendering", tone: "ok" };
     case "tool_skipped":
       return { label: `tool skipped · ${event.tool} (${event.reason})`, tone: "warn" };
     case "tool_result":
@@ -36,13 +36,13 @@ function describe(event: StreamEvent): { label: string; tone: string } {
     case "tool_error":
       return { label: `tool error · ${event.tool} (${event.error})`, tone: "warn" };
     case "final":
-      return { label: "final briefing assembled", tone: "ok" };
+      return { label: "Final briefing assembled", tone: "ok" };
     case "error":
       return { label: `error · ${event.message}`, tone: "err" };
     // ``chunk`` is routed before reaching this list, but TypeScript
     // wants the union exhausted.
     case "chunk":
-      return { label: `chunk · ${event.agent}`, tone: "info" };
+      return { label: `chunk · ${labelForAgent(event.agent)}`, tone: "info" };
     // ``done`` and ``stream_interrupted`` are protocol-level — App.tsx
     // routes them away from the event log too, but the union must be
     // exhausted for the type checker.
@@ -88,13 +88,10 @@ export function StreamingViewer({ events, busy, liveThoughts }: Props) {
           {liveThoughts.map(([agent, text]) => (
             <div key={agent} className="live-thought">
               <span className="thought-agent">
-                <span className="pulse" aria-hidden="true" /> {agent} is thinking…
+                <span className="pulse" aria-hidden="true" />{" "}
+                {labelForAgent(agent)} is working…
               </span>
-              <pre className="thought-text">
-                {text.length > THOUGHT_TAIL_CHARS
-                  ? "…" + text.slice(-THOUGHT_TAIL_CHARS)
-                  : text}
-              </pre>
+              <p className="thought-status">{statusForAgent(agent, text.length)}</p>
             </div>
           ))}
         </div>
