@@ -158,10 +158,16 @@ class SalesResearchWorkflow:
             yield evt  # pyright: ignore[reportReturnType]  # Mapping widens to dict at runtime via dict ops downstream
 
         yield {"type": "status", "stage": "aggregating"}
-        final = await self._aggregate(request, state.outputs)
+        final = await self._aggregate(state)
 
         if state.usage_totals:
             final.setdefault("usage", dict(state.usage_totals))
+
+        # Make the briefing renderable BEFORE any side-effect tool fires.
+        # If a HITL/permission failure raises later, the UI already has the
+        # full briefing and can show side-effect failures as non-fatal
+        # banners. ``final`` remains the terminal stream event.
+        yield {"type": "briefing_ready", "briefing": final}
 
         approvals_needed = final.get("requires_approval", []) or []
         tool_args_map = final.get("tool_args", {}) or {}
@@ -177,7 +183,27 @@ class SalesResearchWorkflow:
                     "reason": "no tool_args produced by supervisor",
                 }
                 continue
-            result = await fn(**args)
+            try:
+                result = await fn(**args)
+            except Exception as exc:
+                # Side-effect tool failures (HITL gate, permission denied,
+                # CRM API errors) are non-fatal — the briefing is already
+                # streamed and the seller can act on it manually. Surface
+                # the failure as ``tool_error`` and continue with any
+                # remaining tools so partial side-effect success is also
+                # captured.
+                emit_event(Event(
+                    name="tool.failed",
+                    ok=False,
+                    error=str(exc),
+                    args_redacted={"tool": tool_name},
+                ))
+                yield {
+                    "type": "tool_error",
+                    "tool": tool_name,
+                    "error": str(exc),
+                }
+                continue
             yield {"type": "tool_result", "tool": tool_name, "result": result}
 
         emit_event(Event(name="response.returned", ok=True))
@@ -311,9 +337,27 @@ class SalesResearchWorkflow:
             except Exception:  # noqa: S110  # best-effort cleanup in finally
                 pass
 
-    async def _aggregate(
-        self, request: dict[str, Any], outputs: dict[str, Any]
-    ) -> dict[str, Any]:
+    async def _aggregate(self, state: WorkerState) -> dict[str, Any]:
+        """Build the final ResearchBriefing.
+
+        Pass-through fields (``account_profile``, ``icp_fit``,
+        ``competitive_play``, ``recommended_outreach``) are merged
+        deterministically from worker outputs — there is no value in
+        paying a 30–60s gpt-5-mini reasoning round-trip just to copy
+        JSON. The supervisor LLM is invoked ONLY for the genuinely
+        synthesized fields (executive_summary, next_steps,
+        requires_approval, tool_args). This roughly halves aggregation
+        latency and removes a whole class of "supervisor dropped or
+        renamed worker fields" failures.
+
+        ``state`` is threaded through ``_invoke_agent`` so the
+        supervisor's token usage rolls up into ``state.usage_totals``
+        and lands in the final briefing's ``usage`` field — previously
+        the supervisor call was the largest LLM cost yet was excluded
+        from cost reporting.
+        """
+        request = state.request
+        outputs = state.outputs
         synthesis_prompt = supervisor.build_prompt(request) + (
             f"\n\nWORKER OUTPUTS:\n"
             f"account_profile = {outputs.get('account_planner')}\n"
@@ -321,18 +365,22 @@ class SalesResearchWorkflow:
             f"competitive = {outputs.get('competitive_context')}\n"
             f"outreach = {outputs.get('outreach_personalizer')}\n"
         )
-        # Aggregator runs outside the DAG and does not accumulate token usage
-        # into any particular worker's budget; a transient WorkerState is
-        # threaded through ``_invoke_agent`` only so the usage counters roll
-        # up into the final briefing's ``usage`` field.
         raw = await self._invoke_agent(
-            supervisor.AGENT_NAME, synthesis_prompt, WorkerState(request=request)
+            supervisor.AGENT_NAME, synthesis_prompt, state
         )
-        data = supervisor.transform_response(raw or "{}")
-        ok, err = supervisor.validate_response(data)
+        synthesis = supervisor.transform_response(raw or "{}")
+        ok, err = supervisor.validate_response(synthesis)
         if not ok:
             raise ValueError(f"supervisor aggregator: {err}")
-        return data
+        # Deterministic merge: synthesis fields from the supervisor LLM
+        # plus pass-through fields copied verbatim from worker outputs.
+        return {
+            **synthesis,
+            "account_profile": outputs.get("account_planner", {}),
+            "icp_fit": outputs.get("icp_fit_analyst", {}),
+            "competitive_play": outputs.get("competitive_context", {}),
+            "recommended_outreach": outputs.get("outreach_personalizer", {}),
+        }
 
 
 def build_workflow(context: Any) -> BaseWorkflow:

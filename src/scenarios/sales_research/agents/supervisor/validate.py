@@ -3,9 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 REQUIRED = (
-    "executive_summary", "account_profile", "icp_fit",
-    "competitive_play", "recommended_outreach", "next_steps",
-    "requires_approval", "tool_args",
+    "executive_summary", "next_steps", "requires_approval", "tool_args",
 )
 
 

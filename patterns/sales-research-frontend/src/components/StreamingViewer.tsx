@@ -16,10 +16,14 @@ function describe(event: StreamEvent): { label: string; tone: string } {
         label: `worker skipped · ${event.worker_id}${event.error ? ` (${event.error})` : ""}`,
         tone: "warn",
       };
+    case "briefing_ready":
+      return { label: "briefing ready (rendering)", tone: "ok" };
     case "tool_skipped":
       return { label: `tool skipped · ${event.tool} (${event.reason})`, tone: "warn" };
     case "tool_result":
       return { label: `tool result · ${event.tool}`, tone: "ok" };
+    case "tool_error":
+      return { label: `tool error · ${event.tool} (${event.error})`, tone: "warn" };
     case "final":
       return { label: "final briefing assembled", tone: "ok" };
     case "error":
