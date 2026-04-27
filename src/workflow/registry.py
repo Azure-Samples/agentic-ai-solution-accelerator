@@ -32,9 +32,31 @@ _IMPORT_REF_RE = re.compile(
 
 
 @dataclass(frozen=True)
+class AgentRetrieval:
+    """How an individual agent gets grounding facts.
+
+    - ``none``: the agent doesn't use retrieval. Default.
+    - ``python_injected``: the supervisor calls ``_retrieve`` and stuffs
+      ``grounding_chunks`` into the worker's input dict; the prompt builder
+      copies them into the system prompt. Backward-compat path; suitable for
+      scenarios where you want the orchestrator to control retrieval.
+    - ``foundry_tool``: the Foundry agent has an AzureAISearchTool attached
+      that points at the FoundryIQ Index asset created by bootstrap. The
+      Search service handles vector + semantic retrieval server-side;
+      ``_retrieve`` is skipped for this worker.
+    """
+
+    mode: str  # 'none' | 'python_injected' | 'foundry_tool'
+    index: str = ""
+    top_k: int = 5
+    query_type: str = "vector_semantic_hybrid"
+
+
+@dataclass(frozen=True)
 class ScenarioAgent:
     id: str
     foundry_name: str
+    retrieval: AgentRetrieval | None = None
 
 
 @dataclass(frozen=True)
@@ -167,12 +189,36 @@ def load_scenario(manifest_path: pathlib.Path | None = None) -> ScenarioBundle:
     if not isinstance(agents_raw, list) or not agents_raw:
         raise ValueError("scenario.agents must be a non-empty list")
     agents: list[ScenarioAgent] = []
+    valid_modes = {"none", "python_injected", "foundry_tool"}
     for i, a in enumerate(agents_raw):
         if not isinstance(a, dict) or "id" not in a or "foundry_name" not in a:
             raise ValueError(
                 f"scenario.agents[{i}]: each entry needs 'id' and 'foundry_name'"
             )
-        agents.append(ScenarioAgent(id=a["id"], foundry_name=a["foundry_name"]))
+        retrieval_raw = a.get("retrieval")
+        retrieval: AgentRetrieval | None = None
+        if retrieval_raw is not None:
+            if not isinstance(retrieval_raw, dict):
+                raise ValueError(
+                    f"scenario.agents[{i}].retrieval must be a mapping"
+                )
+            mode = retrieval_raw.get("mode", "none")
+            if mode not in valid_modes:
+                raise ValueError(
+                    f"scenario.agents[{i}].retrieval.mode must be one of "
+                    f"{sorted(valid_modes)}, got {mode!r}"
+                )
+            retrieval = AgentRetrieval(
+                mode=mode,
+                index=str(retrieval_raw.get("index", "")),
+                top_k=int(retrieval_raw.get("top_k", 5)),
+                query_type=str(
+                    retrieval_raw.get("query_type", "vector_semantic_hybrid")
+                ),
+            )
+        agents.append(ScenarioAgent(
+            id=a["id"], foundry_name=a["foundry_name"], retrieval=retrieval,
+        ))
 
     # retrieval.indexes (optional)
     retrieval = scenario.get("retrieval") or {}

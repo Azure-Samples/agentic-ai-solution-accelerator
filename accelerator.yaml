@@ -111,7 +111,18 @@ scenario:
     path: /research/stream
   agents:
     - { id: supervisor,            foundry_name: accel-sales-research-supervisor }
-    - { id: account_planner,       foundry_name: accel-account-planner }
+    - id: account_planner
+      foundry_name: accel-account-planner
+      retrieval:
+        # FoundryIQ pattern — Foundry agent attaches an AzureAISearchTool
+        # bound to the project Index asset (created by bootstrap from the
+        # `index` field below). The Search service handles vector + semantic
+        # retrieval server-side; the supervisor does NOT inject Python
+        # grounding_chunks into the prompt for this agent.
+        mode: foundry_tool
+        index: accounts
+        top_k: 5
+        query_type: vector_semantic_hybrid
     - { id: icp_fit_analyst,       foundry_name: accel-icp-fit-analyst }
     - { id: competitive_context,   foundry_name: accel-competitive-context }
     - { id: outreach_personalizer, foundry_name: accel-outreach-personalizer }

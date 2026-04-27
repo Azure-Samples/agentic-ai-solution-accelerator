@@ -25,14 +25,17 @@ parallelising a worker is a data change to ``WORKERS``; the scaffolder in
 """
 from __future__ import annotations
 
+import os
 from typing import Any, AsyncIterator
 
-from azure.identity import DefaultAzureCredential
+from azure.identity.aio import DefaultAzureCredential
 
 try:
-    from agent_framework.azure import AzureAIClient  # type: ignore
+    # GA SDK rename: agent-framework-azure-ai → agent-framework-foundry,
+    # agent_framework.azure → agent_framework.foundry, AzureAIClient → FoundryAgent.
+    from agent_framework.foundry import FoundryAgent  # type: ignore
 except Exception:  # pragma: no cover - SDK may not be installed in lint envs
-    AzureAIClient = None  # type: ignore
+    FoundryAgent = None  # type: ignore
 
 from src.accelerator_baseline.killswitch import assert_enabled
 from src.accelerator_baseline.telemetry import Event, emit_event
@@ -54,16 +57,15 @@ from .agents import (
 # can append new named functions and register them in ``WORKERS`` via a single
 # AST rewrite. Do NOT inline as lambdas.
 # ---------------------------------------------------------------------------
-def _grounding_query_account_planner(state: WorkerState) -> str:
-    return state.request["company_name"]
-
-
 def _build_input_account_planner(state: WorkerState) -> dict[str, Any]:
+    # When retrieval.mode == foundry_tool, the Foundry agent has an
+    # attached AzureAISearchTool and runs retrieval server-side; do not
+    # echo any orchestrator-side grounding_chunks back into the prompt
+    # (none should be populated anyway since grounding_query is None).
     return {
         "company_name": state.request["company_name"],
         "domain": state.request.get("domain", ""),
         "context_hints": state.request.get("context_hints", []),
-        "grounding_chunks": state.grounding_chunks.get("account_planner", []),
     }
 
 
@@ -95,7 +97,9 @@ WORKERS: dict[str, WorkerSpec] = {
         id="account_planner",
         module=account_planner,
         build_input=_build_input_account_planner,
-        grounding_query=_grounding_query_account_planner,
+        # No grounding_query — retrieval runs as a Foundry tool inside the
+        # agent (see accelerator.yaml scenario.agents[].retrieval). The
+        # Python supervisor's _retrieve path is bypassed for this worker.
     ),
     "icp_fit_analyst": WorkerSpec(
         id="icp_fit_analyst",
@@ -131,6 +135,8 @@ class SalesResearchWorkflow:
     def __init__(self, *, primary_index_name: str = "accounts") -> None:
         self._credential = DefaultAzureCredential()
         self._primary_index_name = primary_index_name
+        self._agent_versions: dict[str, str] = {}
+        self._version_lock: Any = None  # lazily created asyncio.Lock
         self._dag = SupervisorDAG(
             WORKERS,
             invoke_agent=self._invoke_agent,
@@ -178,6 +184,57 @@ class SalesResearchWorkflow:
         yield {"type": "final", "briefing": final}
 
     # ---- internals --------------------------------------------------------
+    async def _resolve_agent_version(self, agent_name: str) -> str | None:
+        """Return the latest version id for a Foundry PromptAgent.
+
+        ``FoundryAgent`` requires an explicit ``agent_version`` for PromptAgents
+        (the kind bootstrap creates). When omitted, the SDK silently falls
+        back to inline chat mode and the model service rejects the request
+        with ``Missing required parameter: 'model'``. The Indexes/Agents
+        preview API also rejects ``"latest"`` (returns 400) so we list
+        versions and pick the highest numeric one. Cached per workflow.
+        """
+        if agent_name in self._agent_versions:
+            return self._agent_versions[agent_name]
+        import asyncio
+        if self._version_lock is None:
+            self._version_lock = asyncio.Lock()
+        async with self._version_lock:
+            if agent_name in self._agent_versions:
+                return self._agent_versions[agent_name]
+            endpoint = os.environ.get("AZURE_AI_FOUNDRY_ENDPOINT")
+            if not endpoint:
+                return None
+            try:
+                from azure.ai.projects.aio import AIProjectClient
+            except Exception:
+                return None
+            try:
+                proj = AIProjectClient(endpoint=endpoint, credential=self._credential)
+                try:
+                    versions: list[str] = []
+                    async for v in proj.agents.list_versions(agent_name):
+                        vid = getattr(v, "version", None)
+                        if isinstance(vid, str) and vid:
+                            versions.append(vid)
+                finally:
+                    await proj.close()
+            except Exception as exc:
+                emit_event(Event(
+                    name="agent.version_lookup_failed",
+                    ok=False, error=f"{agent_name}: {exc}",
+                ))
+                return None
+            if not versions:
+                return None
+            # Pick highest numeric version, fallback to lexicographic max.
+            try:
+                latest = max(versions, key=lambda x: int(x))
+            except ValueError:
+                latest = max(versions)
+            self._agent_versions[agent_name] = latest
+            return latest
+
     async def _invoke_agent(
         self, agent_name: str, prompt: str, state: WorkerState
     ) -> str:
@@ -185,7 +242,7 @@ class SalesResearchWorkflow:
         into ``state.usage_totals`` — never on ``self`` — so concurrent
         requests do not corrupt each other's cost totals.
         """
-        if AzureAIClient is None:
+        if FoundryAgent is None:
             emit_event(
                 Event(
                     name="worker.completed",
@@ -193,8 +250,19 @@ class SalesResearchWorkflow:
                 )
             )
             return "{}"
-        client = AzureAIClient(agent_name=agent_name, use_latest_version=True)
-        agent = client.as_agent()
+        project_endpoint = os.environ.get("AZURE_AI_FOUNDRY_ENDPOINT")
+        if not project_endpoint:
+            raise RuntimeError(
+                "AZURE_AI_FOUNDRY_ENDPOINT is not set — required by FoundryAgent"
+            )
+        agent_version = await self._resolve_agent_version(agent_name)
+        agent = FoundryAgent(
+            project_endpoint=project_endpoint,
+            credential=self._credential,
+            agent_name=agent_name,
+            agent_version=agent_version,
+            allow_preview=True,
+        )
         result = await agent.run(prompt)
         usage = getattr(result, "usage", None)
         if usage is not None:

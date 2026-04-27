@@ -38,6 +38,18 @@ param modelDeploymentName string = 'gpt-5-mini'
 @description('Deployment capacity (TPM in thousands for GlobalStandard SKU).')
 param modelCapacity int = 30
 
+@description('Embedding model deployment name. Used for AI Search query-time vectorization (FoundryIQ over a vector index). Bicep provisions the deployment; bootstrap configures the Search index vectorizer to call this deployment over AAD.')
+param embeddingDeploymentName string = 'text-embedding-3-small'
+
+@description('Embedding model name (OpenAI format).')
+param embeddingModelName string = 'text-embedding-3-small'
+
+@description('Embedding model version.')
+param embeddingModelVersion string = '1'
+
+@description('Embedding deployment capacity (TPM in thousands for GlobalStandard SKU). 30 is enough for the seed corpus + query-time vectorization at moderate QPS.')
+param embeddingModelCapacity int = 30
+
 @description('Extra model deployments beyond the default (object array). Each entry: {slug, deployment_name, model, version, capacity}. Default [] means only the default deployment is provisioned. Derived from the accelerator.yaml models block via loadYamlContent in main.bicep.')
 param extraModelDeployments array = []
 
@@ -124,6 +136,30 @@ resource modelDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-
   }
 }
 
+// Embedding deployment for Azure AI Search integrated vectorization.
+// Sequenced AFTER the default chat deployment via dependsOn so Foundry's
+// provisioning queue doesn't reject concurrent creates on cold capacity
+// (same reason as the @batchSize(1) loop below).
+resource embeddingDeployment 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
+  parent: account
+  name: embeddingDeploymentName
+  sku: {
+    name: 'GlobalStandard'
+    capacity: embeddingModelCapacity
+  }
+  properties: {
+    model: {
+      format: 'OpenAI'
+      name: embeddingModelName
+      version: embeddingModelVersion
+    }
+    versionUpgradeOption: 'OnceCurrentVersionExpired'
+  }
+  dependsOn: [
+    modelDeployment
+  ]
+}
+
 // Extra deployments driven by accelerator.yaml `models:` block.
 // `@batchSize(1)` serialises creates inside the loop so Foundry's
 // provisioning queue doesn't reject concurrent creates on cold
@@ -152,6 +188,7 @@ resource extraModelDeps 'Microsoft.CognitiveServices/accounts/deployments@2024-1
   }
   dependsOn: [
     modelDeployment
+    embeddingDeployment
   ]
 }]
 
@@ -252,10 +289,17 @@ resource foundryPrivateEndpointDnsGroup 'Microsoft.Network/privateEndpoints/priv
 }
 
 output accountName string = account.name
+output accountId string = account.id
 output accountEndpoint string = account.properties.endpoint
 output projectEndpoint string = 'https://${account.name}.services.ai.azure.com/api/projects/${project.name}'
 output projectName string = project.name
+// Project system-assigned MI principal id. Used by main.bicep to grant
+// the project access to AI Search (Search Index Data Reader) so the
+// FoundryIQ Index asset can resolve documents from the connected
+// Search index when the agent's AzureAISearchTool fires.
+output projectPrincipalId string = project.identity.principalId
 output modelDeploymentName string = modelDeployment.name
 output modelName string = modelName
+output embeddingDeploymentName string = embeddingDeployment.name
 output raiPolicyName string = raiPolicy.name
 output modelMap object = modelMap

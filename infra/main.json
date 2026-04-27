@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.40.2.10011",
-      "templateHash": "2786085509939757388"
+      "templateHash": "13616033492241719736"
     }
   },
   "parameters": {
@@ -83,6 +83,13 @@
         "azd-env-name": "[parameters('envName')]",
         "workload": "[format('{0}-accelerator', parameters('scenarioId'))]"
       }
+    },
+    "searchConnectionName": {
+      "type": "string",
+      "defaultValue": "accel-search",
+      "metadata": {
+        "description": "Name of the project-level Cognitive Search connection inside the Foundry project. Bootstrap (FoundryIQ Index asset) references this name when wiring the agent tool."
+      }
     }
   },
   "variables": {
@@ -117,7 +124,13 @@
           },
           {
             "id": "account_planner",
-            "foundry_name": "accel-account-planner"
+            "foundry_name": "accel-account-planner",
+            "retrieval": {
+              "mode": "foundry_tool",
+              "index": "accounts",
+              "top_k": 5,
+              "query_type": "vector_semantic_hybrid"
+            }
           },
           {
             "id": "icp_fit_analyst",
@@ -209,7 +222,18 @@
     "defaultEntries": "[filter(variables('modelsBlock'), lambda('m', equals(coalesce(tryGet(lambdaVariables('m'), 'default'), false()), true())))]",
     "hasManifestDefault": "[not(empty(variables('defaultEntries')))]",
     "defaultModel": "[if(variables('hasManifestDefault'), variables('defaultEntries')[0], createObject('deployment_name', 'gpt-5-mini', 'model', 'gpt-5-mini', 'version', '2025-08-07', 'capacity', 30))]",
-    "extraModelEntries": "[filter(variables('modelsBlock'), lambda('m', not(equals(coalesce(tryGet(lambdaVariables('m'), 'default'), false()), true()))))]"
+    "extraModelEntries": "[filter(variables('modelsBlock'), lambda('m', not(equals(coalesce(tryGet(lambdaVariables('m'), 'default'), false()), true()))))]",
+    "workloadIdentityName": "[format('id-{0}-{1}', parameters('envName'), parameters('resourceToken'))]",
+    "searchName": "[format('srch-{0}-{1}', parameters('envName'), parameters('resourceToken'))]",
+    "foundryAccountSeed": "[format('fdy-{0}-{1}', parameters('envName'), parameters('resourceToken'))]",
+    "foundryAccountName": "[format('fdy{0}', take(uniqueString(resourceGroup().id, variables('foundryAccountSeed')), 12))]",
+    "foundryActualProjectName": "accelerator-default",
+    "searchIndexDataReaderRoleId": "1407120a-92aa-4202-b7e9-c0e197c71c8f",
+    "searchIndexDataContribRoleId": "8ebe5a00-799e-43f5-93ac-243d3dce84a7",
+    "searchServiceContribRoleId": "7ca78c08-252a-4471-8644-bb5ff32d4ba0",
+    "cognitiveServicesOpenAIUserRoleId": "5e0bd9bd-7b93-4f28-af87-19fc36ad61bd",
+    "rbacAdminRoleId": "f58310d9-a9f6-439a-9e8d-f62e7b41a168",
+    "searchRolesAssignableExpr": "[format('@Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAnyValues:GuidEquals {{{0}, {1}, {2}}}', variables('searchIndexDataReaderRoleId'), variables('searchIndexDataContribRoleId'), variables('searchServiceContribRoleId'))]"
   },
   "resources": [
     {
@@ -233,6 +257,74 @@
       }
     },
     {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.Search/searchServices', variables('searchName'))]",
+      "name": "[guid(resourceId('Microsoft.Search/searchServices', variables('searchName')), variables('foundryAccountName'), 'projectReadsSearchIndex')]",
+      "properties": {
+        "principalId": "[reference(resourceId('Microsoft.Resources/deployments', 'foundry'), '2025-04-01').outputs.projectPrincipalId.value]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', variables('searchIndexDataReaderRoleId'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'foundry')]",
+        "[resourceId('Microsoft.Resources/deployments', 'search')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.CognitiveServices/accounts', variables('foundryAccountName'))]",
+      "name": "[guid(resourceId('Microsoft.CognitiveServices/accounts', variables('foundryAccountName')), variables('searchName'), 'searchCallsAoai')]",
+      "properties": {
+        "principalId": "[reference(resourceId('Microsoft.Resources/deployments', 'search'), '2025-04-01').outputs.principalId.value]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', variables('cognitiveServicesOpenAIUserRoleId'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'foundry')]",
+        "[resourceId('Microsoft.Resources/deployments', 'search')]"
+      ]
+    },
+    {
+      "type": "Microsoft.CognitiveServices/accounts/projects/connections",
+      "apiVersion": "2025-12-01",
+      "name": "[format('{0}/{1}/{2}', variables('foundryAccountName'), variables('foundryActualProjectName'), parameters('searchConnectionName'))]",
+      "properties": {
+        "authType": "AAD",
+        "category": "CognitiveSearch",
+        "target": "[reference(resourceId('Microsoft.Resources/deployments', 'search'), '2025-04-01').outputs.endpoint.value]",
+        "isSharedToAll": true,
+        "metadata": {
+          "ApiType": "Azure",
+          "ResourceId": "[reference(resourceId('Microsoft.Resources/deployments', 'search'), '2025-04-01').outputs.id.value]",
+          "Location": "[parameters('location')]"
+        }
+      },
+      "dependsOn": [
+        "[extensionResourceId(resourceId('Microsoft.Search/searchServices', variables('searchName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.Search/searchServices', variables('searchName')), variables('foundryAccountName'), 'projectReadsSearchIndex'))]",
+        "[resourceId('Microsoft.Resources/deployments', 'search')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.Search/searchServices', variables('searchName'))]",
+      "name": "[guid(resourceId('Microsoft.Search/searchServices', variables('searchName')), variables('workloadIdentityName'), 'workloadAssignsSearchRoles')]",
+      "properties": {
+        "principalId": "[reference(resourceId('Microsoft.Resources/deployments', 'identity'), '2025-04-01').outputs.principalId.value]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[resourceId('Microsoft.Authorization/roleDefinitions', variables('rbacAdminRoleId'))]",
+        "description": "Bootstrap-managed: lets the workload MI grant Foundry agent identities access to Search at first run.",
+        "conditionVersion": "2.0",
+        "condition": "[format('((!(ActionMatches{{''Microsoft.Authorization/roleAssignments/write''}})) OR ({0})) AND ((!(ActionMatches{{''Microsoft.Authorization/roleAssignments/delete''}})) OR ({1}))', variables('searchRolesAssignableExpr'), variables('searchRolesAssignableExpr'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Resources/deployments', 'identity')]",
+        "[resourceId('Microsoft.Resources/deployments', 'search')]"
+      ]
+    },
+    {
       "type": "Microsoft.Resources/deployments",
       "apiVersion": "2025-04-01",
       "name": "identity",
@@ -243,7 +335,7 @@
         "mode": "Incremental",
         "parameters": {
           "name": {
-            "value": "[format('id-{0}-{1}', parameters('envName'), parameters('resourceToken'))]"
+            "value": "[variables('workloadIdentityName')]"
           },
           "location": {
             "value": "[parameters('location')]"
@@ -582,7 +674,7 @@
         "mode": "Incremental",
         "parameters": {
           "name": {
-            "value": "[format('srch-{0}-{1}', parameters('envName'), parameters('resourceToken'))]"
+            "value": "[variables('searchName')]"
           },
           "location": {
             "value": "[parameters('location')]"
@@ -610,7 +702,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.40.2.10011",
-              "templateHash": "15857617849955754118"
+              "templateHash": "11471266425670531596"
             }
           },
           "parameters": {
@@ -659,6 +751,9 @@
               "tags": "[parameters('tags')]",
               "sku": {
                 "name": "standard"
+              },
+              "identity": {
+                "type": "SystemAssigned"
               },
               "properties": {
                 "replicaCount": 1,
@@ -751,6 +846,18 @@
             "endpoint": {
               "type": "string",
               "value": "[format('https://{0}.search.windows.net', parameters('name'))]"
+            },
+            "name": {
+              "type": "string",
+              "value": "[parameters('name')]"
+            },
+            "id": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Search/searchServices', parameters('name'))]"
+            },
+            "principalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Search/searchServices', parameters('name')), '2023-11-01', 'full').identity.principalId]"
             }
           }
         }
@@ -770,7 +877,7 @@
         "mode": "Incremental",
         "parameters": {
           "projectName": {
-            "value": "[format('fdy-{0}-{1}', parameters('envName'), parameters('resourceToken'))]"
+            "value": "[variables('foundryAccountSeed')]"
           },
           "location": {
             "value": "[parameters('location')]"
@@ -813,7 +920,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.40.2.10011",
-              "templateHash": "3937025940075633213"
+              "templateHash": "4824328250888878517"
             }
           },
           "parameters": {
@@ -855,6 +962,34 @@
               "defaultValue": 30,
               "metadata": {
                 "description": "Deployment capacity (TPM in thousands for GlobalStandard SKU)."
+              }
+            },
+            "embeddingDeploymentName": {
+              "type": "string",
+              "defaultValue": "text-embedding-3-small",
+              "metadata": {
+                "description": "Embedding model deployment name. Used for AI Search query-time vectorization (FoundryIQ over a vector index). Bicep provisions the deployment; bootstrap configures the Search index vectorizer to call this deployment over AAD."
+              }
+            },
+            "embeddingModelName": {
+              "type": "string",
+              "defaultValue": "text-embedding-3-small",
+              "metadata": {
+                "description": "Embedding model name (OpenAI format)."
+              }
+            },
+            "embeddingModelVersion": {
+              "type": "string",
+              "defaultValue": "1",
+              "metadata": {
+                "description": "Embedding model version."
+              }
+            },
+            "embeddingModelCapacity": {
+              "type": "int",
+              "defaultValue": 30,
+              "metadata": {
+                "description": "Embedding deployment capacity (TPM in thousands for GlobalStandard SKU). 30 is enough for the seed corpus + query-time vectorization at moderate QPS."
               }
             },
             "extraModelDeployments": {
@@ -1022,6 +1157,27 @@
               ]
             },
             {
+              "type": "Microsoft.CognitiveServices/accounts/deployments",
+              "apiVersion": "2024-10-01",
+              "name": "[format('{0}/{1}', variables('accountName'), parameters('embeddingDeploymentName'))]",
+              "sku": {
+                "name": "GlobalStandard",
+                "capacity": "[parameters('embeddingModelCapacity')]"
+              },
+              "properties": {
+                "model": {
+                  "format": "OpenAI",
+                  "name": "[parameters('embeddingModelName')]",
+                  "version": "[parameters('embeddingModelVersion')]"
+                },
+                "versionUpgradeOption": "OnceCurrentVersionExpired"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.CognitiveServices/accounts', variables('accountName'))]",
+                "[resourceId('Microsoft.CognitiveServices/accounts/deployments', variables('accountName'), parameters('modelDeploymentName'))]"
+              ]
+            },
+            {
               "copy": {
                 "name": "extraModelDeps",
                 "count": "[length(parameters('extraModelDeployments'))]",
@@ -1046,6 +1202,7 @@
               },
               "dependsOn": [
                 "[resourceId('Microsoft.CognitiveServices/accounts', variables('accountName'))]",
+                "[resourceId('Microsoft.CognitiveServices/accounts/deployments', variables('accountName'), parameters('embeddingDeploymentName'))]",
                 "[resourceId('Microsoft.CognitiveServices/accounts/deployments', variables('accountName'), parameters('modelDeploymentName'))]",
                 "[resourceId('Microsoft.CognitiveServices/accounts/raiPolicies', variables('accountName'), 'accelerator-default-policy')]"
               ]
@@ -1165,6 +1322,10 @@
               "type": "string",
               "value": "[variables('accountName')]"
             },
+            "accountId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.CognitiveServices/accounts', variables('accountName'))]"
+            },
             "accountEndpoint": {
               "type": "string",
               "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts', variables('accountName')), '2025-04-01-preview').endpoint]"
@@ -1177,6 +1338,10 @@
               "type": "string",
               "value": "[parameters('foundryProjectName')]"
             },
+            "projectPrincipalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.CognitiveServices/accounts/projects', variables('accountName'), parameters('foundryProjectName')), '2025-04-01-preview', 'full').identity.principalId]"
+            },
             "modelDeploymentName": {
               "type": "string",
               "value": "[parameters('modelDeploymentName')]"
@@ -1184,6 +1349,10 @@
             "modelName": {
               "type": "string",
               "value": "[parameters('modelName')]"
+            },
+            "embeddingDeploymentName": {
+              "type": "string",
+              "value": "[parameters('embeddingDeploymentName')]"
             },
             "raiPolicyName": {
               "type": "string",
@@ -1234,6 +1403,12 @@
           "foundryEndpoint": {
             "value": "[reference(resourceId('Microsoft.Resources/deployments', 'foundry'), '2025-04-01').outputs.projectEndpoint.value]"
           },
+          "foundryProjectName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'foundry'), '2025-04-01').outputs.projectName.value]"
+          },
+          "foundryOpenAIEndpoint": {
+            "value": "[format('https://{0}.openai.azure.com', variables('foundryAccountName'))]"
+          },
           "modelDeploymentName": {
             "value": "[reference(resourceId('Microsoft.Resources/deployments', 'foundry'), '2025-04-01').outputs.modelDeploymentName.value]"
           },
@@ -1242,6 +1417,15 @@
           },
           "searchEndpoint": {
             "value": "[reference(resourceId('Microsoft.Resources/deployments', 'search'), '2025-04-01').outputs.endpoint.value]"
+          },
+          "searchResourceId": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'search'), '2025-04-01').outputs.id.value]"
+          },
+          "embeddingDeploymentName": {
+            "value": "[reference(resourceId('Microsoft.Resources/deployments', 'foundry'), '2025-04-01').outputs.embeddingDeploymentName.value]"
+          },
+          "foundrySearchConnectionName": {
+            "value": "[parameters('searchConnectionName')]"
           },
           "externalIngress": {
             "value": "[parameters('externalIngress')]"
@@ -1260,7 +1444,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.40.2.10011",
-              "templateHash": "10768801501587891057"
+              "templateHash": "4670643139068987891"
             }
           },
           "parameters": {
@@ -1288,11 +1472,41 @@
             "foundryEndpoint": {
               "type": "string"
             },
+            "foundryProjectName": {
+              "type": "string",
+              "metadata": {
+                "description": "Foundry project name. Surfaced to the workload as AZURE_AI_FOUNDRY_PROJECT_NAME so bootstrap can address the project Indexes API for FoundryIQ asset CRUD."
+              }
+            },
+            "foundryOpenAIEndpoint": {
+              "type": "string",
+              "metadata": {
+                "description": "OpenAI inference endpoint of the Foundry account (https://{accountName}.openai.azure.com). Surfaced to the workload as AZURE_AI_FOUNDRY_OPENAI_ENDPOINT so bootstrap can configure the AI Search index AzureOpenAIVectorizer with the resource URL the Search service should call at query time."
+              }
+            },
             "modelDeploymentName": {
               "type": "string"
             },
             "searchEndpoint": {
               "type": "string"
+            },
+            "searchResourceId": {
+              "type": "string",
+              "metadata": {
+                "description": "Resource ID of the AI Search service. Surfaced to the workload as AZURE_AI_SEARCH_RESOURCE_ID so bootstrap can scope the role assignments it creates for each Foundry agent identity."
+              }
+            },
+            "embeddingDeploymentName": {
+              "type": "string",
+              "metadata": {
+                "description": "Embedding model deployment name in the Foundry account. Surfaced to the workload as AZURE_AI_FOUNDRY_EMBEDDING_DEPLOYMENT so bootstrap can configure the AI Search vector field vectorizer."
+              }
+            },
+            "foundrySearchConnectionName": {
+              "type": "string",
+              "metadata": {
+                "description": "Project-level connection name of the AI Search connection inside the Foundry project. Surfaced to the workload as AZURE_AI_FOUNDRY_SEARCH_CONNECTION_NAME so bootstrap can reference the connection when creating the FoundryIQ Index asset."
+              }
             },
             "modelMapJson": {
               "type": "string",
@@ -1403,6 +1617,14 @@
                           "value": "[parameters('foundryEndpoint')]"
                         },
                         {
+                          "name": "AZURE_AI_FOUNDRY_PROJECT_NAME",
+                          "value": "[parameters('foundryProjectName')]"
+                        },
+                        {
+                          "name": "AZURE_AI_FOUNDRY_OPENAI_ENDPOINT",
+                          "value": "[parameters('foundryOpenAIEndpoint')]"
+                        },
+                        {
                           "name": "AZURE_AI_FOUNDRY_MODEL",
                           "value": "[parameters('modelDeploymentName')]"
                         },
@@ -1411,8 +1633,20 @@
                           "value": "[parameters('modelMapJson')]"
                         },
                         {
+                          "name": "AZURE_AI_FOUNDRY_EMBEDDING_DEPLOYMENT",
+                          "value": "[parameters('embeddingDeploymentName')]"
+                        },
+                        {
+                          "name": "AZURE_AI_FOUNDRY_SEARCH_CONNECTION_NAME",
+                          "value": "[parameters('foundrySearchConnectionName')]"
+                        },
+                        {
                           "name": "AZURE_AI_SEARCH_ENDPOINT",
                           "value": "[parameters('searchEndpoint')]"
+                        },
+                        {
+                          "name": "AZURE_AI_SEARCH_RESOURCE_ID",
+                          "value": "[parameters('searchResourceId')]"
                         },
                         {
                           "name": "ALLOWED_ORIGINS",
@@ -1596,6 +1830,10 @@
       "type": "object",
       "value": "[reference(resourceId('Microsoft.Resources/deployments', 'foundry'), '2025-04-01').outputs.modelMap.value]"
     },
+    "AZURE_AI_FOUNDRY_EMBEDDING_DEPLOYMENT": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'foundry'), '2025-04-01').outputs.embeddingDeploymentName.value]"
+    },
     "AZURE_AI_FOUNDRY_RAI_POLICY": {
       "type": "string",
       "value": "[reference(resourceId('Microsoft.Resources/deployments', 'foundry'), '2025-04-01').outputs.raiPolicyName.value]"
@@ -1603,6 +1841,14 @@
     "AZURE_AI_SEARCH_ENDPOINT": {
       "type": "string",
       "value": "[reference(resourceId('Microsoft.Resources/deployments', 'search'), '2025-04-01').outputs.endpoint.value]"
+    },
+    "AZURE_AI_SEARCH_RESOURCE_ID": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'search'), '2025-04-01').outputs.id.value]"
+    },
+    "AZURE_AI_FOUNDRY_SEARCH_CONNECTION_NAME": {
+      "type": "string",
+      "value": "[parameters('searchConnectionName')]"
     },
     "APPLICATIONINSIGHTS_CONNECTION_STRING": {
       "type": "string",

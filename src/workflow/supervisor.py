@@ -42,11 +42,16 @@ from __future__ import annotations
 import asyncio
 import enum
 import json
+import logging
+import os
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
 from typing import Any, AsyncIterator
 
 from src.accelerator_baseline.telemetry import Event, emit_event
+
+logger = logging.getLogger("accelerator.supervisor")
+_DEBUG_RAW = os.environ.get("SUPERVISOR_DEBUG_RAW") == "1"
 
 _REQUIRED_MODULE_ATTRS: tuple[str, ...] = (
     "AGENT_NAME",
@@ -393,13 +398,22 @@ class SupervisorDAG:
             prompt = spec.module.build_prompt(inp)
             attempts = max(1, spec.validation_max_attempts)
             last_err = ""
-            for _ in range(attempts):
+            last_raw = ""
+            for attempt_idx in range(attempts):
                 raw = await self._invoke(spec.module.AGENT_NAME, prompt, state)
+                last_raw = raw or ""
                 data = spec.module.transform_response(raw or "{}")
                 ok, err = spec.module.validate_response(data)
                 if ok:
                     return data
                 last_err = err
+                if _DEBUG_RAW:
+                    snippet = last_raw[:300].replace("\n", " ")
+                    logger.warning(
+                        "validation_failed agent=%s attempt=%d/%d err=%s raw=%r",
+                        spec.module.AGENT_NAME, attempt_idx + 1, attempts,
+                        err, snippet,
+                    )
             raise ValueError(f"{spec.module.AGENT_NAME}: {last_err}")
 
         async def _with_sem() -> Any:

@@ -17,6 +17,13 @@ resource search 'Microsoft.Search/searchServices@2023-11-01' = {
   location: location
   tags: tags
   sku: { name: 'standard' }
+  // System-assigned MI lets the Search service authenticate to Azure
+  // OpenAI as itself when query-time AAD vectorizers fire (integrated
+  // vectorization). main.bicep grants this principal Cognitive
+  // Services OpenAI User on the Foundry account inline.
+  identity: {
+    type: 'SystemAssigned'
+  }
   properties: {
     replicaCount: 1
     partitionCount: 1
@@ -91,3 +98,6 @@ resource searchPrivateEndpointDnsGroup 'Microsoft.Network/privateEndpoints/priva
 }
 
 output endpoint string = 'https://${search.name}.search.windows.net'
+output name string = search.name
+output id string = search.id
+output principalId string = search.identity.principalId

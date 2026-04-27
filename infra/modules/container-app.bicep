@@ -7,8 +7,23 @@ param identityId string
 param identityClientId string
 param appInsightsConnectionString string
 param foundryEndpoint string
+@description('Foundry project name. Surfaced to the workload as AZURE_AI_FOUNDRY_PROJECT_NAME so bootstrap can address the project Indexes API for FoundryIQ asset CRUD.')
+param foundryProjectName string
+
+@description('OpenAI inference endpoint of the Foundry account (https://{accountName}.openai.azure.com). Surfaced to the workload as AZURE_AI_FOUNDRY_OPENAI_ENDPOINT so bootstrap can configure the AI Search index AzureOpenAIVectorizer with the resource URL the Search service should call at query time.')
+param foundryOpenAIEndpoint string
+
 param modelDeploymentName string
 param searchEndpoint string
+
+@description('Resource ID of the AI Search service. Surfaced to the workload as AZURE_AI_SEARCH_RESOURCE_ID so bootstrap can scope the role assignments it creates for each Foundry agent identity.')
+param searchResourceId string
+
+@description('Embedding model deployment name in the Foundry account. Surfaced to the workload as AZURE_AI_FOUNDRY_EMBEDDING_DEPLOYMENT so bootstrap can configure the AI Search vector field vectorizer.')
+param embeddingDeploymentName string
+
+@description('Project-level connection name of the AI Search connection inside the Foundry project. Surfaced to the workload as AZURE_AI_FOUNDRY_SEARCH_CONNECTION_NAME so bootstrap can reference the connection when creating the FoundryIQ Index asset.')
+param foundrySearchConnectionName string
 
 @description('JSON object string mapping accelerator.yaml model slugs to deployed deployment_names. Consumed by src.bootstrap (parses AZURE_AI_FOUNDRY_MODEL_MAP) so each Foundry agent can be bound to its declared slug. Sourced from foundry.bicep `modelMap` output via main.bicep.')
 param modelMapJson string = '{}'
@@ -96,9 +111,14 @@ resource app 'Microsoft.App/containerApps@2024-03-01' = {
             { name: 'AZURE_CLIENT_ID', value: identityClientId }
             { name: 'APPLICATIONINSIGHTS_CONNECTION_STRING', value: appInsightsConnectionString }
             { name: 'AZURE_AI_FOUNDRY_ENDPOINT', value: foundryEndpoint }
+            { name: 'AZURE_AI_FOUNDRY_PROJECT_NAME', value: foundryProjectName }
+            { name: 'AZURE_AI_FOUNDRY_OPENAI_ENDPOINT', value: foundryOpenAIEndpoint }
             { name: 'AZURE_AI_FOUNDRY_MODEL', value: modelDeploymentName }
             { name: 'AZURE_AI_FOUNDRY_MODEL_MAP', value: modelMapJson }
+            { name: 'AZURE_AI_FOUNDRY_EMBEDDING_DEPLOYMENT', value: embeddingDeploymentName }
+            { name: 'AZURE_AI_FOUNDRY_SEARCH_CONNECTION_NAME', value: foundrySearchConnectionName }
             { name: 'AZURE_AI_SEARCH_ENDPOINT', value: searchEndpoint }
+            { name: 'AZURE_AI_SEARCH_RESOURCE_ID', value: searchResourceId }
             { name: 'ALLOWED_ORIGINS', value: allowedOrigins }
           ]
           // Probes gate the deployment readiness signal on the in-app

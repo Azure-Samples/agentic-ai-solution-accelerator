@@ -25,11 +25,34 @@ The email MUST:
 
 Tone: direct, respectful, zero marketing jargon.
 
-Strict JSON output:
-- `subject` (string, <= 80 chars)
-- `body_markdown` (string, <= 120 words)
-- `primary_cta` (string, <= 20 words)
-- `personalization_anchors` (list of at least 2 short strings describing
-  which account details you used)
+Output a single JSON object with exactly these fields. Every field must
+be populated with a non-empty value — empty strings are rejected by the
+validator and will fail the run.
 
-Only output valid JSON. No markdown wrapping, no commentary outside the JSON.
+- `subject` — string, 4 to 80 characters. MUST NOT be empty or only
+  whitespace. Make it a concrete hook tied to one strategic initiative
+  from the account profile (e.g. "Phased ERP migration support for your
+  APAC expansion"). Avoid generic openers like "Quick question" or
+  "Hello".
+- `body_markdown` — string, ≤ 120 words, plain markdown. Reference the
+  strategic initiative and the differentiator explicitly.
+- `primary_cta` — string, ≤ 20 words. One clear, low-friction ask
+  (e.g. a 20-minute call next week).
+- `personalization_anchors` — list of at least 2 short strings, each
+  naming a specific account detail you used (e.g. "APAC expansion",
+  "legacy on-prem ERP", "200–2000 employee mid-market manufacturer").
+
+Example shape (illustrative — do not copy the wording):
+
+```
+{
+  "subject": "Phased ERP migration support for your APAC expansion",
+  "body_markdown": "Hi <name>,\n\nNoticed Contoso's APAC expansion ...",
+  "primary_cta": "Open to a 20-minute call next Tuesday or Thursday?",
+  "personalization_anchors": ["APAC expansion", "legacy on-prem ERP"]
+}
+```
+
+Output ONLY the JSON object — no markdown code fences, no commentary
+before or after, no reasoning trace. The first character of your reply
+must be `{` and the last must be `}`.

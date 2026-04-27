@@ -18,8 +18,25 @@ dependencies = [
   "azure-ai-agents>=1.0.0,<2.0.0",
   "azure-identity>=1.18.0,<2.0.0",
   "azure-keyvault-secrets>=4.8.0,<5.0.0",
-  "azure-search-documents>=11.5.0,<12.0.0",
+  # Pinned to GA-only (11.5.x) — 11.6.x is a beta line at time of writing
+  # and ships a different vectorizer shape (AzureOpenAIParameters vs
+  # AzureOpenAIVectorizerParameters). Keep the ceiling tight and bump only
+  # when 11.6.0 ships GA.
+  "azure-search-documents>=11.5.3,<11.6.0",
+  # Required for bootstrap to embed seed docs at provision time so the
+  # `accounts` index has populated `contentVector` fields. Query-time
+  # vectorization fires from the AAD vectorizer in the index schema; this
+  # dep is only for the seed path. agent-framework already pulls
+  # openai>=2 transitively so this is a free-floating soft pin.
+  "openai>=2.0.0,<3.0.0",
   "azure-mgmt-cognitiveservices>=13.5.0,<14.0.0",
+  # Required by src.bootstrap._grant_agent_search_access — at runtime,
+  # bootstrap inspects each Foundry agent's instance_identity.principal_id
+  # and uses ARM role-assignments to grant it Search RBAC on the AI Search
+  # service. The workload MI has Role Based Access Control Administrator
+  # (constrained to the three Search roles via ABAC condition in
+  # infra/main.bicep) so this is the minimum-privilege path.
+  "azure-mgmt-authorization>=4.0.0,<5.0.0",
   "azure-monitor-opentelemetry>=1.6.0,<2.0.0",
   "opentelemetry-api>=1.27.0,<2.0.0",
   "opentelemetry-sdk>=1.27.0,<2.0.0",
