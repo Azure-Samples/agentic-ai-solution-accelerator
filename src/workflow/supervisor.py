@@ -82,6 +82,13 @@ class WorkerState:
     grounding_chunks: dict[str, list[Mapping[str, Any]]] = field(default_factory=dict)
     usage_totals: dict[str, int] = field(default_factory=dict)
     status: dict[str, WorkerStatus] = field(default_factory=dict)
+    # Optional sink for streaming chunk events. Scenarios that want
+    # token-level streaming during ``_invoke_agent`` create a queue per
+    # request and the workflow merges it into the SSE event stream. Left
+    # ``None`` for non-streaming callers (unit tests, batch invocations)
+    # so the agent_framework streaming path is bypassed and behaviour is
+    # identical to pre-streaming code.
+    chunks: "asyncio.Queue[Any] | None" = None
 
 
 BuildInput = Callable[[WorkerState], Mapping[str, Any]]

@@ -30,16 +30,25 @@ export interface ResearchBriefing {
 //
 // Event ordering contract:
 //   status (supervisor.routed)
-//   partial × N (one per worker)
+//   chunk × *           ← interleaved with all other events while
+//                         workers / aggregator are streaming tokens
+//   partial × N         ← one per worker (final accumulated output)
 //   status (aggregating)
-//   briefing_ready                ← briefing renderable; stream NOT terminal
+//   chunk × *           ← supervisor LLM streaming during _aggregate
+//   briefing_ready      ← briefing renderable; stream NOT terminal
 //   [tool_skipped | tool_result | tool_error] × M
-//   final                         ← terminal; carries the same briefing
+//   final               ← terminal; carries the same briefing
+//
+// `heartbeat` is emitted every 15s of silence to keep intermediate
+// proxies (Vite dev proxy, Container Apps ingress) from closing the
+// connection during long worker runs. The frontend should ignore it.
 //
 // `error` is reserved for FATAL failures (DAG aborts, aggregation throws).
 // Side-effect tool failures use `tool_error` and do NOT abort the stream.
 export type StreamEvent =
   | { type: "status"; stage: string; stages?: string[][] }
+  | { type: "chunk"; agent: string; delta: string }
+  | { type: "heartbeat" }
   | { type: "partial"; worker_id: string; output: unknown }
   | { type: "worker_skipped"; worker_id: string; error?: string; reason?: string }
   | { type: "briefing_ready"; briefing: ResearchBriefing }

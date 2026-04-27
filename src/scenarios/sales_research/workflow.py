@@ -25,6 +25,7 @@ parallelising a worker is a data change to ``WORKERS``; the scaffolder in
 """
 from __future__ import annotations
 
+import asyncio
 import os
 from typing import Any, AsyncIterator
 
@@ -144,6 +145,26 @@ class SalesResearchWorkflow:
         )
 
     async def stream(self, request: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
+        """Yield SSE events for one research request.
+
+        Architecture: a single background ``orchestrate`` task drives the
+        DAG, the aggregator, and side-effect tools, pushing every event
+        into a merged queue. ``_invoke_agent`` runs the Foundry agent in
+        streaming mode and pushes per-token ``chunk`` events into the
+        SAME queue, so worker thoughts interleave naturally with DAG
+        ``partial`` events. The consumer loop emits a ``heartbeat`` every
+        15 s of silence so dev proxies / Container Apps ingress / browser
+        intermediaries do not close the connection during long worker
+        runs (root cause of the "1 partial then dead stream" UX bug).
+
+        We deliberately use ``asyncio.wait`` on a *persistent* get task
+        rather than ``asyncio.wait_for`` to avoid the well-known queue
+        item-loss race where a timeout cancels ``Queue.get`` after it has
+        already taken an item but before it has returned it to the
+        caller. With the persistent-task pattern the get is never
+        cancelled by the heartbeat path; we just check ``done`` next
+        iteration.
+        """
         assert_enabled("workflow")
         emit_event(
             Event(
@@ -153,61 +174,108 @@ class SalesResearchWorkflow:
         )
 
         state = WorkerState(request=request)
+        # Single merged queue: orchestrator events AND streaming chunks
+        # both flow through here. ``None`` is the end-of-stream sentinel
+        # and a dict containing key ``_error`` is the in-band exception
+        # marker (we cannot raise across a task boundary cleanly).
+        out_q: asyncio.Queue[Any] = asyncio.Queue()
+        state.chunks = out_q
 
-        async for evt in self._dag.run(state):
-            yield evt  # pyright: ignore[reportReturnType]  # Mapping widens to dict at runtime via dict ops downstream
-
-        yield {"type": "status", "stage": "aggregating"}
-        final = await self._aggregate(state)
-
-        if state.usage_totals:
-            final.setdefault("usage", dict(state.usage_totals))
-
-        # Make the briefing renderable BEFORE any side-effect tool fires.
-        # If a HITL/permission failure raises later, the UI already has the
-        # full briefing and can show side-effect failures as non-fatal
-        # banners. ``final`` remains the terminal stream event.
-        yield {"type": "briefing_ready", "briefing": final}
-
-        approvals_needed = final.get("requires_approval", []) or []
-        tool_args_map = final.get("tool_args", {}) or {}
-        for tool_name in approvals_needed:
-            if tool_name not in SIDE_EFFECT_TOOLS:
-                continue
-            fn, _schema = SIDE_EFFECT_TOOLS[tool_name]
-            args = tool_args_map.get(tool_name, {})
-            if not args:
-                yield {
-                    "type": "tool_skipped",
-                    "tool": tool_name,
-                    "reason": "no tool_args produced by supervisor",
-                }
-                continue
+        async def orchestrate() -> None:
             try:
-                result = await fn(**args)
-            except Exception as exc:
-                # Side-effect tool failures (HITL gate, permission denied,
-                # CRM API errors) are non-fatal — the briefing is already
-                # streamed and the seller can act on it manually. Surface
-                # the failure as ``tool_error`` and continue with any
-                # remaining tools so partial side-effect success is also
-                # captured.
-                emit_event(Event(
-                    name="tool.failed",
-                    ok=False,
-                    error=str(exc),
-                    args_redacted={"tool": tool_name},
-                ))
-                yield {
-                    "type": "tool_error",
-                    "tool": tool_name,
-                    "error": str(exc),
-                }
-                continue
-            yield {"type": "tool_result", "tool": tool_name, "result": result}
+                async for evt in self._dag.run(state):
+                    await out_q.put(evt)
 
-        emit_event(Event(name="response.returned", ok=True))
-        yield {"type": "final", "briefing": final}
+                await out_q.put({"type": "status", "stage": "aggregating"})
+                final = await self._aggregate(state)
+
+                if state.usage_totals:
+                    final.setdefault("usage", dict(state.usage_totals))
+
+                # Briefing renderable BEFORE side-effect tools — a HITL
+                # or permission failure later cannot wipe it from the UI.
+                await out_q.put({"type": "briefing_ready", "briefing": final})
+
+                approvals_needed = final.get("requires_approval", []) or []
+                tool_args_map = final.get("tool_args", {}) or {}
+                for tool_name in approvals_needed:
+                    if tool_name not in SIDE_EFFECT_TOOLS:
+                        continue
+                    fn, _schema = SIDE_EFFECT_TOOLS[tool_name]
+                    args = tool_args_map.get(tool_name, {})
+                    if not args:
+                        await out_q.put({
+                            "type": "tool_skipped",
+                            "tool": tool_name,
+                            "reason": "no tool_args produced by supervisor",
+                        })
+                        continue
+                    try:
+                        result = await fn(**args)
+                    except Exception as exc:
+                        emit_event(Event(
+                            name="tool.failed",
+                            ok=False,
+                            error=str(exc),
+                            args_redacted={"tool": tool_name},
+                        ))
+                        await out_q.put({
+                            "type": "tool_error",
+                            "tool": tool_name,
+                            "error": str(exc),
+                        })
+                        continue
+                    await out_q.put({
+                        "type": "tool_result",
+                        "tool": tool_name,
+                        "result": result,
+                    })
+
+                emit_event(Event(name="response.returned", ok=True))
+                await out_q.put({"type": "final", "briefing": final})
+            except Exception as exc:
+                # Surface the exception as an in-band marker so the
+                # consumer loop can re-raise it on the same task that
+                # owns the generator — keeps stack traces meaningful and
+                # lets FastAPI's outer ``gen()`` emit a typed ``error``
+                # event.
+                await out_q.put({"_error": exc})
+            finally:
+                await out_q.put(None)
+
+        orch_task = asyncio.create_task(orchestrate(), name="sales-research-orchestrate")
+        get_task: asyncio.Task[Any] | None = None
+        try:
+            while True:
+                if get_task is None:
+                    get_task = asyncio.ensure_future(out_q.get())
+                done, _pending = await asyncio.wait({get_task}, timeout=15.0)
+                if get_task not in done:
+                    # Idle period — emit a non-data heartbeat so the
+                    # connection stays warm. Loop again WITHOUT cancelling
+                    # ``get_task``; on the next pass it will already be
+                    # in ``done`` if a real event landed meanwhile.
+                    yield {"type": "heartbeat"}
+                    continue
+                evt = get_task.result()
+                get_task = None
+                if evt is None:
+                    break
+                if isinstance(evt, dict) and "_error" in evt:
+                    raise evt["_error"]
+                yield evt
+        finally:
+            # Make sure the orchestrator + any pending get future are
+            # not leaked when the consumer (e.g. FastAPI client
+            # disconnect) bails out early.
+            if get_task is not None and not get_task.done():
+                get_task.cancel()
+            if not orch_task.done():
+                orch_task.cancel()
+                try:
+                    await orch_task
+                except (asyncio.CancelledError, Exception):  # noqa: S110  # task already failed/cancelled
+                    pass
 
     # ---- internals --------------------------------------------------------
     async def _resolve_agent_version(self, agent_name: str) -> str | None:
@@ -264,9 +332,23 @@ class SalesResearchWorkflow:
     async def _invoke_agent(
         self, agent_name: str, prompt: str, state: WorkerState
     ) -> str:
-        """Retrieve a Foundry agent and run one turn. Accumulates token usage
-        into ``state.usage_totals`` — never on ``self`` — so concurrent
-        requests do not corrupt each other's cost totals.
+        """Retrieve a Foundry agent and run one turn.
+
+        When ``state.chunks`` is set (the streaming SSE path), the agent
+        is invoked with ``stream=True`` and each ``AgentResponseUpdate``
+        is forwarded as a ``chunk`` event into the merged event queue
+        for live UI feedback. The full text is reassembled from the
+        final ``AgentResponse`` (``ResponseStream.get_final_response``)
+        so downstream parsing/validation operates on the complete
+        payload and not a partial.
+
+        Without ``state.chunks`` (unit tests, batch invocations) the
+        non-streaming code path is used unchanged — required for the
+        existing test stubs that monkey-patch ``agent.run``.
+
+        Token usage from either path accumulates into
+        ``state.usage_totals`` so concurrent requests do not corrupt
+        each other's cost totals.
         """
         if FoundryAgent is None:
             emit_event(
@@ -289,19 +371,62 @@ class SalesResearchWorkflow:
             agent_version=agent_version,
             allow_preview=True,
         )
-        result = await agent.run(prompt)
-        usage = getattr(result, "usage", None)
-        if usage is not None:
-            for key in ("prompt_tokens", "completion_tokens", "total_tokens"):
-                val = getattr(usage, key, None)
-                if isinstance(val, (int, float)):
-                    state.usage_totals[key] = (
-                        state.usage_totals.get(key, 0) + int(val)
-                    )
-            state.usage_totals["agent_calls"] = (
-                state.usage_totals.get("agent_calls", 0) + 1
-            )
-        return result.text
+
+        if state.chunks is None:
+            # Non-streaming path (unit tests / batch). Behaviour identical
+            # to pre-streaming workflow.
+            result = await agent.run(prompt)
+            self._merge_usage(state, getattr(result, "usage", None))
+            return result.text
+
+        # Streaming path: iterate updates, push chunk events, reassemble.
+        # ``agent.run(stream=True)`` returns a ``ResponseStream`` that is
+        # async-iterable (yields ``AgentResponseUpdate``) and exposes
+        # ``get_final_response()`` for the consolidated response with
+        # accurate usage. We rely on the SDK's batching of updates rather
+        # than per-token chunks so we don't drown the UI; if a future SDK
+        # rev emits very granular tokens we may add coalescing here.
+        response_stream = agent.run(prompt, stream=True)
+        chunks_buf: list[str] = []
+        try:
+            async for update in response_stream:
+                delta = getattr(update, "text", None) or ""
+                if not delta:
+                    continue
+                chunks_buf.append(delta)
+                # Best-effort: never let a slow consumer (browser, proxy)
+                # back-pressure the agent SDK. Drop the chunk silently
+                # if the queue is bounded and full — the final text is
+                # still preserved in ``chunks_buf``.
+                try:
+                    state.chunks.put_nowait({
+                        "type": "chunk",
+                        "agent": agent_name,
+                        "delta": delta,
+                    })
+                except asyncio.QueueFull:  # pragma: no cover - defensive
+                    pass
+            final_response = await response_stream.get_final_response()
+        except Exception:
+            # Make sure the SSE stream surfaces the failure cleanly via
+            # the orchestrator's ``_error`` channel rather than hanging.
+            raise
+        self._merge_usage(state, getattr(final_response, "usage", None))
+        return getattr(final_response, "text", None) or "".join(chunks_buf)
+
+    @staticmethod
+    def _merge_usage(state: WorkerState, usage: Any) -> None:
+        if usage is None:
+            return
+        for key in ("prompt_tokens", "completion_tokens", "total_tokens"):
+            val = getattr(usage, key, None)
+            if isinstance(val, (int, float)):
+                state.usage_totals[key] = (
+                    state.usage_totals.get(key, 0) + int(val)
+                )
+        state.usage_totals["agent_calls"] = (
+            state.usage_totals.get("agent_calls", 0) + 1
+        )
 
     async def _retrieve_grounding(self, query: str) -> list[dict[str, Any]]:
         """Pull top-K grounded chunks from the scenario's primary AI Search index.

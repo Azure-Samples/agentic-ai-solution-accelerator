@@ -66,6 +66,39 @@ code {
 .partial-block { margin-top: 0.5rem; }
 .partial-block summary { cursor: pointer; font-weight: 600; }
 
+.live-thoughts {
+  margin-top: 0.75rem;
+  max-height: 220px;
+  overflow-y: auto;
+  border-top: 1px dashed var(--border);
+  padding-top: 0.5rem;
+}
+.live-thought + .live-thought { margin-top: 0.75rem; }
+.thought-agent {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.thought-text {
+  margin: 4px 0 0;
+  padding: 8px 10px;
+  background: var(--bg-muted, #f6f7f9);
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 140px;
+  overflow: hidden;
+}
+
 form .grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

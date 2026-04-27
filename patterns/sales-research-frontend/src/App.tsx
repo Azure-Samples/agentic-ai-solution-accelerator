@@ -13,6 +13,12 @@ export default function App() {
   const [toolWarnings, setToolWarnings] = useState<
     { tool: string; error: string }[]
   >([]);
+  // Live "thinking" buffer per agent — accumulated from `chunk` events
+  // so the UI can show streaming progress while a worker is producing
+  // its 30-60s response. Cleared on each new submit.
+  const [workerThoughts, setWorkerThoughts] = useState<Record<string, string>>(
+    {},
+  );
   const abortRef = useRef<AbortController | null>(null);
 
   async function handleSubmit(req: ResearchRequest) {
@@ -21,6 +27,7 @@ export default function App() {
     setBriefing(null);
     setError(null);
     setToolWarnings([]);
+    setWorkerThoughts({});
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -29,6 +36,20 @@ export default function App() {
       await runResearch(req, {
         signal: controller.signal,
         onEvent: (evt) => {
+          // Token-stream chunks would drown the event log; route them
+          // into a separate per-agent live buffer instead. The
+          // StreamingViewer renders a "thinking" panel for any agent
+          // that has thoughts but hasn't emitted ``partial`` yet.
+          if (evt.type === "chunk") {
+            setWorkerThoughts((prev) => ({
+              ...prev,
+              [evt.agent]: (prev[evt.agent] ?? "") + evt.delta,
+            }));
+            return;
+          }
+          // Heartbeats are connection-keepalive only; ignore for UI.
+          if (evt.type === "heartbeat") return;
+
           setEvents((prev) => [...prev, evt]);
           // ``briefing_ready`` makes the briefing renderable BEFORE
           // any side-effect tools fire, so a HITL/permission failure
@@ -73,6 +94,12 @@ export default function App() {
     .map((e) => ({ worker_id: e.worker_id, output: e.output }));
   const showPartialFallback = !briefing && partials.length > 0;
 
+  // An agent is "still thinking" if we've seen chunks but no partial yet.
+  const completedWorkers = new Set(partials.map((p) => p.worker_id));
+  const liveThoughts = Object.entries(workerThoughts).filter(
+    ([agent]) => !completedWorkers.has(agent),
+  );
+
   return (
     <div className="app">
       <header className="app-header">
@@ -102,7 +129,11 @@ export default function App() {
             </ul>
           </div>
         )}
-        <StreamingViewer events={events} busy={busy} />
+        <StreamingViewer
+          events={events}
+          busy={busy}
+          liveThoughts={liveThoughts}
+        />
         <ResultPanel briefing={briefing} />
         {showPartialFallback && (
           <div className="card">
