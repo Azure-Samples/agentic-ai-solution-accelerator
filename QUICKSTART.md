@@ -1,18 +1,12 @@
 # QUICKSTART — Deploy an Agentic AI Solution in ~15 minutes
 
-> Partner's path from "new customer meeting" to "working agent in customer Azure," in **eight steps**. This is the **per-customer deployment** path; if it's your first time on this accelerator, do [Setup & prereqs](docs/getting-started/setup-and-prereqs.md) (one-time) and [`docs/enablement/hands-on-lab.md`](docs/enablement/hands-on-lab.md) (sandbox rehearsal) before Step 1.
+> Partner's path from "new customer meeting" to "working agent in customer Azure," in **eight steps**. This is the **per-customer deployment** path — the executable summary of the [Partner playbook](docs/partner-playbook.md).
 
-> **Before you start:** Step 5 authenticates against the customer's Azure tenant (`az login --tenant <customer-tenant-id>` + `azd up`), so confirm two things first — you have the rights to create resources in that tenant, and the customer has approved the expected `azd up` cost. Re-read this note before Step 5; the rest of the steps are local.
+> **Prerequisites:** First time on this accelerator? Do [Setup & prereqs](docs/getting-started/setup-and-prereqs.md) (one-time) and [`docs/enablement/hands-on-lab.md`](docs/enablement/hands-on-lab.md) (sandbox rehearsal) **before** Step 1. See [Orientation](docs/getting-started/index.md) if you're not sure which path applies.
 
----
+> **Before Step 5:** You'll authenticate against the customer's Azure tenant (`az login --tenant <customer-tenant-id>` + `azd up`). Confirm you have the rights to create resources there and the customer has approved the expected `azd up` cost.
 
-## Before Step 1 — read these if any apply to you
-
-- **New here?** This is a Microsoft-published template repo partners fork per customer engagement to deliver an agentic AI solution on **Azure AI Foundry + Microsoft Agent Framework**. Skim [Orientation](docs/getting-started/index.md) once.
-- **First time on this accelerator?** Strongly recommended to complete [`docs/enablement/hands-on-lab.md`](docs/enablement/hands-on-lab.md) in a sandbox subscription **before** your first customer-facing deployment. The happy path below assumes you've run it once end-to-end.
-- **Engineer joining after discovery is complete?** Jump straight to [Step 3 — Scaffold the solution from the brief](#step-3--scaffold-the-solution-from-the-brief).
-- **Scoping an engagement or running the discovery workshop?** Read [`docs/partner-playbook.md`](docs/partner-playbook.md) for the full 7-stage motion; this QUICKSTART is the mechanics summary.
-- **Customer already provided a PRD / BRD / functional spec?** Run `/ingest-prd` before `/discover-scenario` to pre-draft the brief — full flow: [`docs/discovery/how-to-use.md`](docs/discovery/how-to-use.md).
+> **Joining mid-engagement?** If discovery is already complete, jump to [Step 3 — Scaffold from the brief](#step-3--scaffold-the-solution-from-the-brief). If a brief doesn't yet exist, hand back to the delivery lead — discovery is owned in the [Discovery kit](docs/discovery/how-to-use.md), not here.
 
 ---
 
@@ -52,7 +46,7 @@ VS Code opens with Copilot already configured via `.github/copilot-instructions.
 
 **Where:** VS Code (Copilot Chat sidebar). The use-case canvas and discovery workbook are partner-fillable templates you handle in your usual editor before this step.
 
-> **Full discovery sequence** (canvas → facilitation guide → workbook → `/discover-scenario` → ROI calc, plus the `/ingest-prd` branch when a PRD/BRD/spec exists) lives in [`docs/discovery/how-to-use.md`](docs/discovery/how-to-use.md). **Read it before running the chatmode** — the five artifacts have a fixed order and the workshop-readiness gate sits upstream.
+> **The full discovery sequence** — canvas → facilitation guide → workbook → `/discover-scenario` → ROI calc, plus the `/ingest-prd` branch for customers who already have a PRD/BRD/spec — is owned by the [Discovery kit](docs/discovery/how-to-use.md). **Read it first** if you haven't run discovery on this accelerator before; the five artifacts have a fixed order and a workshop-readiness gate sits upstream.
 
 In Copilot Chat:
 
@@ -60,16 +54,7 @@ In Copilot Chat:
 /discover-scenario
 ```
 
-Copilot interviews you — either after a customer workshop or live in the room — and writes `docs/discovery/solution-brief.md`. The brief captures:
-
-- Business context, sponsor, problem statement
-- Users, journeys, success criteria
-- **ROI hypothesis** (baseline cost, target savings, payback, KPIs to instrument)
-- Solution shape (single-agent · supervisor · chat-with-actioning)
-- Constraints (residency, identity, compliance)
-- Acceptance evals (quality, groundedness, safety, latency, cost)
-
-The brief is the **single source of truth** for the engagement. Every downstream artifact derives from it.
+Copilot interviews you (in a workshop or live in the room) and writes `docs/discovery/solution-brief.md`. The brief is the **single source of truth** for the engagement — every downstream artifact derives from it.
 
 ---
 
@@ -197,13 +182,7 @@ a minimal React + Vite + TypeScript starter that consumes `/research/stream`
 and is deployable to Azure Static Web Apps. It's reference material, not a
 finished product: the customer's real UX is the partner's value-add.
 
-**Before customer-facing**, you also wire — none of which the accelerator ships:
-
-- **End-user auth** — Entra Easy Auth on Container Apps, App Gateway + WAF, or Front Door. The shipped API has no end-user auth dependency.
-- **State persistence** — Cosmos / Postgres / Redis / IndexedDB if the UX needs run history, multi-user separation, or durable HITL state.
-- **HITL approval surface** — Logic Apps / Teams adaptive card / ServiceNow that `HITL_APPROVER_ENDPOINT` resolves to. The accelerator ships the contract, not the approver UI.
-
-See `docs/partner-playbook.md` "What the accelerator gives you vs. what you still own" for the full split.
+**Before customer-facing**, you also wire — none of which the accelerator ships: end-user auth (Easy Auth / App Gateway / Front Door), state persistence (Cosmos / Postgres / Redis), and the HITL approval surface (Logic Apps / Teams / ServiceNow that `HITL_APPROVER_ENDPOINT` resolves to). The full ownership boundary lives in [`docs/partner-playbook.md`](docs/partner-playbook.md#what-the-accelerator-gives-you-vs-what-you-still-own) — call it out in the SOW.
 
 If your customer already has an internal portal or Power Platform surface,
 the same pattern shows how to call the SSE endpoint from any client; lift

@@ -1,12 +1,6 @@
 # Setup & prereqs
 
-**One-time** workstation + subscription readiness. Run this once per partner machine and once per Azure subscription you'll deploy into; you do not re-read this every customer engagement. This is the authoritative reference for **setup, prereqs, secrets, and troubleshooting**. It complements — not replaces — the other partner-facing docs:
-
-- For the end-to-end delivery motion (discovery → handover → measure) see [`docs/partner-playbook.md`](../partner-playbook.md).
-- For the eight-step happy-path skim, see [`QUICKSTART.md`](../../QUICKSTART.md).
-- For a sandbox rehearsal before your first customer, see [`docs/enablement/hands-on-lab.md`](../enablement/hands-on-lab.md).
-
-When those docs and this one disagree on **setup mechanics** (prereqs, secrets, `azd` invocation, troubleshooting), this file wins. When they disagree on **delivery motion** (when to run discovery, how to scope an SOW, handover sequence), the playbook wins. The chatmodes in `.github/chatmodes/` win over both on the executable surface they drive.
+**One-time** workstation + subscription readiness. Run this once per partner machine and once per Azure subscription you'll deploy into; you do not re-read this every customer engagement. This is the authoritative reference for **setup, prereqs, secrets, and troubleshooting** — see the [precedence rules](index.md#precedence-when-docs-conflict) for how it relates to the other partner-facing docs.
 
 ## Where you'll work
 

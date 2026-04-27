@@ -67,55 +67,14 @@ hide:
 
 <small>Want the full visual? See the [workflow map](partner-workflow.md) — same content, swim-lane diagram, clickable nodes.</small>
 
----
-
-## Pick your lane (in depth)
-
-=== "🧭 Delivery Lead"
-
-    **You own:** scope, discovery workshop, SOW, UAT sign-off, handover meeting, monthly value review.
-
-    - **Start with:** [Partner playbook](partner-playbook.md) — end-to-end 7-stage motion, SOW guidance, "what good looks like" per stage.
-    - **Then run:** `/delivery-guide` in Copilot Chat for a guided pass through the motion.
-    - **Also use:** [Discovery guide](discovery/how-to-use.md) · [Handover template](handover/handover-packet-template.md)
-    - **Customer already gave you a PRD/BRD/spec?** Run `/ingest-prd` to pre-draft the brief, then `/discover-scenario` gap-fills. Full flow inside [how-to-use.md](discovery/how-to-use.md).
-
-    !!! success "Done when"
-        Customer sponsor signs off at UAT (Stage 5), handover packet is delivered with a named owner and date (Stage 6), and the first monthly value review is on the calendar (Stage 7).
-
-=== "🛠️ Partner Engineer"
-
-    **You own:** scaffold, provision, iterate, acceptance evals, UAT support, engagement handover artifacts.
-
-    - **Start with:** [Orientation](getting-started/index.md) — chooses your path (first customer: Setup → Lab → Quickstart; returning: straight to Quickstart).
-    - **Then run:** `/scaffold-from-brief` once a solution brief exists.
-    - **Also use:** [Setup & prereqs](getting-started/setup-and-prereqs.md) (authoritative `azd up` troubleshooting) · [Hands-on lab](enablement/hands-on-lab.md)
-
-    !!! warning "First customer engagement? Run the hands-on-lab first"
-        The [8-lab sandbox](enablement/hands-on-lab.md) rehearses every chatmode + `azd up` + PR gates against a throwaway subscription. Skipping this is the #1 cause of avoidable first-engagement incidents.
-
-    !!! success "Done when"
-        Acceptance evals (quality + redteam) pass in the customer's environment **and** handover artifacts — repo access, runbook, approver rota, killswitch drill notes — are delivered to customer ops.
-
-=== "🏛️ Customer Ops"
-
-    **You own:** day-2 operations after the partner hands over — monitoring, HITL approver rotation, incidents, drills, expansion intake.
-
-    - **Primary:** Your engagement-specific handover packet (the partner delivers this at Stage 6).
-    - **Fallback:** [Day-2 runbook](customer-runbook.md) — generic monitoring, killswitch, evals, model swap, secret rotation, incidents. **Partner packet wins on conflict.**
-
-    !!! success "Done when (handover accepted)"
-        Alerts route to your on-call, HITL approver rota is current, killswitch + secret-rotation drills have been run once, and you know which partner contact handles expansion requests. *Day-2 ops is steady-state, not a finish line.*
-
 !!! note "Wearing multiple hats at a small partner?"
-    The lanes above are **responsibilities, not job titles**. **Solo partner:** run the Lead lane top-to-bottom through Stage 1; drop into the Engineer lane at Stage 2 (scaffold → provision → iterate); return to the Lead lane at Stage 5 (UAT) through Stage 7. **Customer ops is always the customer's lane** — not something the partner wears.
+    The lanes above are **responsibilities, not job titles**. **Solo partner:** run the Lead lane through Stage 1, drop into the Engineer lane at Stage 2 (scaffold → provision → iterate), return to the Lead lane at Stage 5 (UAT) through Stage 7. **Customer ops is always the customer's lane** — never something the partner wears.
 
 ---
 
 ## Reference material
 
-!!! abstract "When guidance conflicts, use this precedence"
-    Chatmodes in `.github/chatmodes/` (they drive the executable surface) → [Partner playbook](partner-playbook.md) (delivery motion) and [Setup & prereqs](getting-started/setup-and-prereqs.md) (mechanics) → this home page. The engagement-specific handover packet supersedes the generic [customer runbook](customer-runbook.md) for the customer ops lane.
+> **When guidance conflicts:** see the precedence rules in [Orientation](getting-started/index.md#how-the-docs-fit-together). One canonical statement, one place.
 
 <div class="grid cards" markdown>
 

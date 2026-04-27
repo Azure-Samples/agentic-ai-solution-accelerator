@@ -33,7 +33,15 @@ orientation (you are here)
     └─→ Partner playbook  ───────────────────  delivery lead motion (discovery → handover → measure)
 ```
 
-The Quickstart and the Partner playbook intentionally overlap: the Quickstart is the engineer's mechanics summary, the playbook is the delivery lead's full motion. When they disagree on **setup mechanics**, [Setup & prereqs](setup-and-prereqs.md) wins. When they disagree on **delivery motion**, the playbook wins.
+### Precedence when docs conflict
+
+This is the canonical precedence rule for the whole site — other pages link here rather than restate it.
+
+1. **Chatmodes** in `.github/chatmodes/` win on the executable surface they drive (they are the runtime contract).
+2. **[Setup & prereqs](setup-and-prereqs.md)** wins on setup mechanics — prereqs, secrets, `azd` invocation, troubleshooting.
+3. **[Partner playbook](../partner-playbook.md)** wins on delivery motion — when to run discovery, how to scope an SOW, handover sequence.
+4. **[Quickstart](../QUICKSTART.md)** is the engineer's executable summary of the playbook; if it disagrees with the playbook on motion or with Setup on mechanics, those win.
+5. The **engagement-specific handover packet** supersedes the generic [customer runbook](../customer-runbook.md) for the customer ops lane.
 
 ## What you'll have shipped at the end
 
