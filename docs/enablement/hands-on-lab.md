@@ -332,18 +332,21 @@ the explainer above the chart for why this differs from the FastAPI
 empty unless the run hit an error — that's the panel to check first
 when a smoke test misbehaves.
 
+> **Note — what's deliberately missing.** The workbook does not ship
+> a `$ per call` or `Groundedness eval score` panel. Both events
+> (`cost.call` and `eval.result`) exist in the codebase but aren't
+> emitted by live frontend traffic — cost-per-call requires partner-wired
+> `record_call_cost(...)` calls and groundedness comes from
+> `evals/quality/` runs in CI. Acceptance gates for both still live in
+> `accelerator.yaml -> acceptance`. See `docs/customer-runbook.md`
+> "What you inherited" and Section 3 (Operational dials) for the wiring
+> path when you need them.
+
 **Check your work:**
 
 - Open each panel and read the markdown explainer that sits directly
   above the chart. Each one tells you what event populates it and how
   to interpret a red bar / unexpected gap.
-- Answer for yourself: why doesn't the workbook ship a `$ per call`
-  or `Groundedness eval score` panel? (Both events — `cost.call` and
-  `eval.result` — exist in the codebase but aren't emitted by live
-  frontend traffic. `cost.py::record_call_cost()` is partner-wired,
-  groundedness comes from CI eval runs. See `docs/customer-runbook.md`
-  "What you inherited" and Section 3 (Operational dials) for the full
-  answer.)
 - Force a failure (e.g. send a malformed payload via the curl in
   Step 2, or temporarily revoke the Foundry role assignment and
   retry) and confirm a red bar shows up in **Responses by outcome**
