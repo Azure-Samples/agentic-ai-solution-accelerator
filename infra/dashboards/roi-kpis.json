@@ -1,28 +1,74 @@
 {
-  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-  "_comment": "App Insights workbook JSON template. Scenario-agnostic by default: panels key off accelerator-wide telemetry events (response.returned, tool.hitl_*, cost.call, eval.result) emitted by `src/accelerator_baseline/telemetry.py::emit_event` and filter by cloud_RoleName so a partner can swap the scenario in accelerator.yaml without touching this file. Events land in the `traces` table (message=event.name, attrs in customDimensions) — see docs/customer-runbook.md Section 2 for the rationale. Every panel filters on `isnotempty(customDimensions.event_name)` so counts only include accelerator events and not generic FastAPI/uvicorn/OTel log rows that also land in `traces`. Partners rename the dashboard per engagement and add scenario-specific panels as needed.",
-  "dashboardName": "Agentic AI Accelerator ROI",
-  "panels": [
+  "version": "Notebook/1.0",
+  "items": [
     {
-      "title": "Successful responses per day",
-      "kql": "traces | where message == 'response.returned' | where isnotempty(customDimensions.event_name) | where tostring(customDimensions.ok) == 'true' | summarize count() by bin(timestamp, 1d)"
+      "type": 1,
+      "content": {
+        "json": "## Agentic AI Accelerator — ROI KPIs\n\nPaste-ready Azure Monitor Workbook for the accelerator's baseline KPI events.\n\n**How to use:** in your Application Insights resource, open **Workbooks → New → Advanced Editor** (the `</>` icon), replace the default JSON with this file's contents, then click **Apply**. Save with a descriptive name per engagement.\n\n**Where the data comes from:** every panel queries the `traces` table for events emitted by `src/accelerator_baseline/telemetry.py::emit_event`. The `isnotempty(customDimensions.event_name)` filter scopes results to accelerator events specifically (and not generic FastAPI/uvicorn/OTel rows that also land in `traces`).\n\n**To add a KPI:** append a new `KqlItem/1.0` entry under `items[]` below — same shape as the existing query items. Keep the `resourceType` as `microsoft.insights/components` so the panel binds to whichever Application Insights instance the workbook is opened against."
+      },
+      "name": "title-and-context"
     },
     {
-      "title": "HITL approval rate",
-      "kql": "traces | where message in ('tool.hitl_approved','tool.hitl_rejected') | where isnotempty(customDimensions.event_name) | summarize approvals=countif(message=='tool.hitl_approved'), rejections=countif(message=='tool.hitl_rejected') by bin(timestamp, 1d)"
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "traces\n| where message == 'response.returned'\n| where isnotempty(customDimensions.event_name)\n| where tostring(customDimensions.ok) == 'true'\n| summarize count() by bin(timestamp, 1d)\n| render timechart",
+        "size": 0,
+        "title": "Successful responses per day",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components"
+      },
+      "name": "successful-responses"
     },
     {
-      "title": "P95 request latency (s)",
-      "_note": "Scenario-agnostic: filters by the accelerator's Container App role instead of a hardcoded route. Partners who want a per-endpoint breakdown add `summarize ... by name` once the scenario's endpoint path is known.",
-      "kql": "requests | where cloud_RoleName endswith 'api' | summarize percentile(duration/1000, 95) by bin(timestamp, 1h)"
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "traces\n| where message in ('tool.hitl_approved','tool.hitl_rejected')\n| where isnotempty(customDimensions.event_name)\n| summarize approvals = countif(message == 'tool.hitl_approved'),\n            rejections = countif(message == 'tool.hitl_rejected')\n   by bin(timestamp, 1d)\n| render columnchart",
+        "size": 0,
+        "title": "HITL approval rate",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components"
+      },
+      "name": "hitl-approval-rate"
     },
     {
-      "title": "$ per call (estimated)",
-      "kql": "traces | where message == 'cost.call' | where isnotempty(customDimensions.event_name) | extend cost = todouble(customDimensions.value) | summarize avg(cost) by bin(timestamp, 1d)"
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "requests\n| where cloud_RoleName endswith 'api'\n| summarize percentile(duration / 1000, 95) by bin(timestamp, 1h)\n| render timechart",
+        "size": 0,
+        "title": "P95 request latency (s)",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components"
+      },
+      "name": "p95-request-latency"
     },
     {
-      "title": "Groundedness eval score trend",
-      "kql": "traces | where message == 'eval.result' | where isnotempty(customDimensions.event_name) and tostring(customDimensions.suite) == 'quality' | extend g = todouble(customDimensions.groundedness) | summarize avg(g) by bin(timestamp, 1d)"
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "traces\n| where message == 'cost.call'\n| where isnotempty(customDimensions.event_name)\n| extend cost = todouble(customDimensions.value)\n| summarize avg(cost) by bin(timestamp, 1d)\n| render timechart",
+        "size": 0,
+        "title": "$ per call (estimated)",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components"
+      },
+      "name": "cost-per-call"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "traces\n| where message == 'eval.result'\n| where isnotempty(customDimensions.event_name)\n| where tostring(customDimensions.suite) == 'quality'\n| extend g = todouble(customDimensions.groundedness)\n| summarize avg(g) by bin(timestamp, 1d)\n| render timechart",
+        "size": 0,
+        "title": "Groundedness eval score trend",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components"
+      },
+      "name": "groundedness-trend"
     }
-  ]
+  ],
+  "fallbackResourceIds": [],
+  "$schema": "https://github.com/Microsoft/Application-Insights-Workbooks/blob/master/schema/workbook.json"
 }

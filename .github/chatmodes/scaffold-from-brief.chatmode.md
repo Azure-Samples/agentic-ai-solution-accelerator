@@ -45,7 +45,7 @@ Copy the `scenario:` snippet the CLI printed and paste it into `accelerator.yaml
 | 6. Constraints | `infra/main.parameters.json` + `accelerator.yaml.controls.*` |
 | 3+7. Success criteria → acceptance | `evals/quality/golden_cases.jsonl` — replace flagship cases with 5+ for this scenario |
 | 6. RAI risks | `evals/redteam/cases.jsonl` — one case per risk |
-| 4. KPIs | `src/accelerator_baseline/telemetry.py` — register each named KPI event; `infra/dashboards/roi-kpis.json` — add a chart per KPI |
+| 4. KPIs | `src/accelerator_baseline/telemetry.py` — register each named KPI event; `infra/dashboards/roi-kpis.json` — append a `KqlItem/1.0` entry under `items[]` per KPI |
 
 ## Step 4 — Add additional worker agents (optional)
 If the brief implies more than a supervisor (typical for `supervisor-routing`), add worker packages under `src/scenarios/<package>/agents/<worker>/` following the same three-layer shape (`prompt.py`, `transform.py`, `validate.py`, `__init__.py` exporting `AGENT_NAME`). Add each to `scenario.agents[]` in the manifest and ship a matching `docs/agent-specs/<foundry_name>.md` spec file. The `src/bootstrap.py` startup bootstrap syncs them all to Foundry on the next `azd up` / `azd deploy`.

@@ -236,85 +236,106 @@ which dashboard panels require partner-wired emitters.
 After clicking **Run research** in Lab 2, you have real traffic. Open App
 Insights and trace it.
 
-1. In App Insights → Logs, run:
+### Step 1 — Query the events stream
 
-   ```kql
-   traces
-   | where timestamp > ago(15m)
-   | where message in ("request.received","supervisor.routed","worker.completed",
-                       "retrieval.returned","response.returned","tool.executed",
-                       "tool.hitl_approved","tool.hitl_rejected","aggregator.composed")
-   | where isnotempty(customDimensions.event_name)
-   | project timestamp, message, operation_Id, operation_ParentId, customDimensions
-   | order by timestamp asc
-   ```
+In App Insights → Logs, run:
 
-   You should see `request.received` → `supervisor.routed` →
-   one or more `worker.completed` → `retrieval.returned` →
-   `response.returned`. If the request actually routed through a
-   HITL-gated side-effect tool (`crm_write_contact`, `send_email`)
-   you'll also see `tool.executed` + a `tool.hitl_*` event — but
-   many flagship requests don't touch those tools, so don't treat
-   those two events as guaranteed per request. Which `tool.hitl_*`
-   variant fires depends on whether you set `HITL_APPROVER_ENDPOINT`
-   (prod) or `HITL_DEV_MODE=1` (dev-only).
+```kql
+traces
+| where timestamp > ago(15m)
+| where message in ("request.received","supervisor.routed","worker.completed",
+                    "retrieval.returned","response.returned","tool.executed",
+                    "tool.hitl_approved","tool.hitl_rejected","aggregator.composed")
+| where isnotempty(customDimensions.event_name)
+| project timestamp, message, operation_Id, operation_ParentId, customDimensions
+| order by timestamp asc
+```
 
-   > **Why `traces` and not `customEvents`?** Events are emitted by
-   > `src/accelerator_baseline/telemetry.py::emit_event`, which routes
-   > through the `accelerator` Python logger that
-   > `configure_azure_monitor(logger_name="accelerator")` pipes into App
-   > Insights. Log records land in `traces` (one row per event) with
-   > `message == event.name` and the event payload flattened into
-   > `customDimensions.<attr>`. The `isnotempty(customDimensions.event_name)`
-   > filter scopes the result set to accelerator events specifically, since
-   > `traces` also collects FastAPI/uvicorn/OTel internal log rows.
+You should see `request.received` → `supervisor.routed` →
+one or more `worker.completed` → `retrieval.returned` →
+`response.returned`. If the request actually routed through a
+HITL-gated side-effect tool (`crm_write_contact`, `send_email`)
+you'll also see `tool.executed` + a `tool.hitl_*` event — but
+many flagship requests don't touch those tools, so don't treat
+those two events as guaranteed per request. Which `tool.hitl_*`
+variant fires depends on whether you set `HITL_APPROVER_ENDPOINT`
+(prod) or `HITL_DEV_MODE=1` (dev-only).
 
-   The `operation_Id` column lets you correlate one stream call to its
-   parent `requests` row and any nested `dependencies`. To pivot from a
-   single event, copy the **first 8 characters** of any `operation_Id`
-   from the results above (e.g. `89baea0c`) and paste them between the
-   quotes in the query below — replace only the `OPID_PREFIX_HERE` text:
+> **Why `traces` and not `customEvents`?** Events are emitted by
+> `src/accelerator_baseline/telemetry.py::emit_event`, which routes
+> through the `accelerator` Python logger that
+> `configure_azure_monitor(logger_name="accelerator")` pipes into App
+> Insights. Log records land in `traces` (one row per event) with
+> `message == event.name` and the event payload flattened into
+> `customDimensions.<attr>`. The `isnotempty(customDimensions.event_name)`
+> filter scopes the result set to accelerator events specifically, since
+> `traces` also collects FastAPI/uvicorn/OTel internal log rows.
 
-   ```kql
-   let opPrefix = "OPID_PREFIX_HERE";
-   union requests, dependencies, traces
-   | where timestamp > ago(2h)
-   | where operation_Id startswith opPrefix
-   | project timestamp, itemType, name=coalesce(name, message), duration, success, customDimensions
-   | order by timestamp asc
-   ```
+### Step 2 — Pivot one request across `requests` + `dependencies` + `traces`
 
-   > **Why a prefix and not the full ID?** The Logs UI display-truncates
-   > `operation_Id` with a trailing `…`, and that truncated string does
-   > not equal-match the real 32-char value. A prefix avoids the trap;
-   > 8 hex chars (≈ 4 billion combinations) is plenty unique within any
-   > realistic time window.
+The `operation_Id` column lets you correlate one stream call to its
+parent `requests` row and any nested `dependencies`. Copy the **first
+8 characters** of any `operation_Id` from the results above
+(e.g. `89baea0c`) and paste them between the quotes in the query
+below — replace only the `OPID_PREFIX_HERE` text:
 
-   If you want to drive synthetic traffic without the UI, here's the
-   curl form:
+```kql
+let opPrefix = "OPID_PREFIX_HERE";
+union requests, dependencies, traces
+| where timestamp > ago(2h)
+| where operation_Id startswith opPrefix
+| project timestamp, itemType, name=coalesce(name, message), duration, success, customDimensions
+| order by timestamp asc
+```
 
-   ```bash
-   curl -N -X POST "$API_URL/research/stream" \
-     -H "Content-Type: application/json" \
-     -d '{"company_name":"Contoso","seller_intent":"Discovery call","persona":"VP of Operations"}'
-   ```
+> **Why a prefix and not the full ID?** The Logs UI display-truncates
+> `operation_Id` with a trailing `…`, and that truncated string does
+> not equal-match the real 32-char value. A prefix avoids the trap;
+> 8 hex chars (≈ 4 billion combinations) is plenty unique within any
+> realistic time window.
 
-2. Open `infra/dashboards/roi-kpis.json` in the repo, copy the JSON,
-   then in Application Insights → Workbooks → New → Advanced editor
-   paste it and save. Refresh — the "Successful responses per day"
-   and "P95 request latency" panels should show data from your
-   traffic. The "HITL approval rate" panel only lights up once
-   you've exercised a HITL-gated tool (see the "HITL approver"
-   section of `docs/customer-runbook.md`).
+If you want to drive synthetic traffic without the UI, here's the
+curl form:
+
+```bash
+curl -N -X POST "$API_URL/research/stream" \
+  -H "Content-Type: application/json" \
+  -d '{"company_name":"Contoso","seller_intent":"Discovery call","persona":"VP of Operations"}'
+```
+
+### Step 3 — Import the ROI workbook
+
+The repo ships `infra/dashboards/roi-kpis.json` as a paste-ready
+Azure Monitor Workbook. To install it:
+
+1. Still in your Application Insights resource, go to **Monitoring →
+   Workbooks**.
+2. Click **+ New** at the top of the gallery.
+3. In the empty workbook, click the **Advanced Editor** icon (looks like
+   `</>`) in the toolbar above the first item. The editor opens with a
+   default template selected — leave the **Gallery Template** dropdown
+   on its default value.
+4. Select all the JSON in the editor, delete it, then paste the entire
+   contents of `infra/dashboards/roi-kpis.json` from your repo.
+5. Click **Apply** at the bottom of the editor. The workbook reloads
+   with five panels.
+6. Click **Done Editing**, then **Save** (disk icon top-left). Give it a
+   name (e.g. `Accelerator ROI - <env>`) and pick a region.
+
+The "Successful responses per day" and "P95 request latency" panels
+should show data from your traffic. The "HITL approval rate" panel only
+lights up once you've exercised a HITL-gated tool (see the "HITL
+approver" section of `docs/customer-runbook.md`).
 
 **Check your work:**
 
-- Answer for yourself: why are both the "$ per call" and
-  "Groundedness eval score trend" panels empty in the shipped flagship?
-  (The workbook keys those panels off `cost.call` and `eval.result` custom
-  events; neither is emitted by the shipped workflow — `cost.py::record_call_cost()`
-  exists but isn't wired into the hot path. See `docs/customer-runbook.md`
-  "What you inherited" and Section 3 (Operational dials) for the full answer.)
+- Answer for yourself: why are the "$ per call" and "Groundedness eval
+  score trend" panels empty in the shipped flagship? (The workbook keys
+  those panels off `cost.call` and `eval.result` events; neither is
+  emitted by the shipped workflow — `cost.py::record_call_cost()` exists
+  but isn't wired into the hot path. See `docs/customer-runbook.md`
+  "What you inherited" and Section 3 (Operational dials) for the full
+  answer.)
 
 ---
 

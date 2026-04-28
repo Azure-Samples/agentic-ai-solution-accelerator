@@ -128,8 +128,8 @@ through the customization steps below.
 - Edit `retrieval.py` to match the chosen grounding sources
 - Create `src/tools/<tool_name>.py` per side-effect tool (each wrapped in
   `hitl.checkpoint(...)`)
-- Register KPI events in `src/accelerator_baseline/telemetry.py` and add a
-  chart per KPI in `infra/dashboards/roi-kpis.json`
+- Register KPI events in `src/accelerator_baseline/telemetry.py` and append
+  a `KqlItem/1.0` entry per KPI under `items[]` in `infra/dashboards/roi-kpis.json`
 - Replace flagship golden cases in `evals/quality/golden_cases.jsonl`
   (5+ for this scenario)
 - Add a redteam case per RAI risk in `evals/redteam/cases.jsonl`

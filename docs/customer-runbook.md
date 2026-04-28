@@ -185,9 +185,11 @@ events they wired, if any.
 
 ### Dashboard
 
-`infra/dashboards/roi-kpis.json` is an Azure Monitor workbook **template**
-(ARM JSON). It is **not auto-deployed**. To use it: Application Insights
-→ Workbooks → New → Advanced editor → paste the JSON → Save.
+`infra/dashboards/roi-kpis.json` is a paste-ready Azure Monitor Workbook
+(Advanced Editor JSON). It is **not auto-deployed**. To install it:
+in your Application Insights resource go to Workbooks → New → click the
+`</>` Advanced Editor icon → replace the default contents with this
+file's JSON → Apply → Save. Lab 3 walks through this end-to-end.
 
 It ships 5 panels. Which ones show data depends on what your partner
 wired:

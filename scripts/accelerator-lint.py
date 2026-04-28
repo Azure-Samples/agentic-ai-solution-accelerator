@@ -2287,6 +2287,82 @@ def mkdocs_nav_integrity(ctx: Ctx) -> list[Finding]:
 
 
 # ---------------------------------------------------------------------------
+# ROI workbook shape — pin the partner-facing dashboard JSON to the actual
+# Azure Monitor Workbook Advanced Editor schema so the file stays paste-ready.
+# Lab 3 instructs partners to paste this file's contents into the Workbook
+# Advanced Editor; if it ever drifts back to a custom shape, the paste flow
+# silently produces an empty workbook.
+# ---------------------------------------------------------------------------
+@check
+def roi_workbook_shape(ctx: Ctx) -> list[Finding]:
+    rel = "infra/dashboards/roi-kpis.json"
+    p = ROOT / rel
+    if not p.exists():
+        return []
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return [Finding("roi-workbook-shape", "block", rel,
+                        f"file is not valid JSON: {exc}")]
+
+    out: list[Finding] = []
+    if data.get("version") != "Notebook/1.0":
+        out.append(Finding(
+            "roi-workbook-shape", "block", rel,
+            "top-level `version` must be 'Notebook/1.0' (Azure Monitor "
+            "Workbook Advanced Editor schema). Lab 3 pastes this file into "
+            "the Advanced Editor; a custom shape silently breaks that flow.",
+        ))
+    items = data.get("items")
+    if not isinstance(items, list) or not items:
+        out.append(Finding("roi-workbook-shape", "block", rel,
+                           "top-level `items` must be a non-empty array"))
+        return out
+    kql_panels = [
+        (idx, it) for idx, it in enumerate(items)
+        if isinstance(it, dict) and it.get("type") == 3
+    ]
+    if not kql_panels:
+        out.append(Finding(
+            "roi-workbook-shape", "block", rel,
+            "no KQL panels found (no items with `type: 3`); workbook would "
+            "render with only narrative text and no telemetry.",
+        ))
+    for idx, it in kql_panels:
+        content = it.get("content") or {}
+        prefix = f"items[{idx}] (type=3)"
+        if content.get("version") != "KqlItem/1.0":
+            out.append(Finding(
+                "roi-workbook-shape", "block", rel,
+                f"{prefix}: content.version must be 'KqlItem/1.0'",
+            ))
+        if not content.get("query"):
+            out.append(Finding(
+                "roi-workbook-shape", "block", rel,
+                f"{prefix}: content.query is empty",
+            ))
+        if not content.get("title"):
+            out.append(Finding(
+                "roi-workbook-shape", "warn", rel,
+                f"{prefix}: content.title is empty (panels without titles "
+                "are hard to identify in the rendered workbook)",
+            ))
+        if content.get("queryType") != 0:
+            out.append(Finding(
+                "roi-workbook-shape", "block", rel,
+                f"{prefix}: content.queryType must be 0 (Logs query)",
+            ))
+        if content.get("resourceType") != "microsoft.insights/components":
+            out.append(Finding(
+                "roi-workbook-shape", "block", rel,
+                f"{prefix}: content.resourceType must be "
+                "'microsoft.insights/components' so the panel binds to the "
+                "App Insights resource the workbook is opened against.",
+            ))
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 def main() -> int:
