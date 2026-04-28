@@ -30,8 +30,21 @@ Roles are skim guidance, not separate paths:
 
 [:material-rocket-launch: Start with **1. Get oriented** →](start/ready/01-get-oriented.md){ .md-button .md-button--primary }
 
-!!! tip "Visual: the 10-step flow at a glance"
-    [Download `10-step-flow.excalidraw`](assets/diagrams/10-step-flow.excalidraw) and open it at [aka.ms/excalidraw](https://aka.ms/excalidraw) (**File → Open**) to view or edit. Get-ready (3 steps) feeds Deliver (7 steps); next engagement loops back to step 5.
+```mermaid
+flowchart LR
+    classDef ready fill:#a5d8ff,stroke:#1864ab,stroke-width:2px,color:#000
+    classDef deliver fill:#99e9f2,stroke:#0c8599,stroke-width:2px,color:#000
+    subgraph READY["<b>Get ready</b> · do once"]
+      direction LR
+      R1["1. Get oriented"]:::ready --> R2["2. Set up your machine"]:::ready --> R3["3. Rehearse in a sandbox"]:::ready
+    end
+    subgraph DELIVER["<b>Deliver</b> · per customer"]
+      direction LR
+      D1["4. Clone"]:::deliver --> D2["5. Discover"]:::deliver --> D3["6. Scaffold"]:::deliver --> D4["7. Provision"]:::deliver --> D5["8. Iterate & evaluate"]:::deliver --> D6["9. UAT & handover"]:::deliver --> D7["10. Operate"]:::deliver
+    end
+    R3 --> D1
+    D7 -. "next engagement" .-> D2
+```
 
 ---
 

@@ -122,6 +122,30 @@ MERMAID_TO_SVG: dict[str, tuple[str, str]] = {
         "Partner workflow swim-lane diagram: Delivery Lead, Partner "
         "Engineer, and Customer Ops across the seven playbook stages.",
     ),
+    "index.md": (
+        "assets/diagrams/10-step-flow.svg",
+        "Partner walkthrough at a glance: 3 Get-ready steps feed 7 Deliver "
+        "steps; next engagement loops back to step 5 (Discover).",
+    ),
+    "start/ready/01-get-oriented.md": (
+        "assets/diagrams/supervisor-workers.svg",
+        "Supervisor + specialist workers shape: a supervisor agent routes a "
+        "customer request to specialist workers; side-effect tools pass "
+        "through a HITL gate; every span emits telemetry to App Insights.",
+    ),
+    "start/deliver/03-scaffold-from-the-brief.md": (
+        "assets/diagrams/brief-to-artifacts.svg",
+        "solution-brief.md fans out into prompts, retrieval, infra, "
+        "accelerator.yaml, eval cases, telemetry events, and the acceptance "
+        "gate. Re-running /scaffold-from-brief reapplies the fan-out.",
+    ),
+    "start/deliver/04-provision-the-customers-azure.md": (
+        "assets/diagrams/oidc-topology.svg",
+        "OIDC trust path: GitHub Environment + federated credential exchange "
+        "tokens with the customer's Entra app registration; the service "
+        "principal has scoped RBAC on the resource group; deploy.yml runs "
+        "azd up against it. No secrets cross tenants.",
+    ),
 }
 
 _MERMAID_BLOCK_RE = re.compile(r"```mermaid\r?\n.*?\r?\n```", re.DOTALL)
@@ -308,7 +332,7 @@ def stage() -> None:
     # mirroring the source-tree path here is enough — no nav entry
     # needed.
     asset_suffixes = {".csv", ".xlsx", ".xlsm", ".png", ".jpg", ".jpeg",
-                      ".svg", ".pdf", ".gif", ".webp", ".css", ".excalidraw"}
+                      ".svg", ".pdf", ".gif", ".webp", ".css"}
     asset_count = 0
     for src in DOCS_SRC.rglob("*"):
         if not src.is_file() or src.suffix.lower() not in asset_suffixes:

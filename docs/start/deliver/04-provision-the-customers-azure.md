@@ -69,8 +69,33 @@ The chatmode adds an entry to `deploy/environments.yaml`, creates the matching *
 
 If the environment will gate side-effect tools through a webhook approver (Logic Apps, Teams, ServiceNow), set `HITL_APPROVER_ENDPOINT` as an Environment secret on the same screen. Failures to reach the approver are treated as rejections (fail-closed).
 
-!!! tip "Visual: OIDC trust path — no secrets crossing tenants"
-    [Download `oidc-topology.excalidraw`](../../assets/diagrams/oidc-topology.excalidraw) and open it at [aka.ms/excalidraw](https://aka.ms/excalidraw) (**File → Open**) to see how the GitHub Environment, federated credential, customer Entra app registration, and resource group connect — and where the trust gets re-pointed at handover.
+```mermaid
+flowchart LR
+    classDef gh fill:#a5d8ff,stroke:#1864ab,stroke-width:2px,color:#000
+    classDef cred fill:#fff3bf,stroke:#e67700,stroke-width:2px,color:#000
+    classDef job fill:#b2f2bb,stroke:#2f9e44,stroke-width:2px,color:#000
+    classDef az fill:#f3d9fa,stroke:#862e9c,stroke-width:2px,color:#000
+    classDef rg fill:#99e9f2,stroke:#0c8599,stroke-width:2px,color:#000
+
+    subgraph GH["<b>GitHub repo</b> · &lt;customer&gt;-agents"]
+      direction TB
+      ENV["GitHub Environment<br/>(per customer · gates approvals)"]:::gh
+      FC["Federated credential<br/>(subject = env + branch)"]:::cred
+      JOB["deploy.yml job · azd up"]:::job
+      ENV --> FC --> JOB
+    end
+    subgraph AZ["<b>Customer Azure tenant</b>"]
+      direction TB
+      EA["Entra app registration<br/>(trusts GH subject)"]:::az
+      SP["Service principal<br/>(scoped RBAC)"]:::az
+      RG["Resource group<br/>Foundry · App Insights · Key Vault"]:::rg
+      EA --> SP --> RG
+    end
+    FC -. "OIDC token exchange" .-> EA
+    JOB --> RG
+```
+
+At handover, the federated credential is re-pointed to the customer's own repo — never hand-edit `deploy.yml`; `deploy/environments.yaml` is the contract.
 
 ## Provision + deploy
 

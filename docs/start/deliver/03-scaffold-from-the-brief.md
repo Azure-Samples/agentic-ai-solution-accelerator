@@ -59,8 +59,25 @@ If you scaffold a **new** scenario via `python scripts/scaffold-scenario.py <sce
 | RAI risks | `evals/redteam/` custom adversarial cases |
 | ROI KPIs | `src/accelerator_baseline/telemetry.py` events + `infra/dashboards/roi-kpis.json` (panels are scenario-agnostic; rename the dashboard per engagement) |
 
-!!! tip "Visual: the brief is the source of truth"
-    [Download `brief-to-artifacts.excalidraw`](../../assets/diagrams/brief-to-artifacts.excalidraw) and open it at [aka.ms/excalidraw](https://aka.ms/excalidraw) (**File → Open**) to see how `solution-brief.md` fans out into prompts, retrieval, infra, evals, telemetry, and the acceptance gate. Re-run `/scaffold-from-brief` whenever the brief changes.
+```mermaid
+flowchart LR
+    classDef brief fill:#f3d9fa,stroke:#862e9c,stroke-width:2px,color:#000
+    classDef code fill:#b2f2bb,stroke:#2f9e44,stroke-width:2px,color:#000
+    classDef infra fill:#a5d8ff,stroke:#1864ab,stroke-width:2px,color:#000
+    classDef gate fill:#fff3bf,stroke:#e67700,stroke-width:2px,color:#000
+    classDef obs fill:#99e9f2,stroke:#0c8599,stroke-width:2px,color:#000
+
+    B["<b>docs/discovery/<br/>solution-brief.md</b>"]:::brief
+    B --> P["Prompts &<br/>worker agents"]:::code
+    B --> R["Retrieval &<br/>tools"]:::code
+    B --> I["Infra (Bicep)<br/>+ landing zone"]:::infra
+    B --> Y["accelerator.yaml<br/>(KPIs · HITL · gates)"]:::gate
+    B --> E["Eval cases<br/>(quality + redteam)"]:::obs
+    B --> TM["Telemetry events<br/>+ dashboard panels"]:::infra
+    B --> A["Acceptance gate<br/>(CI must pass)"]:::gate
+```
+
+Re-run `/scaffold-from-brief` whenever the brief changes — the same fan-out reapplies.
 
 ## Authoring agent instructions
 

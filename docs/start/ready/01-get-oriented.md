@@ -35,8 +35,26 @@ The flagship is one supervisor agent that routes a customer request across speci
   WORKERS in src/scenarios/<id>/workflow.py)
 ```
 
-!!! tip "Visual: supervisor + workers + HITL + telemetry"
-    [Download `supervisor-workers.excalidraw`](../../assets/diagrams/supervisor-workers.excalidraw) and open it at [aka.ms/excalidraw](https://aka.ms/excalidraw) (**File → Open**) to see how requests fan out, how the HITL gate sits in front of side-effect tools, and where telemetry is captured.
+```mermaid
+flowchart TB
+    classDef user fill:#dee2e6,stroke:#495057,stroke-width:2px,color:#000
+    classDef sup fill:#f3d9fa,stroke:#862e9c,stroke-width:2px,color:#000
+    classDef worker fill:#b2f2bb,stroke:#2f9e44,stroke-width:2px,color:#000
+    classDef hitl fill:#fff3bf,stroke:#e67700,stroke-width:2px,color:#000
+    classDef tel fill:#a5d8ff,stroke:#1864ab,stroke-width:2px,color:#000
+
+    U["Customer request<br/>(API / chat)"]:::user --> S["<b>Supervisor</b><br/>routes intent → worker(s)"]:::sup
+    S --> W1["Researcher<br/>(retrieval-only)"]:::worker
+    S --> W2["Drafter<br/>(LLM-only)"]:::worker
+    S --> W3["Tool-using worker<br/>(side effects)"]:::worker
+    S --> W4["Specialist N<br/>(custom)"]:::worker
+    W3 --> H{"HITL gate<br/>approves side effects"}:::hitl
+    S -. trace .-> T["Telemetry · App Insights<br/>KPI events · evals (quality + redteam)"]:::tel
+    W1 -. emit .-> T
+    W2 -. emit .-> T
+    W3 -. emit .-> T
+    W4 -. emit .-> T
+```
 
 Two simpler shapes are also supported via `/switch-to-variant`:
 **single-agent** (no supervisor) and **chat-with-actioning** (conversational front-end).
