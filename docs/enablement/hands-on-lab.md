@@ -239,9 +239,12 @@ Insights and trace it.
 1. In App Insights → Logs, run:
 
    ```kql
-   customEvents
-   | where timestamp > ago(10m)
-   | project timestamp, name, customDimensions
+   traces
+   | where timestamp > ago(15m)
+   | where message in ("request.received","supervisor.routed","worker.completed",
+                       "retrieval.returned","response.returned","tool.executed",
+                       "tool.hitl_approved","tool.hitl_rejected","aggregator.composed")
+   | project timestamp, message, operation_Id, operation_ParentId, customDimensions
    | order by timestamp asc
    ```
 
@@ -254,6 +257,28 @@ Insights and trace it.
    those two events as guaranteed per request. Which `tool.hitl_*`
    variant fires depends on whether you set `HITL_APPROVER_ENDPOINT`
    (prod) or `HITL_DEV_MODE=1` (dev-only).
+
+   > **Why `traces` and not `customEvents`?** Events are emitted by
+   > `src/accelerator_baseline/telemetry.py::emit_event`, which routes
+   > through the `accelerator` Python logger that
+   > `configure_azure_monitor(logger_name="accelerator")` pipes into App
+   > Insights. Log records land in `traces` (one row per event) with
+   > `message == event.name` and the event payload flattened into
+   > `customDimensions.<attr>`. The same call also adds an OTel span
+   > event for distributed-trace correlation; that's enrichment, not a
+   > separate counted item — always count events from `traces`.
+
+   The `operation_Id` column lets you correlate one stream call to its
+   parent `requests` row and any nested `dependencies`. Pivot from a
+   single event:
+
+   ```kql
+   let opId = "<paste-an-operation_Id-from-above>";
+   union requests, dependencies, traces
+   | where operation_Id == opId
+   | project timestamp, itemType, name=coalesce(name, message), duration, success, customDimensions
+   | order by timestamp asc
+   ```
 
    If you want to drive synthetic traffic without the UI, here's the
    curl form:

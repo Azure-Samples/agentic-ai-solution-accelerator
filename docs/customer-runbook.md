@@ -52,7 +52,7 @@ If you've been paged for a P1 (bad output, unsafe tool behavior, model outage), 
 
 Detail: [Section 3 — Killswitch](#killswitch). Re-enable by setting the var back to empty or `off`.
 
-2. **Check App Insights** — filter `customEvents` by `response.returned` with `customDimensions.ok == 'false'` and by `tool.hitl_misconfigured` over the incident window. Correlate to a specific agent / tool. Workbook panels are in [Section 2 — Monitoring](#2-monitoring).
+2. **Check App Insights** — query the `traces` table (the canonical event surface; see [Section 2 — Monitoring](#2-monitoring) for why) for `message == 'response.returned'` with `tostring(customDimensions.ok) == 'false'` and for `message == 'tool.hitl_misconfigured'` over the incident window. Correlate to a specific agent / tool. Workbook panels are in [Section 2 — Monitoring](#2-monitoring).
 
 3. **Page the partner approver / delivery lead** — the partner's handover packet lists the named contact and SLA. HITL approver reachability and the customer-specific rollback path live there, not here.
 
@@ -201,7 +201,9 @@ wired:
 | Groundedness eval score trend       | **Only if partner wired `eval.result`** | `eval.result` events          |
 
 Only the latency panel filters by `cloud_RoleName` today. The event
-panels query `customEvents` across the whole App Insights resource —
+panels query `traces` across the whole App Insights resource (events emitted by
+`src/accelerator_baseline/telemetry.py::emit_event` land there with
+`message == event.name` and attributes in `customDimensions`) —
 if the resource is shared with other workloads, add a
 `cloud_RoleName` filter before operationalizing.
 
@@ -482,8 +484,7 @@ for those follows the partner's runbook, not this one.
 
 1. **Flip the killswitch** (Section 3). Side-effect tools halt immediately;
    read-only paths keep working so in-flight sessions don't error.
-2. In App Insights, filter `customEvents` by `tool.executed`,
-   `tool.hitl_*`, and `response.returned` with `ok == 'false'` over
+2. In App Insights, query `traces` for `message in ('tool.executed','tool.hitl_approved','tool.hitl_rejected','tool.hitl_misconfigured','response.returned')` and `tostring(customDimensions.ok) == 'false'` over
    the incident window. Correlate to a specific agent / tool.
 3. If a prompt regression is suspected, **do not** trust Foundry
    portal history as a durable record — check

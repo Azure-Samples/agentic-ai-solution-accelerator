@@ -38,18 +38,31 @@ logger = logging.getLogger("accelerator")
 logging.basicConfig(level=logging.INFO)
 
 
-def _configure_otel() -> None:
+def _configure_otel(app: FastAPI) -> None:
     try:
         from azure.monitor.opentelemetry import configure_azure_monitor  # type: ignore
     except Exception:
         logger.warning("azure-monitor-opentelemetry not installed; OTel disabled.")
         return
     s = load_settings()
-    if s.appinsights_connection:
-        configure_azure_monitor(
-            connection_string=s.appinsights_connection,
-            logger_name="accelerator",
+    if not s.appinsights_connection:
+        return
+    configure_azure_monitor(
+        connection_string=s.appinsights_connection,
+        logger_name="accelerator",
+    )
+    # FastAPI auto-instrumentation creates a parent ``requests`` span per HTTP
+    # request, so every ``emit_event(...)`` inside the workflow gets correlated
+    # to a single distributed-trace operation_Id in App Insights.
+    try:
+        from opentelemetry.instrumentation.fastapi import (  # type: ignore
+            FastAPIInstrumentor,
         )
+
+        FastAPIInstrumentor.instrument_app(app)
+        logger.info("App Insights wired up (FastAPI auto-instrumentation enabled).")
+    except Exception as exc:  # noqa: BLE001 — instrumentation is best-effort
+        logger.warning("FastAPI auto-instrumentation skipped: %s", exc)
         logger.info("App Insights wired up.")
 
 
@@ -164,7 +177,7 @@ app = FastAPI(
     version="0.1.0",
     lifespan=None,  # set below once _bundle is loaded
 )
-_configure_otel()
+_configure_otel(app)
 _configure_cors(app)
 _bundle = load_scenario()
 logger.info("loaded scenario %r at %s", _bundle.id, _bundle.endpoint_path)

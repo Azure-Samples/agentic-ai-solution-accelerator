@@ -53,18 +53,43 @@ KPI_EVENTS: set[str] = {
 
 
 def emit_event(event: Event) -> None:
-    """Emit a typed event to App Insights via OTel.
+    """Emit a typed event to App Insights via the OTel-wired logger.
 
-    Span attributes follow ``event.*`` convention for Kusto queries. In local
-    development where no AppInsights exporter is configured, falls back to
-    structured ``logger.info`` output.
+    **Canonical query surface: the App Insights ``traces`` table.** Each event
+    becomes a log record with ``message == event.name`` and flattened attributes
+    available as ``customDimensions.<attr>``. Example KQL::
+
+        traces
+        | where message == "response.returned"
+        | where tostring(customDimensions.ok) == "true"
+        | summarize count() by bin(timestamp, 1d)
+
+    A span event is *also* attached to the active span when one is recording, so
+    distributed traces show event timeline points alongside the request span.
+    The span event is **enrichment, not a separate counted item** — always
+    count from ``traces``.
+
+    Why the unconditional log: ``configure_azure_monitor(logger_name="accelerator")``
+    pipes ``accelerator.*`` loggers through the Azure Monitor exporter. Relying
+    on ``span.add_event`` alone silently dropped events because async streaming
+    paths often had no recording parent span (no FastAPI auto-instrumentation
+    or manual span scoping wrapped them).
     """
     payload = asdict(event)
+    flat = _otel_flatten(payload)
+
+    # `name` collides with stdlib ``logging.LogRecord.name``; reroute to
+    # ``event_name`` so the log record fields don't blow up at emit time.
+    flat.pop("name", None)
+    flat["event_name"] = event.name
+
     span = trace.get_current_span()
     if span and span.is_recording():
         span.add_event(name=event.name, attributes=_otel_flatten(payload))
-    if not _appinsights_configured():
-        logger.info("telemetry.event", extra={"event": payload})
+
+    # Always log — this is what makes the event visible in `traces`. The
+    # ``extra`` dict becomes ``customDimensions`` in App Insights.
+    logger.info(event.name, extra=flat)
 
 
 def _otel_flatten(payload: Mapping[str, Any]) -> dict[str, Any]:
