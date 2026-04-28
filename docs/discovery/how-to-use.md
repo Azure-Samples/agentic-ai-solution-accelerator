@@ -175,3 +175,8 @@ everything downstream (lint, evals, dashboards) keys off its fields.
 > Assumes you've already cloned the customer repo (walkthrough step
 > *Deliver → 1. Clone for the customer*). If you haven't, do that first
 > — `/scaffold-from-brief` runs against the cloned repo.
+
+---
+
+!!! info "← Back to the partner walkthrough"
+    This page is the **full** discovery guide. The walkthrough version (with the per-engagement step-by-step) lives at [5. Discover with the customer](../start/deliver/02-discover-with-the-customer.md).

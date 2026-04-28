@@ -132,3 +132,8 @@ These happen inside the stages above but aren't first-order navigation targets:
 - [`../QUICKSTART.md`](../QUICKSTART.md) — 15-minute mechanics summary (for the engineer persona).
 - [`../README.md`](../README.md) — the repo-level router.
 - [`../.github/chatmodes/delivery-guide.chatmode.md`](../.github/chatmodes/delivery-guide.chatmode.md) — the delivery-guide entry point; other chatmodes sit alongside it and win on conflict with narrative docs.
+
+---
+
+!!! info "← Back to the partner walkthrough"
+    This page is the **workflow map** reference. The actionable step-by-step lives in the [partner walkthrough](start/ready/01-get-oriented.md) — start there, or return to whichever step sent you here.

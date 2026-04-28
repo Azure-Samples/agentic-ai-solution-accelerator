@@ -620,3 +620,8 @@ that work is out of day-2 scope.
 
 For anything not covered: escalate to the partner delivery team, or
 file a GitHub Issue on the template repo for upstream fixes.
+
+---
+
+!!! info "← Back to the partner walkthrough"
+    This page is the **deep** day-2 runbook. The walkthrough version with the most common loops lives at [10. Operate (Day 2)](start/deliver/07-operate-day-2.md). The engagement-specific handover packet supersedes both for any one customer.

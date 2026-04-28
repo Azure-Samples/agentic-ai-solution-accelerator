@@ -54,4 +54,4 @@ The detailed runbook content (model swap procedures, secret rotation walkthrough
 
 ---
 
-**End of walkthrough.** For the next engagement, return to [4. Clone for the customer](01-clone-for-the-customer.md).
+**End of walkthrough.** For the next engagement, Track 1 (*Get ready*) stays done — return directly to [4. Clone for the customer](01-clone-for-the-customer.md) and run Track 2 with the new customer's short-name.

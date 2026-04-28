@@ -249,3 +249,8 @@ For regulated customers, set the Bicep param `enablePrivateLink=true` to disable
    confirm the role assignments are present. `azd deploy` (not full `azd up`)
    triggers a revision restart that re-runs bootstrap.
 
+
+---
+
+!!! info "← Back to the partner walkthrough"
+    This page is the **full** setup reference. The walkthrough version (with the minimal install path) lives at [2. Set up your machine](../start/ready/02-set-up-your-machine.md).

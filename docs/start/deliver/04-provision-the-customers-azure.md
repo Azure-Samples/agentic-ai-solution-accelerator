@@ -12,7 +12,7 @@
     **✅ Done when** — Resource group exists in customer tenant; `/healthz` returns 200; Foundry agents are reachable; App Insights is wired; HITL approver endpoint is configured for the environment.
 
 !!! tip "Chatmodes used here"
-    [`/configure-landing-zone`](../../chatmodes/configure-landing-zone.chatmode.md) · [`/deploy-to-env`](../../chatmodes/deploy-to-env.chatmode.md)
+    [`/configure-landing-zone`](../../../.github/chatmodes/configure-landing-zone.chatmode.md) · [`/deploy-to-env`](../../../.github/chatmodes/deploy-to-env.chatmode.md)
 
     Full reference: [Chatmodes overview](../../chatmodes-index.md).
 

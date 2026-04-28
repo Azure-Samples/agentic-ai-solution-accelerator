@@ -551,3 +551,7 @@ quota you might need for the next run.
   gates exist so you notice your own gaps, not to score you
 - A Tier 2 / Tier 3 networking lab — that's `/configure-landing-zone`
   territory and requires infrastructure beyond a dev sandbox
+---
+
+!!! info "← Back to the partner walkthrough"
+    This page is the **full** lab guide. The walkthrough version (with hybrid one-line summaries + check-yourself prompts per lab) lives at [3. Rehearse in a sandbox](../start/ready/03-rehearse-in-a-sandbox.md).

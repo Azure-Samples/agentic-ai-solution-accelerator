@@ -55,13 +55,41 @@ Jump in at the step that matches your current state.
 
 Deep dives that sit **outside** the walkthrough — open them when a step sends you there.
 
+### Common tasks (jump straight to the chatmode or page you need)
+
+| If you want to… | Go to |
+|---|---|
+| See which chatmode runs at which step | [Chatmodes overview](chatmodes-index.md) |
+| Add a side-effect tool with HITL baked in | [`/add-tool`](../.github/chatmodes/add-tool.chatmode.md) (used in step 8) |
+| Add a specialist worker agent | [`/add-worker-agent`](../.github/chatmodes/add-worker-agent.chatmode.md) (used in step 8) |
+| Scaffold the customer's repo from a filled brief | [`/scaffold-from-brief`](../.github/chatmodes/scaffold-from-brief.chatmode.md) (used in step 6) |
+| Onboard a new Azure environment (dev/UAT/prod) | [`/deploy-to-env`](../.github/chatmodes/deploy-to-env.chatmode.md) (used in step 7) |
+| Pick a landing-zone tier (standalone / AVM / ALZ-integrated) | [`/configure-landing-zone`](../.github/chatmodes/configure-landing-zone.chatmode.md) (used in step 7) |
+| Preflight a change against lint / eval / deploy gates | [`/explain-change`](../.github/chatmodes/explain-change.chatmode.md) (used in step 8) |
+| Re-author the scenario as single-agent or chat-with-actioning | [`/switch-to-variant`](../.github/chatmodes/switch-to-variant.chatmode.md) (used in step 8) |
+
+### Deep dives
+
 - **Architecture & governance** — [Reference architecture](patterns/architecture/README.md) · [Azure AI landing zone](patterns/azure-ai-landing-zone/README.md) · [WAF alignment](patterns/waf-alignment/README.md) · [Responsible AI](patterns/rai/README.md)
-- **Engineering reference** — [Chatmodes overview](chatmodes-index.md) · [Agent specs](agent-specs/README.md) · [Tool catalog](foundry-tool-catalog.md) · [Version matrix](version-matrix.md)
+- **Engineering reference** — [Agent specs](agent-specs/README.md) · [Tool catalog](foundry-tool-catalog.md) · [Version matrix](version-matrix.md)
 - **Frontend starter** — [`patterns/sales-research-frontend/`](patterns/sales-research-frontend/README.md)
 - **Reference scenarios** — [Customer service actioning](references/customer-service-actioning/README.md) · [RFP response](references/rfp-response/README.md)
 - **Delivery context** — [Partner playbook](partner-playbook.md) (narrative companion to the walkthrough) · [Solution brief guide](discovery/SOLUTION-BRIEF-GUIDE.md) · [Handover template](handover/handover-packet-template.md) · [Workflow map](partner-workflow.md)
 
 [:material-github: GitHub repo](https://github.com/Azure-Samples/agentic-ai-solution-accelerator) · [Contributing](about/CONTRIBUTING.md) · [Support](about/SUPPORT.md)
+
+---
+
+## Returning for the next customer?
+
+Track 1 (*Get ready*) stays done. Skip straight to **[4. Clone for the customer](start/deliver/01-clone-for-the-customer.md)** and run through Track 2 again with the new customer's short-name. The accelerator is built to support multiple customer engagements from one prepared workstation.
+
+Quick preflight before the next engagement:
+
+- [ ] `gh auth status` succeeds and you can see the customer's GitHub org.
+- [ ] `az account list` includes the customer's tenant; partner has rights in their target subscription.
+- [ ] `accelerator-lint.py` is green on the latest commit of the template (`main`).
+- [ ] You've reviewed any version-matrix updates from the weekly CI run.
 
 ---
 

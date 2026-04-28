@@ -434,3 +434,8 @@ followed the "Prerequisites" section of `docs/getting-started/setup-and-prereqs.
   it gets partner engineers comfortable with the template, not a
   customer's end users. Customer end-user training is partner-owned
   either way.
+
+---
+
+!!! info "← Back to the partner walkthrough"
+    This page is the **narrative** companion. The step-by-step actions live in the [partner walkthrough](start/ready/01-get-oriented.md) — start there, or return to whichever step sent you here. For the per-customer motion in particular: [5. Discover with the customer](start/deliver/02-discover-with-the-customer.md).
