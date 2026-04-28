@@ -79,6 +79,11 @@ enterprise.
 
 ## Tier 2 — `avm` (AVM-aligned standalone)
 
+> **What's shipped today vs partner-authored:**
+> - **Shipped:** AVM exemplars in `infra/avm-reference/{key-vault,ai-search,container-app,monitor}.bicep` (each compiles standalone with `az bicep build`); the `landing_zone_mode_consistent` lint rule; `/configure-landing-zone` chatmode for the migration walk-through.
+> - **Partner authors:** the `cp` of each exemplar into `infra/modules/`, validation against their region/quota, the new vNet + subnet + private DNS zones in their subscription, and the `landing_zone.avm_services` declaration in `accelerator.yaml`. Foundry stays hand-rolled (intentionally not in AVM).
+> - **Reach for:** mid-market with PEs and AVM cadence; no hub yet.
+
 **What it is.** Same topology as Tier 1 (no hub), but the Bicep is
 migrated to **Azure Verified Modules** (`br/public:avm/res/<...>`)
 wherever AVM is GA. The accelerator ships **drop-in exemplars** in
@@ -113,6 +118,11 @@ inherits from AVM's opinions.
   actually migrated (lint asserts the list matches reality).
 
 ## Tier 3 — `alz-integrated` (Azure AI Landing Zone)
+
+> **What's shipped today vs partner-authored:**
+> - **Shipped:** `infra/alz-overlay/main.bicep` subscription-scope deploy (spoke RG + vNet + NSG + peering, opt-in hub DNS zone vNet-link); `infra/main.parameters.alz.json` pre-baked Tier 3 workload parameters; `/configure-landing-zone` chatmode that fills in hub resource IDs.
+> - **Partner authors:** coordination with the customer's CCoE for subscription vending; the UDR (route table on spoke subnet → hub firewall) — overlay provisions the subnet + NSG, but **the UDR is not shipped**; MG placement; hub DNS zone identity access; engagement-specific env-var defaults.
+> - **Reach for:** regulated enterprise; customers with an existing AI ALZ or general ALZ; Financial Services / Health / Public Sector.
 
 **What it is.** The accelerator lands in a **spoke subscription** that
 is already part of the customer's AI ALZ. Resources expose **private
