@@ -12,20 +12,22 @@
     **✅ Done when** — You ran the reference frontend at `http://localhost:5173`, clicked **Run research**, and saw a streamed briefing render with citations from the deployed `/research/stream` API; you read the matching App Insights trace; quality + redteam evals pass; you approved one HITL prompt.
 
 ??? success "What success looks like"
-    **Primary signal — the browser path (Lab 2).** A partner engineer's first proof the accelerator works:
+    Three signals, in the order you'll hit them:
 
-    1. Reference frontend running at `http://localhost:5173` (from `patterns/sales-research-frontend/`).
-    2. Click **Run research** with the pre-filled form.
-    3. Streamed `status` → `partial` → `final` events render in the viewer; the result panel shows a usable briefing with citations.
-
-    **Backend smoke test (Lab 1).** Diagnostic only — proves the Container App booted and bootstrap completed. Not a workflow validation.
+    **1. Backend smoke test (Lab 1).** Proves the Container App booted and bootstrap completed. Not a workflow validation.
 
     ```bash
     curl <api-url>/healthz
     # {"status": "ok", "bootstrap": "complete"}
     ```
 
-    **Eval gate (Lab 4).** `python evals/quality/run.py --api-url <api-url>` ends with something like:
+    **2. Primary success signal — the browser path (Lab 2).** A partner engineer's first proof the accelerator works:
+
+    1. Reference frontend running at `http://localhost:5173` (from `patterns/sales-research-frontend/`).
+    2. Click **Run research** with the pre-filled form.
+    3. Streamed `status` → `partial` → `final` events render in the viewer; the result panel shows a usable briefing with citations.
+
+    **3. Eval gate (Lab 4).** `python evals/quality/run.py --api-url <api-url>` ends with something like:
 
     ```
     quality: 18/20 passed (0.90) ≥ threshold 0.85  ✅
