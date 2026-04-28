@@ -22,6 +22,7 @@ import json
 import logging
 import os
 from contextlib import asynccontextmanager
+from time import monotonic
 from typing import AsyncIterator
 
 from fastapi import FastAPI, HTTPException, Request
@@ -94,6 +95,7 @@ def _make_stream_endpoint(bundle: ScenarioBundle):
             # do NOT reach the EventSource/onmessage handler — keeping
             # the data event stream clean for UI consumers.
             seq = 0
+            stream_start = monotonic()
             try:
                 async for event in workflow.stream(payload.model_dump()):
                     if await request.is_disconnected():
@@ -104,7 +106,13 @@ def _make_stream_endpoint(bundle: ScenarioBundle):
                     seq += 1
                     yield f"data: {json.dumps({**event, 'seq': seq})}\n\n".encode()
             except Exception as exc:
-                emit_event(Event(name="response.returned", ok=False, error=str(exc)))
+                emit_event(Event(
+                    name="response.returned",
+                    ok=False,
+                    error=str(exc),
+                    value=round((monotonic() - stream_start) * 1000.0, 1),
+                    unit="ms",
+                ))
                 seq += 1
                 err = {"type": "error", "message": str(exc), "seq": seq}
                 yield f"data: {json.dumps(err)}\n\n".encode()

@@ -121,7 +121,7 @@
     {
       "type": 1,
       "content": {
-        "json": "### P95 request latency\n\n95th-percentile end-to-end HTTP request duration, by hour. \"P95\" means 95% of requests completed faster than this value — the standard partner-facing SLA signal (less noisy than max, less hand-wavy than average).\n\nThe target lives in `accelerator.yaml -> acceptance.p95_latency_ms` (default: 90 seconds per briefing). If this line trends above target, the bottleneck is usually a slow specialist worker — cross-reference with **Workers completed by agent** to identify which one.\n\nThis panel queries the `requests` table populated by FastAPI auto-instrumentation, not the typed `traces` events."
+        "json": "### P95 end-to-end latency\n\n95th-percentile time the **full orchestration** took, by hour. \"P95\" means 95% of requests completed faster than this value — the standard partner-facing SLA signal (less noisy than max, less hand-wavy than average).\n\nThis is measured from when the workflow received the request to when it emits `response.returned`, so it includes every specialist worker, retrieval call, and aggregation. The FastAPI ``requests`` table can't capture this because the SSE handler returns near-instantly while the briefing streams in the background — partners chasing real latency want this number, not the handler latency.\n\nThe target lives in `accelerator.yaml -> acceptance.p95_latency_ms` (default: 90 seconds per briefing). If this trends above target, cross-reference with **Workers completed by agent** to identify the slow specialist."
       },
       "name": "p95-request-latency-explainer"
     },
@@ -129,10 +129,10 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "requests\n| summarize p95_latency_s = percentile(duration / 1000, 95) by bin(timestamp, 1h)\n| render timechart",
+        "query": "traces\n| where message == 'response.returned'\n| where isnotempty(customDimensions.event_name)\n| extend elapsed_s = todouble(customDimensions.value) / 1000.0\n| where isnotnull(elapsed_s)\n| summarize p95_latency_s = percentile(elapsed_s, 95) by bin(timestamp, 1h)\n| render timechart",
         "size": 0,
-        "title": "P95 request latency (s)",
-        "noDataMessage": "No request rows found. Depends on FastAPI / Azure Monitor request auto-instrumentation; check the `requests` table directly.",
+        "title": "P95 end-to-end latency (s)",
+        "noDataMessage": "No response.returned events with elapsed_ms in window. Run the flagship scenario once.",
         "noDataMessageStyle": 3,
         "timeContextFromParameter": "TimeRange",
         "queryType": 0,

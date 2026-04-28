@@ -29,6 +29,7 @@ import asyncio
 import json
 import logging
 import os
+from time import monotonic
 from typing import Any, AsyncIterator
 
 from azure.identity.aio import DefaultAzureCredential
@@ -217,6 +218,12 @@ class SalesResearchWorkflow:
         iteration.
         """
         assert_enabled("workflow")
+        # Capture the orchestration start time so ``response.returned`` can
+        # carry an authoritative ``elapsed_ms``. The FastAPI ``requests``
+        # table only sees the SSE handler latency (which returns near-zero
+        # because the body streams) — partners who want real end-to-end
+        # latency need this value, not the stream-handler duration.
+        request_start = monotonic()
         emit_event(
             Event(
                 name="request.received",
@@ -304,7 +311,12 @@ class SalesResearchWorkflow:
                         "result": result,
                     })
 
-                emit_event(Event(name="response.returned", ok=True))
+                emit_event(Event(
+                    name="response.returned",
+                    ok=True,
+                    value=round((monotonic() - request_start) * 1000.0, 1),
+                    unit="ms",
+                ))
                 await out_q.put({"type": "final", "briefing": final})
             except Exception as exc:
                 # Surface the exception as an in-band marker so the
