@@ -153,12 +153,12 @@ through the customization steps below.
   `validate.py` enforcing the schema. Reject any PR that skips either step.
 
 **If the pattern is single-agent or chat-with-actioning** instead of the
-flagship supervisor pattern, run `/switch-to-variant` for a guided re-authoring
-of the scenario under `src/scenarios/<new-id>/` using the flagship as the
-reference shape. There is **no shipped scaffold or walkthrough doc** for these
-two variants today — the chatmode walks you through replicating the flagship's
-3-layer structure (`prompt.py`/`transform.py`/`validate.py`) for the simpler
-shape.
+flagship supervisor pattern, run `/switch-to-variant` to swap in the stub
+scaffold from `patterns/single-agent/` or `patterns/chat-with-actioning/`
+(each ships a single source file + a chatmode that copies it over
+`src/main.py`, prunes flagship workers, and updates
+`accelerator.yaml.solution.pattern`). Then finish re-authoring under
+`src/scenarios/<new-id>/` using the flagship as the reference shape.
 
 **Deliverable:** a PR-sized diff with all new files named per the scenario
 ID and the build still green.

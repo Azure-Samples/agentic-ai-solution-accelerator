@@ -127,13 +127,13 @@ Omitting the whole `models:` block is supported: `infra/main.bicep` falls back t
 
 ## Variations a partner can choose
 
-These are **discovery-time pattern choices**, not drop-in packages. Only the **flagship supervisor pattern** ships with a working scenario today; the other two are partner-authored under `src/scenarios/<new-id>/` using the flagship as the reference shape. Use `/switch-to-variant` for guided re-authoring.
+These are **stub scaffolds + chatmode-driven walkthroughs** — not drop-in packages. Each variant ships a minimal source file under `patterns/<variant>/src/` and a `/switch-to-variant <variant>` chatmode that copies it over `src/main.py`, prunes the flagship workers, and updates `accelerator.yaml.solution.pattern`. Partner finishes the re-authoring under `src/scenarios/<new-id>/`. See `.github/chatmodes/switch-to-variant.chatmode.md` for guidance.
 
 | Variant | Status today | When to reach for it |
 |---|---|---|
-| **Supervisor routing** | **Shipped.** Flagship under `src/scenarios/sales_research/`. Lint, evals, and bootstrap all assume this shape. | Research / multi-facet briefing. Default. |
-| **Single-agent retrieval** | **Discovery-only.** No shipped scaffold or walkthrough doc. Partner authors a new scenario folder; flagship structure is the template. | Doc Q&A, policy lookup — one agent + retrieval, no side-effects. |
-| **Chat-with-actioning** | **Discovery-only.** No shipped scaffold or walkthrough doc. Partner authors a new scenario folder; the flagship's HITL gating still applies to every side-effect. | Conversational UX over multi-turn tool use. |
+| **Supervisor routing** | **Shipped (default).** Flagship under `src/scenarios/sales_research/`. Lint, evals, and bootstrap all assume this shape. | Research / multi-facet briefing. Default. |
+| **Single-agent retrieval** | **Stub + walkthrough** at `patterns/single-agent/` (one `src/agent.py` + chatmode). Pages publishes the walkthrough only on GitHub, not in the docs site. | Doc Q&A, policy lookup — one agent + retrieval, no side-effects. |
+| **Chat-with-actioning** | **Stub + walkthrough** at `patterns/chat-with-actioning/` (one `src/chat.py` + chatmode). HITL gating from the flagship still applies to every side-effect. | Conversational UX over multi-turn tool use. |
 
 Raising past 3–5 coordinated workers is out of scope for v1 — evaluation surface and HITL coordination get unmanageable. Split into separate engagements.
 
