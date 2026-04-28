@@ -4,9 +4,41 @@
     {
       "type": 1,
       "content": {
-        "json": "## Agentic AI Accelerator — ROI KPIs\n\nPaste-ready Azure Monitor Workbook for the accelerator's baseline KPI events.\n\n**How to use:** in your Application Insights resource, open **Workbooks → New → Advanced Editor** (the `</>` icon), replace the default JSON with this file's contents, then click **Apply**. Save with a descriptive name per engagement.\n\n**Where the data comes from:** every panel queries the `traces` table for events emitted by `src/accelerator_baseline/telemetry.py::emit_event`. The `isnotempty(customDimensions.event_name)` filter scopes results to accelerator events specifically (and not generic FastAPI/uvicorn/OTel rows that also land in `traces`).\n\n**To add a KPI:** append a new `KqlItem/1.0` entry under `items[]` below — same shape as the existing query items. Keep the `resourceType` as `microsoft.insights/components` so the panel binds to whichever Application Insights instance the workbook is opened against."
+        "json": "## Agentic AI Accelerator — ROI KPIs\n\nPaste-ready Azure Monitor Workbook for the accelerator's baseline KPI events.\n\n**How to use:** in your Application Insights resource, open **Workbooks → New → Advanced Editor** (the `</>` icon), replace the default JSON with this file's contents, then click **Apply**. Save with a descriptive name per engagement.\n\n**Where the data comes from:** every panel queries the `traces` table for events emitted by `src/accelerator_baseline/telemetry.py::emit_event`. The `isnotempty(customDimensions.event_name)` filter scopes results to accelerator events specifically (and not generic FastAPI/uvicorn/OTel rows that also land in `traces`). Use the **Time Range** picker below to widen or narrow the window across all panels at once.\n\n**To add a KPI:** append a new `KqlItem/1.0` entry under `items[]` below — same shape as the existing query items. Set `timeContextFromParameter` to `TimeRange` so the new panel honors the global picker. Keep the `resourceType` as `microsoft.insights/components` so the panel binds to whichever Application Insights instance the workbook is opened against."
       },
       "name": "title-and-context"
+    },
+    {
+      "type": 9,
+      "content": {
+        "version": "KqlParameterItem/1.0",
+        "parameters": [
+          {
+            "id": "0a0a0a0a-0000-4000-8000-000000000001",
+            "version": "KqlParameterItem/1.0",
+            "name": "TimeRange",
+            "label": "Time Range",
+            "type": 4,
+            "isRequired": true,
+            "value": {
+              "durationMs": 86400000
+            },
+            "typeSettings": {
+              "selectableValues": [
+                {"durationMs": 900000},
+                {"durationMs": 3600000},
+                {"durationMs": 14400000},
+                {"durationMs": 43200000},
+                {"durationMs": 86400000},
+                {"durationMs": 172800000},
+                {"durationMs": 604800000},
+                {"durationMs": 2592000000}
+              ]
+            }
+          }
+        ]
+      },
+      "name": "time-range-parameter"
     },
     {
       "type": 3,
@@ -15,6 +47,7 @@
         "query": "traces\n| where message == 'response.returned'\n| where isnotempty(customDimensions.event_name)\n| where tostring(customDimensions.ok) == 'true'\n| summarize count() by bin(timestamp, 1d)\n| render timechart",
         "size": 0,
         "title": "Successful responses per day",
+        "timeContextFromParameter": "TimeRange",
         "queryType": 0,
         "resourceType": "microsoft.insights/components"
       },
@@ -27,6 +60,7 @@
         "query": "traces\n| where message in ('tool.hitl_approved','tool.hitl_rejected')\n| where isnotempty(customDimensions.event_name)\n| summarize approvals = countif(message == 'tool.hitl_approved'),\n            rejections = countif(message == 'tool.hitl_rejected')\n   by bin(timestamp, 1d)\n| render columnchart",
         "size": 0,
         "title": "HITL approval rate",
+        "timeContextFromParameter": "TimeRange",
         "queryType": 0,
         "resourceType": "microsoft.insights/components"
       },
@@ -39,6 +73,7 @@
         "query": "requests\n| where cloud_RoleName endswith 'api'\n| summarize percentile(duration / 1000, 95) by bin(timestamp, 1h)\n| render timechart",
         "size": 0,
         "title": "P95 request latency (s)",
+        "timeContextFromParameter": "TimeRange",
         "queryType": 0,
         "resourceType": "microsoft.insights/components"
       },
@@ -51,6 +86,7 @@
         "query": "traces\n| where message == 'cost.call'\n| where isnotempty(customDimensions.event_name)\n| extend cost = todouble(customDimensions.value)\n| summarize avg(cost) by bin(timestamp, 1d)\n| render timechart",
         "size": 0,
         "title": "$ per call (estimated)",
+        "timeContextFromParameter": "TimeRange",
         "queryType": 0,
         "resourceType": "microsoft.insights/components"
       },
@@ -63,6 +99,7 @@
         "query": "traces\n| where message == 'eval.result'\n| where isnotempty(customDimensions.event_name)\n| where tostring(customDimensions.suite) == 'quality'\n| extend g = todouble(customDimensions.groundedness)\n| summarize avg(g) by bin(timestamp, 1d)\n| render timechart",
         "size": 0,
         "title": "Groundedness eval score trend",
+        "timeContextFromParameter": "TimeRange",
         "queryType": 0,
         "resourceType": "microsoft.insights/components"
       },
