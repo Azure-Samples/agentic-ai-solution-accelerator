@@ -35,6 +35,9 @@ The flagship is one supervisor agent that routes a customer request across speci
   WORKERS in src/scenarios/<id>/workflow.py)
 ```
 
+!!! tip "Visual: supervisor + workers + HITL + telemetry"
+    [Download `supervisor-workers.excalidraw`](../../assets/diagrams/supervisor-workers.excalidraw) and open it at [aka.ms/excalidraw](https://aka.ms/excalidraw) (**File → Open**) to see how requests fan out, how the HITL gate sits in front of side-effect tools, and where telemetry is captured.
+
 Two simpler shapes are also supported via `/switch-to-variant`:
 **single-agent** (no supervisor) and **chat-with-actioning** (conversational front-end).
 

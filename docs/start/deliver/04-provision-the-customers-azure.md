@@ -51,6 +51,9 @@ The chatmode adds an entry to `deploy/environments.yaml`, creates the matching *
 
 If the environment will gate side-effect tools through a webhook approver (Logic Apps, Teams, ServiceNow), set `HITL_APPROVER_ENDPOINT` as an Environment secret on the same screen. Failures to reach the approver are treated as rejections (fail-closed).
 
+!!! tip "Visual: OIDC trust path — no secrets crossing tenants"
+    [Download `oidc-topology.excalidraw`](../../assets/diagrams/oidc-topology.excalidraw) and open it at [aka.ms/excalidraw](https://aka.ms/excalidraw) (**File → Open**) to see how the GitHub Environment, federated credential, customer Entra app registration, and resource group connect — and where the trust gets re-pointed at handover.
+
 ## Provision + deploy
 
 ```bash

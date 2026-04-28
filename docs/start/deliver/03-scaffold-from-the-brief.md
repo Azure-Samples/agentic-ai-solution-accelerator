@@ -40,6 +40,9 @@ If you scaffold a **new** scenario via `python scripts/scaffold-scenario.py <sce
 | RAI risks | `evals/redteam/` custom adversarial cases |
 | ROI KPIs | `src/accelerator_baseline/telemetry.py` events + `infra/dashboards/roi-kpis.json` (panels are scenario-agnostic; rename the dashboard per engagement) |
 
+!!! tip "Visual: the brief is the source of truth"
+    [Download `brief-to-artifacts.excalidraw`](../../assets/diagrams/brief-to-artifacts.excalidraw) and open it at [aka.ms/excalidraw](https://aka.ms/excalidraw) (**File → Open**) to see how `solution-brief.md` fans out into prompts, retrieval, infra, evals, telemetry, and the acceptance gate. Re-run `/scaffold-from-brief` whenever the brief changes.
+
 ## Authoring agent instructions
 
 Agent system instructions live in `docs/agent-specs/<agent>.md` under the `## Instructions` heading — edit those Markdown files, not Python. On `azd up` (next step), the FastAPI startup bootstrap (`src/bootstrap.py`) syncs each spec verbatim to the Foundry portal once the Container App boots. `prompt.py` is for *per-request* input construction only.

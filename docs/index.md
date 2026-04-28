@@ -30,6 +30,9 @@ Roles are skim guidance, not separate paths:
 
 [:material-rocket-launch: Start with **1. Get oriented** →](start/ready/01-get-oriented.md){ .md-button .md-button--primary }
 
+!!! tip "Visual: the 10-step flow at a glance"
+    [Download `10-step-flow.excalidraw`](assets/diagrams/10-step-flow.excalidraw) and open it at [aka.ms/excalidraw](https://aka.ms/excalidraw) (**File → Open**) to view or edit. Get-ready (3 steps) feeds Deliver (7 steps); next engagement loops back to step 5.
+
 ---
 
 ## Joining mid-engagement?
