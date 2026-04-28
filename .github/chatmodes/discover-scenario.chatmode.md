@@ -123,7 +123,7 @@ Push back on vague answers. Force specificity:
 
   1. **Input fields.** Ask: *"What inputs does the end user provide? List each field + a 1-line description of what it's for. Example: `company_name` — the customer account being researched."*
 
-     Push for concrete field names (snake_case), a type per field (text, textarea, select, tags, url, number, date, file), the 1-line description, and whether it's required. Add: *"These should match your `ScenarioRequest` schema fields. If you're unsure about types, text/textarea/select/tags are the common ones — see `patterns/sales-research-frontend/src/components/ResearchForm.tsx` for examples."*
+     Push for concrete field names (lowercase_with_underscores, e.g. `company_name`), a type per field (text, textarea, select, tags, url, number, date, file), the 1-line description, and whether it's required. Add: *"These should match your `ScenarioRequest` schema fields. If you're unsure about types, text/textarea/select/tags are the common ones — see `patterns/sales-research-frontend/src/components/ResearchForm.tsx` for examples."*
 
      Capture into a new **`## UX inputs`** section of the brief as a Markdown table with columns `Field | Type | Description | Required`.
 

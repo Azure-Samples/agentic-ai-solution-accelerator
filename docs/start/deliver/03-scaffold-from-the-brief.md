@@ -77,7 +77,7 @@ flowchart LR
     B --> A["Acceptance gate<br/>(CI must pass)"]:::gate
 ```
 
-Re-run `/scaffold-from-brief` whenever the brief changes — the same fan-out reapplies.
+Re-run `/scaffold-from-brief` whenever the brief changes — the same expansion reapplies across every artefact.
 
 ## Authoring agent instructions
 

@@ -78,7 +78,7 @@ Read the brief's `## UX inputs` and `## UX output sections` tables. If either is
    > *"Next: adapt `patterns/sales-research-frontend/src/components/ResearchForm.tsx` — replace the current form fields with the rows above. Your `src/scenarios/<pkg>/schema.py` `ScenarioRequest` should declare exactly these fields with matching types."*
 
 2. **Print `## UX output sections` back verbatim**, then add:
-   > *"Next: adapt `patterns/sales-research-frontend/src/components/ResultPanel.tsx` — render one subsection per row above. Your supervisor's `transform.py` should emit a dict with one top-level key per section (snake_case of the section name); `validate.py` should enforce the schema."*
+   > *"Next: adapt `patterns/sales-research-frontend/src/components/ResultPanel.tsx` — render one subsection per row above. Your supervisor's `transform.py` should emit a dict with one top-level key per section (lowercase_with_underscores form of the section name); `validate.py` should enforce the schema."*
 
 3. **Emit `docs/discovery/ux-blueprint.md`** — a generated reference doc that persists both tables for downstream work. Use this template, substituting the tables verbatim from the brief:
 

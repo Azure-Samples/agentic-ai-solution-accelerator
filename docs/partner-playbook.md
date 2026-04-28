@@ -115,7 +115,7 @@ through the customization steps below.
 - `src/scenarios/<package>/agents/supervisor/{__init__,prompt,transform,validate}.py`
 - `docs/agent-specs/accel-<scenario-id>-supervisor.md`
 - `data/samples/<package>.json`
-- A `scenario:` snippet printed to stdout to paste into
+- A `scenario:` snippet printed to your terminal to paste into
   `accelerator.yaml`
 
 **Manual follow-ups after the CLI runs** (chatmode step 3):

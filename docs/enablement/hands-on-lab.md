@@ -468,8 +468,8 @@ vs what you still author.
    supervisor agent package (`agents/supervisor/{prompt,transform,validate}.py`)
    plus one supervisor spec stub at
    `docs/agent-specs/accel-ticket-summary-supervisor.md`. The
-   script also prints a `scenario:` YAML block to stdout for you
-   to paste into `accelerator.yaml`.
+   script also prints a `scenario:` YAML block to your terminal
+   for you to paste into `accelerator.yaml`.
 3. Paste the printed `scenario:` block over the existing
    `scenario:` block in `accelerator.yaml`.
 4. Run `python scripts/accelerator-lint.py`. In a fresh scaffold,

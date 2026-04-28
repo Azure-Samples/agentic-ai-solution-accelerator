@@ -23,18 +23,6 @@ The platform is **Microsoft Agent Framework + Azure AI Foundry** — no other or
 
 The flagship is one supervisor agent that routes a customer request across specialist workers and aggregates their outputs.
 
-```text
-                ┌────────────────────────┐
-   request ───► │       Supervisor       │ ◄── routes by intent
-                └─────────┬──────────────┘
-                          │ delegates to
-        ┌─────────────────┼─────────────────────┐
-        ▼                 ▼                     ▼
- Account Researcher   ICP / Fit Analyst   Outreach Personaliser
- (and more — every worker is stateless, declared in
-  WORKERS in src/scenarios/<id>/workflow.py)
-```
-
 ```mermaid
 flowchart TB
     classDef user fill:#dee2e6,stroke:#495057,stroke-width:2px,color:#000
@@ -44,10 +32,10 @@ flowchart TB
     classDef tel fill:#a5d8ff,stroke:#1864ab,stroke-width:2px,color:#000
 
     U["Customer request<br/>(API / chat)"]:::user --> S["<b>Supervisor</b><br/>routes intent → worker(s)"]:::sup
-    S --> W1["Researcher<br/>(retrieval-only)"]:::worker
-    S --> W2["Drafter<br/>(LLM-only)"]:::worker
-    S --> W3["Tool-using worker<br/>(side effects)"]:::worker
-    S --> W4["Specialist N<br/>(custom)"]:::worker
+    S --> W1["Researcher<br/>e.g., Account Researcher<br/>(retrieval-only)"]:::worker
+    S --> W2["Drafter<br/>e.g., Outreach Personaliser<br/>(LLM-only)"]:::worker
+    S --> W3["Tool-using worker<br/>e.g., CRM writer<br/>(side effects)"]:::worker
+    S --> W4["Specialist N<br/>(custom per scenario)"]:::worker
     W3 --> H{"HITL gate<br/>approves side effects"}:::hitl
     S -. trace .-> T["Telemetry · App Insights<br/>KPI events · evals (quality + redteam)"]:::tel
     W1 -. emit .-> T
@@ -55,6 +43,8 @@ flowchart TB
     W3 -. emit .-> T
     W4 -. emit .-> T
 ```
+
+Each worker is stateless and declared in the `WORKERS` registry in `src/scenarios/<id>/workflow.py`. The flagship scenario (`sales_research`) ships Account Researcher, ICP / Fit Analyst, and Outreach Personaliser; your customer scenario will replace these with its own specialists.
 
 Two simpler shapes are also supported via `/switch-to-variant`:
 **single-agent** (no supervisor) and **chat-with-actioning** (conversational front-end).
