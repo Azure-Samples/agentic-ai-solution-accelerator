@@ -229,10 +229,6 @@ async def _bootstrap_knowledge(bundle: ScenarioBundle) -> None:
 
     cred = DefaultAzureCredential()
     try:
-        token = (await cred.get_token(
-            "https://search.azure.com/.default"
-        )).token
-
         # Collect unique index names from retrieval agents.
         seen_indexes: set[str] = set()
         for agent in foundry_tool_agents:

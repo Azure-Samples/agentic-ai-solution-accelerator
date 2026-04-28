@@ -51,7 +51,6 @@ from .agents import (
     competitive_context,
     icp_fit_analyst,
     outreach_personalizer,
-    supervisor,
 )
 
 logger = logging.getLogger(__name__)
@@ -116,10 +115,12 @@ def _build_input_competitive_context(state: WorkerState) -> dict[str, Any]:
 
 
 def _build_input_outreach_personalizer(state: WorkerState) -> dict[str, Any]:
+    fit = state.outputs.get("icp_fit_analyst", "(not yet available)")
+    comp_ctx = state.outputs.get("competitive_context", "(not yet available)")
     return {
         "account_profile": _compact(state.outputs["account_planner"]),
-        "fit_summary": _compact(state.outputs.get("icp_fit_analyst", "(not yet available)")),
-        "competitive_context": _compact(state.outputs.get("competitive_context", "(not yet available)")),
+        "fit_summary": _compact(fit),
+        "competitive_context": _compact(comp_ctx),
         "persona": state.request.get("persona", "Decision maker"),
     }
 
@@ -592,11 +593,20 @@ class SalesResearchWorkflow:
         action = icp.get("recommended_action", "nurture") if isinstance(icp, dict) else "nurture"
 
         if action == "pursue":
-            steps.append(f"Pursue this {tier} account — schedule a discovery call with the buying committee.")
+            steps.append(
+                f"Pursue this {tier} account — schedule a discovery call "
+                f"with the buying committee."
+            )
         elif action == "disqualify":
-            steps.append(f"Re-evaluate fit — account scored {score}/100; consider deprioritizing.")
+            steps.append(
+                f"Re-evaluate fit — account scored {score}/100; "
+                f"consider deprioritizing."
+            )
         else:
-            steps.append(f"Nurture this {tier} account — share relevant case studies and monitor for triggers.")
+            steps.append(
+                f"Nurture this {tier} account — share relevant case studies "
+                f"and monitor for triggers."
+            )
 
         tps = comp.get("talking_points", []) if isinstance(comp, dict) else []
         if tps:

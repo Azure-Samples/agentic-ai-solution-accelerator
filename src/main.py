@@ -184,8 +184,8 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     if hasattr(_bundle.workflow, "warmup"):
         try:
             await _bundle.workflow.warmup()
-        except Exception:
-            pass  # best-effort; first request will retry
+        except Exception as exc:  # noqa: BLE001 — warmup is best-effort
+            logger.debug("workflow.warmup skipped: %s", exc)
     yield
 
 
