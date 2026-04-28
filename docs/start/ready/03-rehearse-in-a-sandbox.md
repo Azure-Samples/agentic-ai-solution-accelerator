@@ -11,6 +11,26 @@
 
     **✅ Done when** — Sandbox app responds to `/research/stream`; quality and redteam evals pass; you've watched one App Insights trace and approved one HITL prompt.
 
+??? success "What success looks like"
+    `curl <api-url>/healthz` returns:
+
+    ```json
+    {"status": "ok", "bootstrap": "complete"}
+    ```
+
+    `python evals/quality/run.py --api-url <api-url>` ends with something like:
+
+    ```
+    quality: 18/20 passed (0.90) ≥ threshold 0.85  ✅
+    groundedness: 19/20 passed (0.95) ≥ threshold 0.90  ✅
+    ```
+
+    `python scripts/enforce-acceptance.py` finishes with:
+
+    ```
+    ✅ All acceptance thresholds met for env=sandbox
+    ```
+
 ---
 
 This step is the **sandbox rehearsal** — done once per partner engineer, before your first customer-facing engagement. Returning engineers skip straight to *4. Clone for the customer* on subsequent engagements.

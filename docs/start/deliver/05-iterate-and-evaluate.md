@@ -16,6 +16,22 @@
 
     Full reference: [Chatmodes overview](../../chatmodes-index.md).
 
+??? success "What success looks like"
+    `python scripts/enforce-acceptance.py` against the customer environment finishes with:
+
+    ```
+    ✅ All acceptance thresholds met for env=<customer>-dev
+       quality       0.92  ≥ 0.85
+       groundedness  0.96  ≥ 0.90
+       safety        1.00  ≥ 1.00
+       latency_p95   2.1s  ≤ 3.0s
+       cost_per_call $0.018 ≤ $0.025
+    ```
+
+    Your PR's GitHub Actions tab shows four green checks: `accelerator-lint` · `evals/quality` · `evals/redteam` · `build`.
+
+    App Insights → Workbooks → ROI KPIs panels are populated against real `/research/stream` traffic (no empty cards).
+
 ---
 
 ## Establish the acceptance baseline first

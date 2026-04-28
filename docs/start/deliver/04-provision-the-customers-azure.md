@@ -16,6 +16,24 @@
 
     Full reference: [Chatmodes overview](../../chatmodes-index.md).
 
+??? success "What success looks like"
+    `azd up` ends with a summary like:
+
+    ```
+    SUCCESS: Your application was provisioned and deployed to Azure in 12m 4s.
+    You can view the resources created under the resource group rg-<customer>-dev in:
+    https://portal.azure.com/...
+    Endpoint: https://<api>.<region>.azurecontainerapps.io
+    ```
+
+    `curl <api-url>/healthz` returns:
+
+    ```json
+    {"status": "ok", "bootstrap": "complete"}
+    ```
+
+    The customer's resource group lists at least: AIServices account · model deployment · Foundry project · Container App · App Insights · Log Analytics · AI Search · Key Vault · User-Assigned MI.
+
 ---
 
 This step is two preflight chatmodes plus one `azd up`. The chatmodes do the GitHub plumbing (manifest entry, GitHub Environment, OIDC federated credential) so CI can deploy without a service-principal secret.
@@ -91,7 +109,63 @@ If `/healthz` returns 503, the FastAPI startup bootstrap is failing — most oft
 traces | where operation_Name == "lifespan.startup"
 ```
 
-→ Full troubleshooting: [Reference → Set up your machine → Troubleshooting](../ready/02-set-up-your-machine.md#troubleshooting--top-5-per-machine).
+## Troubleshooting `azd up` and first boot
+
+Customer deploys hit a small set of repeatable failure modes. Try these in order before re-running `azd up`.
+
+??? failure "RBAC role hasn't propagated yet (most common)"
+    **Symptom.** `/healthz` returns 503; App Insights `traces` show `Forbidden` from Cognitive Services or AI Search during `lifespan.startup`.
+
+    **Cause.** Managed Identity role assignments take 1–3 minutes to propagate after `azd up` finishes.
+
+    **Fix.** Wait 3 minutes, hit `/healthz` again. If still failing, confirm the User-Assigned MI has **Cognitive Services OpenAI User** + **Azure AI Developer** + **Search Index Data Contributor** in the resource group:
+
+    ```bash
+    az role assignment list --assignee <mi-principal-id> --scope <rg-id> -o table
+    ```
+
+??? failure "Model deployment quota exceeded in the chosen region"
+    **Symptom.** `azd up` fails inside `Microsoft.CognitiveServices/accounts/deployments` with `InsufficientQuota` or `429`.
+
+    **Cause.** The default model (`gpt-5-mini` GlobalStandard, 30 TPM) competes with other deployments in the region.
+
+    **Fix.** Either request quota in Azure portal → Quotas → Cognitive Services, or pick a region with headroom in `infra/main.parameters.json -> location`, or downsize TPM in `accelerator.yaml -> models[].capacity` and re-run `azd up`.
+
+??? failure "Foundry project failed to create"
+    **Symptom.** `azd up` fails on `Microsoft.CognitiveServices/accounts/projects` resource.
+
+    **Cause.** Either the AIServices account isn't fully provisioned yet, or the subscription isn't enrolled for AI Foundry projects in the selected region.
+
+    **Fix.** Re-run `azd up` (idempotent — picks up where it left off). If it fails twice in the same place, check `https://ai.azure.com` lists the AIServices account and offers to create a project there manually.
+
+??? failure "AI Search index never seeded"
+    **Symptom.** `/healthz` returns 200, but agent calls fail with `ResourceNotFound` for the search index, or eval cases get `0` retrieval hits.
+
+    **Cause.** The bootstrap ran before AI Search RBAC propagated, so the seed step was skipped.
+
+    **Fix.** Restart the Container App revision (`az containerapp revision restart` or hit the **Restart** button in the portal). The startup bootstrap re-runs the seed step; verify with:
+
+    ```kusto
+    traces | where message contains "ai-search seed" | order by timestamp desc
+    ```
+
+??? failure "HITL approver endpoint not reachable"
+    **Symptom.** Side-effect tools fail-closed; logs show `hitl.checkpoint -> approver_unreachable`.
+
+    **Cause.** `HITL_APPROVER_ENDPOINT` Environment secret was not set when `/deploy-to-env` ran, or the URL points to an approver Logic App / webhook that isn't deployed yet.
+
+    **Fix.** Set the secret in **GitHub → Settings → Environments → \<env-name\> → Add secret**, then `azd deploy` to roll the new value into the Container App config. Test with a contrived side-effect call from a unit test — fail-closed is by design and correct.
+
+??? failure "Anything else"
+    Capture App Insights traces for the failing operation:
+
+    ```kusto
+    union exceptions, traces
+    | where timestamp > ago(15m) and severityLevel >= 2
+    | order by timestamp desc
+    ```
+
+    For per-machine prerequisites that look broken (Python, gh, az, azd), see the Get-ready troubleshooting in [2. Set up your machine](../ready/02-set-up-your-machine.md#troubleshooting--top-5-per-machine).
 
 ---
 

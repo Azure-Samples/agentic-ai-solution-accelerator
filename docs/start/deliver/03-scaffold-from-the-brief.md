@@ -16,6 +16,25 @@
 
     Full reference: [Chatmodes overview](../../chatmodes-index.md).
 
+??? success "What success looks like"
+    `git status` after the scaffold run shows changes spread across (typical):
+
+    ```
+    modified:   src/scenarios/sales_research/agents/supervisor/prompt.py
+    modified:   src/scenarios/sales_research/retrieval.py
+    new file:   src/tools/<your-new-tool>.py
+    modified:   accelerator.yaml
+    modified:   evals/quality/golden_cases.jsonl
+    modified:   evals/redteam/<scenario>.jsonl
+    modified:   infra/main.parameters.json
+    ```
+
+    `python scripts/accelerator-lint.py` finishes with:
+
+    ```
+    ✅ accelerator-lint: 30/30 rules passed
+    ```
+
 ---
 
 In Copilot Chat:
