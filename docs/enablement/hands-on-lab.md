@@ -270,11 +270,14 @@ Insights and trace it.
    > `traces` also collects FastAPI/uvicorn/OTel internal log rows.
 
    The `operation_Id` column lets you correlate one stream call to its
-   parent `requests` row and any nested `dependencies`. Pivot from a
-   single event:
+   parent `requests` row and any nested `dependencies`. To pivot from a
+   single event, copy any `operation_Id` value from the results above
+   (looks like `89baea0c980660a003ddfdc028...`) and paste it between the
+   quotes in the query below — keep the quotes, replace only the
+   `PASTE_OPERATION_ID_HERE` text:
 
    ```kql
-   let opId = "<paste-an-operation_Id-from-above>";
+   let opId = "PASTE_OPERATION_ID_HERE";
    union requests, dependencies, traces
    | where operation_Id == opId
    | project timestamp, itemType, name=coalesce(name, message), duration, success, customDimensions
