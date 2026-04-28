@@ -260,11 +260,23 @@ function CitationsList({ items }: { items: Record<string, unknown>[] }) {
         const url = c["url"] ? String(c["url"]) : null;
         const quote = c["quote"] ? String(c["quote"]) : null;
         const title = c["title"] ? String(c["title"]) : null;
-        const label = title || (url ? new URL(url).hostname.replace(/^www\./, "") : `Source ${i + 1}`);
+        let parsedHost: string | null = null;
+        let isHttpUrl = false;
+        if (url) {
+          try {
+            const parsed = new URL(url);
+            isHttpUrl = parsed.protocol === "http:" || parsed.protocol === "https:";
+            parsedHost = parsed.hostname.replace(/^www\./, "");
+          } catch {
+            // Citation `url` is not an absolute URL (e.g., a document name or
+            // relative path). Fall through and render it as plain text.
+          }
+        }
+        const label = title || parsedHost || (url ?? `Source ${i + 1}`);
         return (
           <li key={i} className="citation-item">
             <span className="citation-num">{i + 1}</span>
-            {url ? (
+            {isHttpUrl && url ? (
               <a href={url} target="_blank" rel="noopener noreferrer" className="citation-link">{label}</a>
             ) : (
               <span className="citation-label">{label}</span>
