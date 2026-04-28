@@ -41,6 +41,13 @@
       "name": "time-range-parameter"
     },
     {
+      "type": 1,
+      "content": {
+        "json": "### Responses by outcome\n\nOne bar per day. Each end-to-end frontend request emits exactly one `response.returned` event when the orchestrator finishes. **Green = success, red = failure.** If you see failures here, jump straight to **Latest failures and rejected actions** at the bottom for the actual error message and the component that raised it.\n\nThis is the partner-facing health signal you want to wire into Azure Monitor alerts (see `customer-runbook.md` Section 2)."
+      },
+      "name": "responses-by-outcome-explainer"
+    },
+    {
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
@@ -54,6 +61,13 @@
         "resourceType": "microsoft.insights/components"
       },
       "name": "responses-by-outcome"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "### Workflow runs (supervisor routed)\n\nThe supervisor agent decides which specialist workers to invoke for each request. It emits one `supervisor.routed` event per request — so this panel should equal the number of requests that successfully reached the orchestrator (typically matches **success + failure** in the panel above).\n\nA gap between this and **Responses by outcome** means a request died before reaching the supervisor (auth, validation, frontend error)."
+      },
+      "name": "workflow-runs-explainer"
     },
     {
       "type": 3,
@@ -71,6 +85,13 @@
       "name": "workflow-runs"
     },
     {
+      "type": 1,
+      "content": {
+        "json": "### Workers completed by agent\n\nThe flagship scenario fans out a single request across multiple specialist workers in parallel (e.g. `account_planner`, `news_signals`, `competitive_landscape`). Each emits a `worker.completed` event when it finishes. Bars are grouped by worker name (`customDimensions.external_system`) and split into **succeeded** vs **failed**.\n\n**Reading this panel:** if a worker you expected is missing, the supervisor skipped it (intent didn't match) or an upstream dependency failed. If a bar is mostly red, the failure pattern is concentrated in one specialist — its prompt or tool config is the place to look."
+      },
+      "name": "workers-by-agent-explainer"
+    },
+    {
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
@@ -86,6 +107,13 @@
       "name": "workers-by-agent"
     },
     {
+      "type": 1,
+      "content": {
+        "json": "### P95 request latency\n\n95th-percentile end-to-end HTTP request duration, by hour. \"P95\" means 95% of requests completed faster than this value — the standard partner-facing SLA signal (less noisy than max, less hand-wavy than average).\n\nThe target lives in `accelerator.yaml -> acceptance.p95_latency_ms` (default: 90 seconds per briefing). If this line trends above target, the bottleneck is usually a slow specialist worker — cross-reference with **Workers completed by agent** to identify which one.\n\nThis panel queries the `requests` table populated by FastAPI auto-instrumentation, not the typed `traces` events."
+      },
+      "name": "p95-request-latency-explainer"
+    },
+    {
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
@@ -99,6 +127,13 @@
         "resourceType": "microsoft.insights/components"
       },
       "name": "p95-request-latency"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "### Latest failures and rejected actions\n\nThe first place to look when a smoke test misbehaves. Surfaces five categories of \"something went wrong\":\n\n- `tool.failed` — a tool the supervisor invoked threw an exception\n- `tool.hitl_misconfigured` — a side-effect tool was triggered but no HITL approver is wired (sandbox / partner-starter mode)\n- `tool.hitl_rejected` — a human approver explicitly said no\n- `response.returned ok=false` — the workflow died before producing a briefing\n- `worker.completed ok=false` / `retrieval.returned ok=false` / `tool.executed ok=false` — a specific component failed\n\nEach row shows the timestamp, event name, the component that raised it (`external_system`), and the error message. Empty = all green in the selected window."
+      },
+      "name": "latest-failures-explainer"
     },
     {
       "type": 3,
