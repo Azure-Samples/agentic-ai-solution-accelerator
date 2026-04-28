@@ -1286,7 +1286,17 @@ def shared_assets_not_scenario_specific(ctx: Ctx) -> list[Finding]:
     if not infra_root.exists():
         return []
 
-    allowlist_rel = {"infra/main.parameters.json", "infra/main.parameters.alz.json"}
+    allowlist_rel = {
+        "infra/main.parameters.json",
+        "infra/main.parameters.alz.json",
+        # main.json is the compiled ARM artifact of main.bicep + the
+        # accelerator.yaml manifest (loaded via loadYamlContent at build
+        # time). The scenario id necessarily appears as both the param
+        # default value AND inside the embedded manifest variable —
+        # neither is partner-editable infra. Police main.bicep instead;
+        # main.json is regenerated on every `az bicep build`.
+        "infra/main.json",
+    }
 
     out: list[Finding] = []
     for p, text in ctx.iter():
@@ -2162,7 +2172,17 @@ _MKDOCS_EXCLUDED_FROM_NAV: set[str] = {
     "docs/partner-workflow.md",
     "docs/discovery/prd-conversion-prompt.md",
     "docs/discovery/solution-brief.md",
+    "docs/discovery/use-case-canvas.md",
     "docs/adr/ADR-template.md",
+    # Per-agent system instruction specs — deep-linked from
+    # docs/agent-specs/README.md (which IS in nav). The individual specs
+    # are reference content, not walkthrough steps, so they don't need
+    # their own side-nav entries.
+    "docs/agent-specs/accel-account-planner.md",
+    "docs/agent-specs/accel-competitive-context.md",
+    "docs/agent-specs/accel-icp-fit-analyst.md",
+    "docs/agent-specs/accel-outreach-personalizer.md",
+    "docs/agent-specs/accel-sales-research-supervisor.md",
     # Internal coding-agent instructions (Microsoft Agent Framework +
     # Claude) — staged into the site for deep-link access but not
     # surfaced in partner nav.
@@ -2192,7 +2212,12 @@ def mkdocs_nav_integrity(ctx: Ctx) -> list[Finding]:
     nav_match = re.search(r"(?ms)^nav:\s*\n(.+?)(?=^\S|\Z)", text)
     nav_files: set[str] = set()
     if nav_match:
+        # Match both shapes mkdocs accepts:
+        #   - Title: path/to/page.md      ('key: value' entry)
+        #   - path/to/page.md             (bare list-item — title inferred from H1)
         for m in re.finditer(r":\s*([^\s#][^\s#]*\.md)\s*$", nav_match.group(1), re.M):
+            nav_files.add(m.group(1).strip())
+        for m in re.finditer(r"^\s*-\s+([^\s#:][^\s#:]*\.md)\s*$", nav_match.group(1), re.M):
             nav_files.add(m.group(1).strip())
 
     # These paths are relative to docs_dir (docs-build/). Map back to
