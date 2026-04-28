@@ -271,18 +271,24 @@ Insights and trace it.
 
    The `operation_Id` column lets you correlate one stream call to its
    parent `requests` row and any nested `dependencies`. To pivot from a
-   single event, copy any `operation_Id` value from the results above
-   (looks like `89baea0c980660a003ddfdc028...`) and paste it between the
-   quotes in the query below — keep the quotes, replace only the
-   `PASTE_OPERATION_ID_HERE` text:
+   single event, copy the **first 8 characters** of any `operation_Id`
+   from the results above (e.g. `89baea0c`) and paste them between the
+   quotes in the query below — replace only the `OPID_PREFIX_HERE` text:
 
    ```kql
-   let opId = "PASTE_OPERATION_ID_HERE";
+   let opPrefix = "OPID_PREFIX_HERE";
    union requests, dependencies, traces
-   | where operation_Id == opId
+   | where timestamp > ago(2h)
+   | where operation_Id startswith opPrefix
    | project timestamp, itemType, name=coalesce(name, message), duration, success, customDimensions
    | order by timestamp asc
    ```
+
+   > **Why a prefix and not the full ID?** The Logs UI display-truncates
+   > `operation_Id` with a trailing `…`, and that truncated string does
+   > not equal-match the real 32-char value. A prefix avoids the trap;
+   > 8 hex chars (≈ 4 billion combinations) is plenty unique within any
+   > realistic time window.
 
    If you want to drive synthetic traffic without the UI, here's the
    curl form:
