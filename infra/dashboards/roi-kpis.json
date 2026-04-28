@@ -4,7 +4,7 @@
     {
       "type": 1,
       "content": {
-        "json": "## Agentic AI Accelerator — ROI KPIs\n\nPaste-ready Azure Monitor Workbook for the accelerator's baseline KPI events.\n\n**How to use:** in your Application Insights resource, open **Workbooks → New → Advanced Editor** (the `</>` icon), replace the default JSON with this file's contents, then click **Apply**. Save with a descriptive name per engagement.\n\n**Where the data comes from:** every panel queries the `traces` table for events emitted by `src/accelerator_baseline/telemetry.py::emit_event`. The `isnotempty(customDimensions.event_name)` filter scopes results to accelerator events specifically (and not generic FastAPI/uvicorn/OTel rows that also land in `traces`). Use the **Time Range** picker below to widen or narrow the window across all panels at once.\n\n**To add a KPI:** append a new `KqlItem/1.0` entry under `items[]` below — same shape as the existing query items. Set `timeContextFromParameter` to `TimeRange` so the new panel honors the global picker. Keep the `resourceType` as `microsoft.insights/components` so the panel binds to whichever Application Insights instance the workbook is opened against."
+        "json": "## Agentic AI Accelerator — Live telemetry\n\nPaste-ready Azure Monitor Workbook for the accelerator's flagship scenario. Every panel is backed by an event that fires on a normal end-to-end request, so a single smoke test through the frontend should populate them.\n\n**How to use:** in your Application Insights resource, open **Workbooks → New → Advanced Editor** (the `</>` icon), replace the default JSON with this file's contents, then click **Apply**. Save with a descriptive name per engagement.\n\n**Where the data comes from:** every panel queries the `traces` table (or `requests` for latency) for events emitted by `src/accelerator_baseline/telemetry.py::emit_event`. The `isnotempty(customDimensions.event_name)` filter scopes results to accelerator events specifically (and not generic FastAPI/uvicorn/OTel rows that also land in `traces`). Use the **Time Range** picker below to widen or narrow the window across all panels at once.\n\n**Cost-per-call and groundedness aren't shipped here** because they aren't emitted by live frontend traffic — cost requires partner-wired `record_call_cost(...)` calls and groundedness comes from `evals/quality/` runs. Acceptance gates for both still live in `accelerator.yaml -> acceptance`. Wire those panels in when the underlying events fire.\n\n**To add a KPI:** append a new `KqlItem/1.0` entry under `items[]` below — same shape as the existing query items. Set `timeContextFromParameter` to `TimeRange` so the new panel honors the global picker. Keep the `resourceType` as `microsoft.insights/components` so the panel binds to whichever Application Insights instance the workbook is opened against."
       },
       "name": "title-and-context"
     },
@@ -44,35 +44,56 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "traces\n| where message == 'response.returned'\n| where isnotempty(customDimensions.event_name)\n| where tobool(customDimensions.ok) == true\n| summarize count() by bin(timestamp, 1d)\n| render timechart",
+        "query": "traces\n| where message == 'response.returned'\n| where isnotempty(customDimensions.event_name)\n| extend ok = tobool(customDimensions.ok)\n| summarize success = countif(ok == true), failure = countif(ok == false) by bin(timestamp, 1d)\n| render columnchart",
         "size": 0,
-        "title": "Successful responses per day",
+        "title": "Responses by outcome",
+        "noDataMessage": "No response.returned events in the selected window. Run the flagship scenario once through the frontend.",
+        "noDataMessageStyle": 3,
         "timeContextFromParameter": "TimeRange",
         "queryType": 0,
         "resourceType": "microsoft.insights/components"
       },
-      "name": "successful-responses"
+      "name": "responses-by-outcome"
     },
     {
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "traces\n| where message in ('tool.hitl_approved','tool.hitl_rejected')\n| where isnotempty(customDimensions.event_name)\n| summarize approvals = countif(message == 'tool.hitl_approved'),\n            rejections = countif(message == 'tool.hitl_rejected')\n   by bin(timestamp, 1d)\n| render columnchart",
+        "query": "traces\n| where message == 'supervisor.routed'\n| where isnotempty(customDimensions.event_name)\n| summarize workflow_runs = count() by bin(timestamp, 1d)\n| render timechart",
         "size": 0,
-        "title": "HITL approval rate",
+        "title": "Workflow runs (supervisor routed)",
+        "noDataMessage": "No supervisor.routed events. Each end-to-end request emits exactly one — populates after a smoke test.",
+        "noDataMessageStyle": 3,
         "timeContextFromParameter": "TimeRange",
         "queryType": 0,
         "resourceType": "microsoft.insights/components"
       },
-      "name": "hitl-approval-rate"
+      "name": "workflow-runs"
     },
     {
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "requests\n| where cloud_RoleName endswith 'api'\n| summarize percentile(duration / 1000, 95) by bin(timestamp, 1h)\n| render timechart",
+        "query": "traces\n| where message == 'worker.completed'\n| where isnotempty(customDimensions.event_name)\n| extend agent = tostring(customDimensions.external_system), ok = tobool(customDimensions.ok)\n| summarize succeeded = countif(ok == true), failed = countif(ok == false) by bin(timestamp, 1d), agent\n| render columnchart",
+        "size": 0,
+        "title": "Workers completed by agent",
+        "noDataMessage": "No worker.completed events. Populates per worker (account_planner, news_signals, ...) after a smoke test.",
+        "noDataMessageStyle": 3,
+        "timeContextFromParameter": "TimeRange",
+        "queryType": 0,
+        "resourceType": "microsoft.insights/components"
+      },
+      "name": "workers-by-agent"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "requests\n| summarize p95_latency_s = percentile(duration / 1000, 95) by bin(timestamp, 1h)\n| render timechart",
         "size": 0,
         "title": "P95 request latency (s)",
+        "noDataMessage": "No request rows found. Depends on FastAPI / Azure Monitor request auto-instrumentation; check the `requests` table directly.",
+        "noDataMessageStyle": 3,
         "timeContextFromParameter": "TimeRange",
         "queryType": 0,
         "resourceType": "microsoft.insights/components"
@@ -83,27 +104,16 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "traces\n| where message == 'cost.call'\n| where isnotempty(customDimensions.event_name)\n| extend cost = todouble(customDimensions.value)\n| summarize avg(cost) by bin(timestamp, 1d)\n| render timechart",
+        "query": "traces\n| where isnotempty(customDimensions.event_name)\n| extend ok_str = tostring(customDimensions.ok)\n| extend ok = iff(isempty(ok_str), dynamic(null), tobool(ok_str))\n| where message in ('tool.failed', 'tool.hitl_misconfigured', 'tool.hitl_rejected')\n    or (message in ('response.returned', 'worker.completed', 'retrieval.returned', 'tool.executed') and ok == false)\n| project timestamp, event = message, component = tostring(customDimensions.external_system), error = tostring(customDimensions.error)\n| order by timestamp desc",
         "size": 0,
-        "title": "$ per call (estimated)",
+        "title": "Latest failures and rejected actions",
+        "noDataMessage": "No failures or rejected actions in window — all green.",
+        "noDataMessageStyle": 3,
         "timeContextFromParameter": "TimeRange",
         "queryType": 0,
         "resourceType": "microsoft.insights/components"
       },
-      "name": "cost-per-call"
-    },
-    {
-      "type": 3,
-      "content": {
-        "version": "KqlItem/1.0",
-        "query": "traces\n| where message == 'eval.result'\n| where isnotempty(customDimensions.event_name)\n| where tostring(customDimensions.suite) == 'quality'\n| extend g = todouble(customDimensions.groundedness)\n| summarize avg(g) by bin(timestamp, 1d)\n| render timechart",
-        "size": 0,
-        "title": "Groundedness eval score trend",
-        "timeContextFromParameter": "TimeRange",
-        "queryType": 0,
-        "resourceType": "microsoft.insights/components"
-      },
-      "name": "groundedness-trend"
+      "name": "latest-failures"
     }
   ],
   "fallbackResourceIds": [],

@@ -191,23 +191,30 @@ in your Application Insights resource go to Workbooks → New → click the
 `</>` Advanced Editor icon → replace the default contents with this
 file's JSON → Apply → Save. Lab 3 walks through this end-to-end.
 
-It ships 5 panels. Which ones show data depends on what your partner
-wired:
+It ships 5 live-traffic panels — every one populates after a single
+end-to-end smoke test through the frontend:
 
-| Panel                               | Works out of the box? | Depends on                                  |
-|-------------------------------------|-----------------------|---------------------------------------------|
-| Successful responses per day        | Yes                   | `response.returned` (always emitted)        |
-| HITL approval rate                  | Yes when HITL is in use | `tool.hitl_approved`, `tool.hitl_rejected` |
-| P95 request latency                 | Yes                   | Container App request telemetry (`cloud_RoleName endswith 'api'`) |
-| $ per call (estimated)              | **Only if partner wired `cost.call`** | `cost.call` events                |
-| Groundedness eval score trend       | **Only if partner wired `eval.result`** | `eval.result` events          |
+| Panel                                  | Backed by                                         |
+|----------------------------------------|---------------------------------------------------|
+| Responses by outcome                   | `response.returned` (success / failure split)     |
+| Workflow runs (supervisor routed)      | `supervisor.routed` (one per request)             |
+| Workers completed by agent             | `worker.completed` grouped by `external_system`   |
+| P95 request latency                    | Container App request telemetry (`requests` table)|
+| Latest failures and rejected actions   | `tool.failed`, `tool.hitl_misconfigured`, `tool.hitl_rejected`, plus any `ok==false` row |
 
-Only the latency panel filters by `cloud_RoleName` today. The event
-panels query `traces` across the whole App Insights resource (events emitted by
-`src/accelerator_baseline/telemetry.py::emit_event` land there with
-`message == event.name` and attributes in `customDimensions`) —
-if the resource is shared with other workloads, add a
-`cloud_RoleName` filter before operationalizing.
+**Cost-per-call and groundedness aren't shipped here** because they
+aren't emitted by live frontend traffic — `cost.call` requires
+partner-wired `record_call_cost(...)` calls and `eval.result` comes
+from `evals/quality/` runs. Acceptance gates for both still live in
+`accelerator.yaml -> acceptance`. Wire those panels in when the
+underlying events fire.
+
+The event panels query `traces` across the whole App Insights resource
+(events emitted by `src/accelerator_baseline/telemetry.py::emit_event`
+land there with `message == event.name` and attributes in
+`customDimensions`). The latency panel queries `requests`. If the
+resource is shared with other workloads, add a `cloud_RoleName` filter
+before operationalizing.
 
 ### Alerts
 

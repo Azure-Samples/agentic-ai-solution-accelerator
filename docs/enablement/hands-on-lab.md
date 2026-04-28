@@ -322,18 +322,20 @@ Azure Monitor Workbook. To install it:
 6. Click **Done Editing**, then **Save** (disk icon top-left). Give it a
    name (e.g. `Accelerator ROI - <env>`) and pick a region.
 
-The "Successful responses per day" and "P95 request latency" panels
-should show data from your traffic. The "HITL approval rate" panel only
-lights up once you've exercised a HITL-gated tool (see the "HITL
-approver" section of `docs/customer-runbook.md`).
+All five panels should show data from your single smoke-test request:
+"Responses by outcome" (one success), "Workflow runs", "Workers
+completed by agent" (one bar per worker that ran), and "P95 request
+latency". "Latest failures and rejected actions" should be empty
+unless the run hit an error — that's the panel to check first when a
+smoke test misbehaves.
 
 **Check your work:**
 
-- Answer for yourself: why are the "$ per call" and "Groundedness eval
-  score trend" panels empty in the shipped flagship? (The workbook keys
-  those panels off `cost.call` and `eval.result` events; neither is
-  emitted by the shipped workflow — `cost.py::record_call_cost()` exists
-  but isn't wired into the hot path. See `docs/customer-runbook.md`
+- Answer for yourself: why doesn't the workbook ship a `$ per call`
+  or `Groundedness eval score` panel? (Both events — `cost.call` and
+  `eval.result` — exist in the codebase but aren't emitted by live
+  frontend traffic. `cost.py::record_call_cost()` is partner-wired,
+  groundedness comes from CI eval runs. See `docs/customer-runbook.md`
   "What you inherited" and Section 3 (Operational dials) for the full
   answer.)
 
