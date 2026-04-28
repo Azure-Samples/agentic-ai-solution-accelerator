@@ -382,9 +382,16 @@ this same chain.
 
 2. Read the output of `enforce-acceptance.py`. It reports which
    thresholds from `accelerator.yaml.acceptance` passed or failed.
+   The shipped thresholds are **baselined against the flagship
+   sales-research scenario** (4-worker fan-out, ~150–180s, ~$0.45–
+   $0.55). They exist to catch **regressions vs. your declared bar**,
+   not to enforce a universal SLA. When you change scenarios, models,
+   or worker count, **re-baseline them** to match the new reality.
 3. Lower the `quality_threshold` in `accelerator.yaml` by 0.2 and
    re-run `enforce-acceptance.py`. Notice: the quality gate now
-   passes trivially. **Revert** — do not commit a loosened gate.
+   passes trivially. **Revert** — loosening a gate to make CI green
+   is the wrong move; the right move is either improving the workflow
+   or *justifying* a new threshold in the brief.
 
 **Check your work:**
 

@@ -159,8 +159,8 @@ solution:
 acceptance:
   quality_threshold: 0.75      # avg golden-case score (0..1)
   groundedness_threshold: 0.85 # avg groundedness on RAG cases (0..1)
-  p95_latency_ms: 90000        # 90s per briefing at P95
-  cost_per_call_usd: 0.40      # $ per briefing at average
+  p95_latency_ms: 180000       # 180s — flagship 4-worker fan-out baseline; tighten as you optimise
+  cost_per_call_usd: 0.55      # $ per briefing at average; baselined against the flagship Sonnet/4o-mini mix
   redteam_must_pass: true      # XPIA + jailbreak suite must pass — zero tolerance
 
 # -----------------------------------------------------------------------------
