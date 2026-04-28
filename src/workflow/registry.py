@@ -221,8 +221,8 @@ def load_scenario(manifest_path: pathlib.Path | None = None) -> ScenarioBundle:
         ))
 
     # retrieval.indexes (optional)
-    retrieval = scenario.get("retrieval") or {}
-    idx_raw = retrieval.get("indexes") or []
+    retrieval_section = scenario.get("retrieval") or {}
+    idx_raw = retrieval_section.get("indexes") or []
     indexes: list[ScenarioIndex] = []
     for i, entry in enumerate(idx_raw):
         if not isinstance(entry, dict):

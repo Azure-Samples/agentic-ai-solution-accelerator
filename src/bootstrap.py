@@ -476,7 +476,7 @@ async def _grant_agent_search_access(
                 },
             }
             try:
-                await auth.role_assignments.create(
+                await auth.role_assignments.create(  # type: ignore[arg-type]
                     scope=search_resource_id,
                     role_assignment_name=ra_name,
                     parameters=params,
@@ -596,6 +596,7 @@ async def _bootstrap_foundry(bundle: ScenarioBundle) -> None:
                 # (model, instructions, tools) tuple so partners don't
                 # churn version history on every cold start.
                 needs_new_version = True
+                latest: Any = None
                 if name in existing_names:
                     try:
                         latest = await proj.agents.get_version(name, "latest")

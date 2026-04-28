@@ -183,7 +183,7 @@ async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
     # request does not pay a cold-start penalty.
     if hasattr(_bundle.workflow, "warmup"):
         try:
-            await _bundle.workflow.warmup()
+            await _bundle.workflow.warmup()  # type: ignore[attr-defined]
         except Exception as exc:  # noqa: BLE001 — warmup is best-effort
             logger.debug("workflow.warmup skipped: %s", exc)
     yield
