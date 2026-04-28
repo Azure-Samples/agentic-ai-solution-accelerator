@@ -50,6 +50,18 @@ Two simpler shapes are also supported via `/switch-to-variant`:
 
 The full ownership boundary lives in [Delivery context → Partner playbook](../../partner-playbook.md#what-the-accelerator-gives-you-vs-what-you-still-own). Call it out explicitly in the SOW.
 
+## Who does what
+
+The walkthrough maps to **three responsibilities** — not three people. At a small partner, one person commonly wears both the Delivery Lead and Partner Engineer hats; Customer Ops is always customer-owned.
+
+| Responsibility | What they own | Walkthrough steps |
+|---|---|---|
+| 🧭 **Delivery Lead** (partner) | Customer relationship, scope, discovery, ROI, UAT sign-off, handover meeting, monthly value review | 1–3 (read), 5 *Discover*, 9 *UAT & handover* |
+| 🛠️ **Partner Engineer** (partner) | Scaffolding, infra, evals, HITL wiring, frontend, CI gates, UAT support | 1–3 (do), 4 *Clone*, 6 *Scaffold*, 7 *Provision*, 8 *Iterate*, 9 *UAT support* |
+| 🏛️ **Customer Ops** (customer) | Day-2 monitoring, killswitch, eval re-run, secret rotation, model swap, incident response | 10 *Operate (Day 2)* — owns it from handover onward |
+
+> **Small partner?** Same person does Delivery Lead + Partner Engineer steps; the labels just clarify *which hat* you're wearing for each step.
+
 ## One-time vs. per-customer
 
 | Step | When |
