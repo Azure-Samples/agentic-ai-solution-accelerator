@@ -323,14 +323,20 @@ Azure Monitor Workbook. To install it:
    name (e.g. `Accelerator ROI - <env>`) and pick a region.
 
 All five panels should show data from your single smoke-test request:
-"Responses by outcome" (one success), "Workflow runs", "Workers
-completed by agent" (one bar per worker that ran), and "P95 request
-latency". "Latest failures and rejected actions" should be empty
-unless the run hit an error — that's the panel to check first when a
-smoke test misbehaves.
+"Responses by outcome" (one green bar — success), "Workflow runs"
+(one routing decision), "Workers completed by agent" (one bar per
+specialist that ran, e.g. `account_planner`, `news_signals`), and
+"P95 end-to-end latency" (the orchestration time in seconds — read
+the explainer above the chart for why this differs from the FastAPI
+``requests`` table). "Latest failures and rejected actions" should be
+empty unless the run hit an error — that's the panel to check first
+when a smoke test misbehaves.
 
 **Check your work:**
 
+- Open each panel and read the markdown explainer that sits directly
+  above the chart. Each one tells you what event populates it and how
+  to interpret a red bar / unexpected gap.
 - Answer for yourself: why doesn't the workbook ship a `$ per call`
   or `Groundedness eval score` panel? (Both events — `cost.call` and
   `eval.result` — exist in the codebase but aren't emitted by live
@@ -338,6 +344,11 @@ smoke test misbehaves.
   groundedness comes from CI eval runs. See `docs/customer-runbook.md`
   "What you inherited" and Section 3 (Operational dials) for the full
   answer.)
+- Force a failure (e.g. send a malformed payload via the curl in
+  Step 2, or temporarily revoke the Foundry role assignment and
+  retry) and confirm a red bar shows up in **Responses by outcome**
+  and a row appears in **Latest failures and rejected actions** with
+  the error message.
 
 ---
 
