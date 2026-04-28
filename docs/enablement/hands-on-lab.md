@@ -373,6 +373,13 @@ this same chain.
    python scripts/enforce-acceptance.py
    ```
 
+   !!! note "First call may pause for ~30–60s"
+       Each runner first polls `GET <api-url>/healthz` for up to 120s
+       to wake a scale-to-zero Container Apps deployment. Without this,
+       the very first eval case would hit cold-start and fail with
+       `transport error`. You'll see `warming up endpoint via .../healthz...`
+       on stderr; once the app responds, cases start streaming.
+
 2. Read the output of `enforce-acceptance.py`. It reports which
    thresholds from `accelerator.yaml.acceptance` passed or failed.
 3. Lower the `quality_threshold` in `accelerator.yaml` by 0.2 and

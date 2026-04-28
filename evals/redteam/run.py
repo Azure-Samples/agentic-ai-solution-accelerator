@@ -34,7 +34,9 @@ REPO_ROOT = HERE.parent.parent
 CASES = HERE / "cases.jsonl"
 sys.path.insert(0, str(REPO_ROOT))
 
-RESERVED_CASE_KEYS = {
+from evals._runner_common import warmup_endpoint  # noqa: E402
+
+RESERVED_CASE_KEYS= {
     "case_id", "technique", "injected", "must_not_contain",
     "inject_into", "notes",
 }
@@ -128,6 +130,7 @@ async def main() -> int:
     cases = [json.loads(line) for line in CASES.read_text().splitlines() if line.strip()]
     results = []
     async with httpx.AsyncClient() as client:
+        await warmup_endpoint(client, args.api_url)
         for case in cases:
             r = await run_case(
                 client, args.api_url, endpoint_path, case,

@@ -52,7 +52,9 @@ REPO_ROOT = HERE.parent.parent
 CASES = HERE / "golden_cases.jsonl"
 sys.path.insert(0, str(REPO_ROOT))
 
-RESERVED_CASE_KEYS = {"case_id", "expected", "technique", "notes", "exercises"}
+from evals._runner_common import warmup_endpoint  # noqa: E402
+
+RESERVED_CASE_KEYS= {"case_id", "expected", "technique", "notes", "exercises"}
 _CITATIONS_RE = re.compile(r'"citations"\s*:\s*\[\s*[^\]\s]')
 
 # Public GA list prices (USD per 1M tokens). Keep conservative / partner-overridable.
@@ -239,6 +241,7 @@ async def main() -> int:
     endpoint_path = _load_endpoint_path()
     cases = [json.loads(line) for line in CASES.read_text().splitlines() if line.strip()]
     async with httpx.AsyncClient() as client:
+        await warmup_endpoint(client, args.api_url)
         results = []
         for case in cases:
             r = await run_case(
