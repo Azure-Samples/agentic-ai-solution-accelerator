@@ -7,6 +7,21 @@ edit_uri: edit/main/docs/
 docs_dir: docs-build
 site_dir: site
 
+# Validation -- promote link/anchor drift to warnings so `mkdocs build --strict`
+# catches them in CI. Default mkdocs only validates nav files; anchors are info-only
+# unless we explicitly raise them. This is what lets prepare-pages + strict together
+# enforce that a partner's edits to docs/ don't silently break Pages anchors.
+validation:
+  nav:
+    omitted_files: info
+    not_found: warn
+    absolute_links: warn
+  links:
+    not_found: warn
+    absolute_links: warn
+    unrecognized_links: warn
+    anchors: warn
+
 theme:
   name: material
   features:
