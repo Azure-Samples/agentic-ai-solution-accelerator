@@ -11,6 +11,11 @@
 
     **✅ Done when** — `/scaffold-from-brief` has run; the diff is reviewed and committed; `python scripts/accelerator-lint.py` passes.
 
+!!! tip "Chatmodes used here"
+    [`/scaffold-from-brief`](../../chatmodes/scaffold-from-brief.chatmode.md)
+
+    Full reference: [Chatmodes overview](../../chatmodes-index.md).
+
 ---
 
 In Copilot Chat:

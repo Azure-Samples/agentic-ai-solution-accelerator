@@ -11,6 +11,11 @@
 
     **✅ Done when** — Resource group exists in customer tenant; `/healthz` returns 200; Foundry agents are reachable; App Insights is wired; HITL approver endpoint is configured for the environment.
 
+!!! tip "Chatmodes used here"
+    [`/configure-landing-zone`](../../chatmodes/configure-landing-zone.chatmode.md) · [`/deploy-to-env`](../../chatmodes/deploy-to-env.chatmode.md)
+
+    Full reference: [Chatmodes overview](../../chatmodes-index.md).
+
 ---
 
 This step is two preflight chatmodes plus one `azd up`. The chatmodes do the GitHub plumbing (manifest entry, GitHub Environment, OIDC federated credential) so CI can deploy without a service-principal secret.

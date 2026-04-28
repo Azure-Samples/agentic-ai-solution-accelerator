@@ -1,0 +1,48 @@
+# Chatmodes — quick reference
+
+Chatmodes are slash commands you run inside **GitHub Copilot Chat** in VS Code, against the cloned customer repo. Each one is a structured prompt that drives Copilot through a specific delivery task — discover, scaffold, configure infra, add a tool, etc. They keep you on the supported path and prevent accidental architecture drift.
+
+!!! info "How to invoke"
+    1. Open the customer repo in VS Code.
+    2. Open the Copilot Chat sidebar (`Ctrl+Alt+I` or the 💬 icon).
+    3. Type `/` — the picker shows every chatmode shipped in `.github/chatmodes/`.
+    4. Pick one and follow the prompts.
+
+The full prompt for each chatmode is published in the navigation under [Reference → Chatmodes](#when-to-run-which--by-walkthrough-step) — open one if you want to see exactly what Copilot will be told.
+
+---
+
+## When to run which — by walkthrough step
+
+| Walkthrough step | Chatmode | What it does | Inputs you provide | What it writes |
+|---|---|---|---|---|
+| [5. Discover with the customer](start/deliver/02-discover-with-the-customer.md) | [`/ingest-prd`](chatmodes/ingest-prd.chatmode.md) *(optional)* | Pre-drafts the brief from a customer PRD / BRD / spec | Path to PRD (`.md` / `.txt` / `.docx` / `.pdf`) | Draft `docs/discovery/solution-brief.md` with `STATUS: AI-extracted draft` banner + per-section evidence comments |
+| [5. Discover](start/deliver/02-discover-with-the-customer.md) | [`/discover-scenario`](chatmodes/discover-scenario.chatmode.md) | Runs the structured discovery interview; fills `solution-brief.md` and `accelerator.yaml` | Live workshop answers, notes, or PRD-draft TBDs | `docs/discovery/solution-brief.md` (canonical), `accelerator.yaml` (`solution.*`, `acceptance.*`, `kpis[]`) |
+| [6. Scaffold from the brief](start/deliver/03-scaffold-from-the-brief.md) | [`/scaffold-from-brief`](chatmodes/scaffold-from-brief.chatmode.md) | Materialises the brief into code, infra, evals, telemetry | Filled `solution-brief.md` (zero TBDs) | New `src/scenarios/<id>/` package, `accelerator.yaml` `scenario:` block, eval golden cases, redteam cases |
+| [7. Provision the customer's Azure](start/deliver/04-provision-the-customers-azure.md) | [`/configure-landing-zone`](chatmodes/configure-landing-zone.chatmode.md) | Picks the landing-zone tier and aligns `infra/` accordingly | Customer environment shape (pilot / mid-market / regulated) | `accelerator.yaml -> landing_zone.mode`; `infra/` shape selection |
+| [7. Provision](start/deliver/04-provision-the-customers-azure.md) | [`/deploy-to-env`](chatmodes/deploy-to-env.chatmode.md) | Registers a new Azure environment, wires OIDC, dispatches first deploy | Env name (`dev` / `uat` / `prod`), customer Entra app reg, target subscription | `deploy/environments.yaml` entry, GitHub Environment, OIDC federated credential |
+| [8. Iterate & evaluate](start/deliver/05-iterate-and-evaluate.md) | [`/add-tool`](chatmodes/add-tool.chatmode.md) | Scaffolds a side-effect tool with HITL + redteam baked in | Tool name, external system, side-effect category | `src/tools/<tool>.py`, unit test, redteam case, registration on the right worker |
+| [8. Iterate](start/deliver/05-iterate-and-evaluate.md) | [`/add-worker-agent`](chatmodes/add-worker-agent.chatmode.md) | Runs `scripts/scaffold-agent.py` and the manual follow-ups | Agent id, scenario id, one-sentence capability | New `src/scenarios/<scenario>/agents/<agent_name>/` (3-layer module), `WORKERS` registry entry, Foundry agent spec stub |
+| [8. Iterate](start/deliver/05-iterate-and-evaluate.md) | [`/explain-change`](chatmodes/explain-change.chatmode.md) | Preflight: maps your current diff to lint rules, evals, deploy steps that will fire | (Reads current git diff) | Read-only readout — does not modify files |
+| [8. Iterate](start/deliver/05-iterate-and-evaluate.md) | [`/switch-to-variant`](chatmodes/switch-to-variant.chatmode.md) | Walks through re-authoring the scenario as `single-agent` or `chat-with-actioning` | Target variant + scenario id | New `src/scenarios/<id>/` package shaped for the variant; manual follow-ups for prompts/tests |
+| Any (engagement-wide) | [`/delivery-guide`](chatmodes/delivery-guide.chatmode.md) | End-to-end engagement co-pilot — answers "what's next?" across the whole motion | Free-form question | No file writes; conversational guidance |
+
+---
+
+## When you can skip a chatmode
+
+| Situation | Why you can skip |
+|---|---|
+| Customer handed you a clean PRD already | Skip `/ingest-prd` — you can pre-fill the brief by hand if the doc is short |
+| Returning engineer, no scenario change | Skip `/scaffold-from-brief` — the existing scaffold is fine if `accelerator.yaml` matches the brief |
+| Pilot in your own dev sub | Skip `/configure-landing-zone` — Tier 1 (`standalone`) is the default and works for a sandbox |
+| Tool is read-only (a retriever) | Skip `/add-tool` — add a module under `src/retrieval/` instead; HITL is for side-effects |
+| Adding a single agent in the existing scenario | Skip the chatmode and run `python scripts/scaffold-agent.py` directly — same code path |
+
+---
+
+## Where the prompts live
+
+Every chatmode is a Markdown file under [`.github/chatmodes/`](https://github.com/Azure-Samples/agentic-ai-solution-accelerator/tree/main/.github/chatmodes) in the repo. The header `description:` field is what Copilot Chat shows in the picker; the body is the prompt Copilot follows. You can read or fork them — they're plain Markdown, version-controlled, and reviewable.
+
+If you want to add a custom chatmode for your partner practice, follow the existing files as templates and PR it back; the accelerator team welcomes new patterns.

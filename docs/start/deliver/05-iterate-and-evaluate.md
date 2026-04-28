@@ -11,6 +11,11 @@
 
     **✅ Done when** — Quality evals ≥ acceptance thresholds in `accelerator.yaml`; redteam green; lint green; KPI events emitting in App Insights against real traffic.
 
+!!! tip "Chatmodes used here"
+    [`/add-tool`](../../chatmodes/add-tool.chatmode.md) · [`/add-worker-agent`](../../chatmodes/add-worker-agent.chatmode.md) · [`/explain-change`](../../chatmodes/explain-change.chatmode.md) · [`/switch-to-variant`](../../chatmodes/switch-to-variant.chatmode.md)
+
+    Full reference: [Chatmodes overview](../../chatmodes-index.md).
+
 ---
 
 ## Establish the acceptance baseline first

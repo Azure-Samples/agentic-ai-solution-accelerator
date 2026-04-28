@@ -11,6 +11,11 @@
 
     **✅ Done when** — `docs/discovery/solution-brief.md` has zero `TBD`; success criteria are numeric (baseline → target with %); 3–6 KPI events named; solution shape chosen; 3–5 RAI risks listed; `accelerator.yaml` updated by the chatmode.
 
+!!! tip "Chatmodes used here"
+    [`/ingest-prd`](../../chatmodes/ingest-prd.chatmode.md) *(optional, if customer provided a PRD)* · [`/discover-scenario`](../../chatmodes/discover-scenario.chatmode.md)
+
+    Full reference: [Chatmodes overview](../../chatmodes-index.md).
+
 ---
 
 The brief is the **single source of truth** for the engagement. Every downstream artifact — prompts, tools, retrieval schema, HITL gates, eval thresholds, dashboards — derives from it. A weak brief makes every later step harder.

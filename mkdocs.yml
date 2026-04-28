@@ -118,6 +118,7 @@ nav:
           - Customer service actioning: references/customer-service-actioning/README.md
           - RFP response: references/rfp-response/README.md
       - Chatmodes:
+          - Overview: chatmodes-index.md
           - Delivery guide: chatmodes/delivery-guide.chatmode.md
           - Discover scenario: chatmodes/discover-scenario.chatmode.md
           - Ingest PRD: chatmodes/ingest-prd.chatmode.md
