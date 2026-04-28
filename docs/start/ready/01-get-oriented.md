@@ -65,16 +65,6 @@ The full ownership boundary lives in [Delivery context → Partner playbook](../
 | 9. UAT & handover | Per engagement |
 | 10. Operate (Day 2) | Per engagement (ongoing) |
 
-## When pages disagree, this is the precedence
-
-This is the canonical precedence rule for the whole site — other pages link here rather than restate it.
-
-1. **Chatmodes** in `.github/chatmodes/` win on the executable surface they drive — they are the runtime contract.
-2. **[2. Set up your machine](02-set-up-your-machine.md)** wins on setup mechanics — prereqs, secrets, `azd` invocation, troubleshooting.
-3. **[Partner playbook](../../partner-playbook.md)** (under Reference → Delivery context) wins on partner-motion intent — *why* the seven delivery steps are shaped this way.
-4. The **delivery walkthrough** (steps 4–10) is the executable summary of the playbook; if it disagrees with the playbook on motion or with *Set up your machine* on mechanics, those win.
-5. The engagement-specific **handover packet** supersedes the generic [Operate (Day 2)](../deliver/07-operate-day-2.md) page once the customer has one.
-
 ---
 
 **Continue →** [2. Set up your machine](02-set-up-your-machine.md)
