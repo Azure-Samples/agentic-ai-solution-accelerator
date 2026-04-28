@@ -1,9 +1,10 @@
 # Partner workflow — visual navigation map
 
+> **Looking for the step-by-step?** Use the [partner walkthrough](start/index.md). This page is a one-glance map of the same motion — useful for orientation, not for execution.
+
 > **How to use this page:** scan once to orient yourself across the seven
-> stages and three responsibilities. Then open the README lane for your
-> role and follow it top-to-bottom. Come back here only if you lose the
-> thread.
+> stages and three responsibilities. Then open the [walkthrough](start/index.md)
+> and follow it top-to-bottom. Come back here only if you lose the thread.
 
 > **This page is a navigation map.** Stage *details* (how to run discovery,
 > how to scaffold, what "good" looks like) live in the linked docs and win

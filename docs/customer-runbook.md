@@ -1,5 +1,7 @@
 # Customer runbook — day-2 operations
 
+> **Walkthrough version:** [*Deliver to a customer → 7. Operate (Day 2)*](start/deliver/07-operate-day-2.md) is the partner-facing summary that points back to this runbook. This page is the canonical day-2 reference handed to the customer's ops team.
+
 This runbook is for the **customer's ops team** after the partner has
 deployed the accelerator into the customer's Azure and handed off. It
 covers the operations the customer owns: monitoring, killswitch, evals

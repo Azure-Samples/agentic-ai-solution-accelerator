@@ -1,5 +1,7 @@
 # Hands-on lab — first deployment walkthrough
 
+> **Walkthrough version:** [*Get ready → 3. Rehearse in a sandbox*](../start/ready/03-rehearse-in-a-sandbox.md) frames this lab as the third step of the partner onboarding flow. This page is the full lab content with check-your-work gates.
+
 **Sandbox rehearsal** for a **partner engineer** new to the agentic AI
 solution accelerator. Recommended **before your first customer-facing engagement**; not required per customer (returning engineers skip straight to `QUICKSTART.md`). After finishing, you'll be comfortable enough
 with the template to run a real customer engagement against it.

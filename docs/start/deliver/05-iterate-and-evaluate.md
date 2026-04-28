@@ -86,7 +86,7 @@ npm run dev
 
 The starter is a minimal React + Vite + TypeScript SSE consumer — reference material, not a finished product. The customer's real UX is the partner's value-add. Before customer-facing UI ships, also wire end-user auth (Easy Auth / App Gateway / Front Door), state persistence (Cosmos / Postgres / Redis) and the HITL approval surface (Logic Apps / Teams / ServiceNow that `HITL_APPROVER_ENDPOINT` resolves to). The full ownership boundary lives in [Reference → Delivery context → Partner playbook](../../partner-playbook.md#what-the-accelerator-gives-you-vs-what-you-still-own).
 
-→ [Reference → Frontend starter](../../patterns/sales-research-frontend/README.md)
+→ [Reference → Frontend starter](../../../patterns/sales-research-frontend/README.md)
 
 ## Need a different shape?
 

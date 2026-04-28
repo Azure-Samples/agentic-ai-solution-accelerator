@@ -1,6 +1,8 @@
 # Setup & prereqs
 
-**One-time** workstation + subscription readiness. Run this once per partner machine and once per Azure subscription you'll deploy into; you do not re-read this every customer engagement. This is the authoritative reference for **setup, prereqs, secrets, and troubleshooting** — see the [precedence rules](index.md#precedence-when-docs-conflict) for how it relates to the other partner-facing docs.
+> **Walkthrough version:** [*Get ready → 2. Set up your machine*](../start/ready/02-set-up-your-machine.md) covers the same setup with the linear-flow framing. This page remains the **authoritative deep reference** for prereqs, secrets, and troubleshooting — bookmark it.
+
+**One-time** workstation + subscription readiness.Run this once per partner machine and once per Azure subscription you'll deploy into; you do not re-read this every customer engagement. This is the authoritative reference for **setup, prereqs, secrets, and troubleshooting** — see the [precedence rules](index.md#precedence-when-docs-conflict) for how it relates to the other partner-facing docs.
 
 ## Where you'll work
 

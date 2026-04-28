@@ -1,5 +1,7 @@
 # Getting started — orientation
 
+> **Looking for the recommended path?** Start at the partner walkthrough — [*Get ready → 1. Get oriented*](../start/ready/01-get-oriented.md). It's the linear flow most partners follow. This page is kept as a reference index for the older role-based layout.
+
 > **Before you start.** A 2-minute frame for what this accelerator is, what you'll ship, and which of the three Getting started docs to open next.
 
 ## What this accelerator is

@@ -1,5 +1,7 @@
 # Discovery artifacts — how they fit together
 
+> **Following the partner walkthrough?** This page is the deep dive for *Deliver to a customer → 2. Discover with the customer*. If you haven't started there, [open the walkthrough](../start/deliver/02-discover-with-the-customer.md) — it ties this content to the rest of the engagement flow.
+
 Five artifacts ship under `docs/discovery/` for the pre-sales through
 kickoff arc of a partner engagement. Each serves one job. Use them in
 this order; skipping steps is how engagements end up with a brief that
@@ -165,8 +167,11 @@ What `/ingest-prd` does **not** do:
 ## Next step
 
 You now have a discovery brief (and, if you ran the ROI calculator, a
-quantified hypothesis). **Continue to** [Quickstart Step 3 — Scaffold the
-solution from the brief](../../QUICKSTART.md#step-3--scaffold-the-solution-from-the-brief)
-to scaffold the agents your brief defined. The brief is the input to
-`/scaffold-from-brief`; everything downstream (lint, evals, dashboards)
-keys off its fields.
+quantified hypothesis). **Continue to** [*3. Scaffold from the brief*](../start/deliver/03-scaffold-from-the-brief.md)
+in the partner walkthrough to turn the brief into code, infra, evals,
+and telemetry. The brief is the input to `/scaffold-from-brief`;
+everything downstream (lint, evals, dashboards) keys off its fields.
+
+> Assumes you've already cloned the customer repo (walkthrough step
+> *Deliver → 1. Clone for the customer*). If you haven't, do that first
+> — `/scaffold-from-brief` runs against the cloned repo.

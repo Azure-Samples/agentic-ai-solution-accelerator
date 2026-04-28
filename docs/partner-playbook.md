@@ -5,7 +5,7 @@ is written for a **Microsoft partner delivery lead** running an engagement from
 SOW to production handover using this accelerator. It explains **why** the
 motion is shaped this way and **what "done" looks like** at each stage.
 
-> See [Orientation → Precedence rules](getting-started/index.md#precedence-when-docs-conflict) for how this playbook relates to Quickstart, Setup, and the chatmodes.
+> **Looking for the step-by-step?** Use the [partner walkthrough](start/index.md) — *Get ready* (one-time) + *Deliver to a customer* (per engagement). This playbook is the reasoning behind the motion; the walkthrough is the action list.
 
 ---
 

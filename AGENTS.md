@@ -81,7 +81,7 @@ Add a new agent by running `python scripts/scaffold-agent.py <agent_id> --scenar
 - **Starting a new customer engagement** → `/discover-scenario` then `/scaffold-from-brief`.
 
 ## References
-- Onboarding: `docs/getting-started/setup-and-prereqs.md`
+- Onboarding: `docs/start/index.md` (partner walkthrough) and `docs/getting-started/setup-and-prereqs.md` (deep reference)
 - Discovery guide: `docs/discovery/SOLUTION-BRIEF-GUIDE.md`
 - `docs/agent-specs/README.md` — per-agent system instructions and bootstrap mechanics
 - Patterns: `docs/patterns/{architecture,rai,waf-alignment}/README.md`

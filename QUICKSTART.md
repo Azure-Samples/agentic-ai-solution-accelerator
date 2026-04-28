@@ -1,8 +1,8 @@
 # QUICKSTART — Deploy an Agentic AI Solution in ~15 minutes
 
-> Partner's path from "new customer meeting" to "working agent in customer Azure," in **eight steps**. This is the **per-customer deployment** path — the executable summary of the [Partner playbook](docs/partner-playbook.md).
+> **Recommended path:** Use the [partner walkthrough](docs/start/index.md) — *Get ready* (one-time) + *Deliver to a customer* (seven steps per engagement). This file is the printable cheat-sheet version of the per-customer steps; keep it open as a reference during an engagement.
 
-> **Prerequisites:** First time on this accelerator? Do [Setup & prereqs](docs/getting-started/setup-and-prereqs.md) (one-time) and [`docs/enablement/hands-on-lab.md`](docs/enablement/hands-on-lab.md) (sandbox rehearsal) **before** Step 1. See [Orientation](docs/getting-started/index.md) if you're not sure which path applies.
+> **First time on this accelerator?** Do *Get ready* in the walkthrough first — [1. Get oriented](docs/start/ready/01-get-oriented.md) → [2. Set up your machine](docs/start/ready/02-set-up-your-machine.md) → [3. Rehearse in a sandbox](docs/start/ready/03-rehearse-in-a-sandbox.md) — **before** Step 1 below.
 
 > **Before Step 5:** You'll authenticate against the customer's Azure tenant (`az login --tenant <customer-tenant-id>` + `azd up`). Confirm you have the rights to create resources there and the customer has approved the expected `azd up` cost.
 
