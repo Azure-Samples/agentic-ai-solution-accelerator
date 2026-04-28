@@ -15,8 +15,8 @@ Use this when the brief or a follow-on requirement introduces a capability no cu
 - The new worker has a clear, one-sentence capability. If you can't write that sentence, push back to clarify — don't scaffold fuzziness.
 
 ## Inputs to gather
-1. **Agent id** (snake_case, e.g. `pricing_calculator`, `risk_scoring`)
-2. **Scenario id** (kebab-case — matches `accelerator.yaml.scenario.id`, e.g. `sales-research`)
+1. **Agent id** (lowercase_with_underscores, e.g. `pricing_calculator`, `risk_scoring`)
+2. **Scenario id** (lowercase-with-hyphens — matches `accelerator.yaml.scenario.id`, e.g. `sales-research`)
 3. **One-sentence capability** (used by the supervisor router; quoted verbatim into the YAML snippet)
 4. **Upstream workers it depends on** (comma-separated list of existing worker ids the DAG must schedule first)
 5. **Whether it's optional** (the DAG can skip it and still produce a valid answer)

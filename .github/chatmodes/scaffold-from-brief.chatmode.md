@@ -10,11 +10,11 @@ You are applying the customer's filled `docs/discovery/solution-brief.md` to thi
 ## Preflight
 1. Open `docs/discovery/solution-brief.md`. If any section is missing or contains `TBD`, STOP and reply: "Run `/discover-scenario` first to fill the brief." Then stop.
 2. Open `accelerator.yaml`. Check whether the existing `scenario:` block is the flagship (`id: sales-research`) or a prior partner-scaffolded scenario.
-3. Confirm a scenario id (kebab-case slug, e.g. `order-triage`, `claims-intake`).
+3. Confirm a scenario id (lowercase-with-hyphens, e.g. `order-triage`, `claims-intake`).
 
 ## Step 1 — Run the scaffolder
 ```bash
-# <scenario-id> is the kebab-case scenario slug (e.g., sales-research, customer-service)
+# <scenario-id> is the scenario slug, lowercase-with-hyphens (e.g., sales-research, customer-service)
 python scripts/scaffold-scenario.py <scenario-id>
 ```
 This materializes:
@@ -27,7 +27,7 @@ Package leaf is auto-derived (hyphens → underscores). The CLI fails fast if an
 
 ## Step 2 — Update `accelerator.yaml`
 Copy the `scenario:` snippet the CLI printed and paste it into `accelerator.yaml`, **replacing** the existing `scenario:` block. Then re-sync the rest of the manifest with the brief:
-- `solution.name` → kebab slug of the engagement
+- `solution.name` → engagement slug (lowercase-with-hyphens)
 - `solution.pattern` / `hitl` / `data_residency` / `identity`
 - `solution.side_effect_tools` → tools your scenario will call (each must exist under `src/tools/` and pass HITL)
 - `acceptance.*` → thresholds drawn from the brief's success criteria
