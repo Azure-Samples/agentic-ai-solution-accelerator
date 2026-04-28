@@ -96,7 +96,7 @@ The variants are **manual re-authoring walkthroughs** (documented in `patterns/<
 /switch-to-variant
 ```
 
-…in Copilot Chat — pick `single-agent` (no supervisor) or `chat-with-actioning` (conversational front-end). For a **different business scenario**, see [Reference → Reference scenarios](../../references/) for Customer Service Actioning and RFP Response walkthroughs.
+…in Copilot Chat — pick `single-agent` (no supervisor) or `chat-with-actioning` (conversational front-end). For a **different business scenario**, see [Reference → Reference scenarios → Customer service actioning](../../references/customer-service-actioning/README.md) or [RFP response](../../references/rfp-response/README.md) for full walkthroughs.
 
 ---
 

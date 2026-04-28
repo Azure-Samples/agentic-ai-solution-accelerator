@@ -5,104 +5,60 @@ hide:
 
 # Agentic AI Solution Accelerator
 
-> **A GitHub template that Microsoft partners clone to deliver a customer-specific agentic AI solution — live in days, not months.** Full engagement motion (discovery → UAT → handover → measure) is weeks, and documented below.
+> **A GitHub template that Microsoft partners clone to deliver a customer-specific agentic AI solution — live in days, not months.** The full engagement motion (discovery → UAT → handover → measure) is weeks, and walked step-by-step below.
 
-**Flagship scenario:** Sales Research & Personalized Outreach — a supervisor agent routes a research request across specialist workers (Account Researcher, ICP/Fit Analyst, Competitive Context, Outreach Personalizer) and returns a grounded, citeable sales brief with a CRM-ready outreach draft. **Human-in-the-loop gates every CRM write and every email send.**
+**Flagship scenario:** Sales Research & Personalised Outreach — a supervisor agent routes a research request across specialist workers (Account Researcher, ICP/Fit Analyst, Competitive Context, Outreach Personaliser) and returns a grounded, citeable sales brief with a CRM-ready outreach draft. **Human-in-the-loop gates every CRM write and every email send.**
 
 **Stack:** Microsoft Agent Framework · Azure AI Foundry · Azure AI Search · Managed Identity · Key Vault · Container Apps · Application Insights · `azd` for infra.
 
-!!! tip "New here? Start in three moves"
-    1. **Pick your lane** in the role cards below — Lead, Engineer, or Ops.
-    2. **Open the linked first action** for your lane and follow it top-to-bottom.
-    3. **Want the full picture?** The [workflow map](partner-workflow.md) shows all 7 stages across the three lanes as a clickable swim-lane diagram.
+---
 
-[:material-rocket-launch: Get started](getting-started/index.md){ .md-button .md-button--primary }
-[:material-book-open-page-variant: Partner playbook](partner-playbook.md){ .md-button }
-[:material-map-marker-path: Full workflow map](partner-workflow.md){ .md-button }
+## How this site is organised
+
+The accelerator is delivered as a **linear walkthrough** in two tracks. Read in order; each step ends with a single **Continue →** link to the next.
+
+- **[Get ready](start/ready/01-get-oriented.md)** *(3 steps, do once)* — orient yourself, install your tools, rehearse in your own sandbox.
+- **[Deliver to a customer](start/deliver/01-clone-for-the-customer.md)** *(7 steps, repeat per engagement)* — clone, discover, scaffold, provision, iterate, hand over, operate.
+
+Roles are skim guidance, not separate paths:
+
+| Role | Read deeply | Skim |
+|---|---|---|
+| **Delivery lead** | *Get oriented*, *Discover with the customer*, *UAT & handover*, *Operate (Day 2)* | The engineering steps |
+| **Partner engineer** | *Set up your machine*, *Rehearse in a sandbox*, *Clone* through *Iterate & evaluate* | *Get oriented* |
+| **Solo partner** | All 10 steps | — |
+
+[:material-rocket-launch: Start with **1. Get oriented** →](start/ready/01-get-oriented.md){ .md-button .md-button--primary }
 
 ---
 
-## Pick your lane
+## Joining mid-engagement?
 
-<div class="role-cards" markdown>
+Jump in at the step that matches your current state.
 
-<div class="role-card lead" markdown>
-**👤 Delivery Lead**
-*Owns the engagement end-to-end*
-
-1. [Scope + discover](discovery/how-to-use.md) — canvas → workshop, or `/ingest-prd` → gap-fill
-2. UAT sign-off — review acceptance evals with customer sponsor
-3. [Handover meeting](handover/handover-packet-template.md) — walk packet + runbook
-4. [Monthly value review](partner-playbook.md#stage-7--measure) — ROI KPIs vs hypothesis
-
-→ [**Start here: Partner playbook**](partner-playbook.md)
-</div>
-
-<div class="role-card eng" markdown>
-**🛠️ Partner Engineer**
-*Builds, ships, supports*
-
-1. [Scaffold from brief](../QUICKSTART.md#step-3--scaffold-the-solution-from-the-brief) — `/scaffold-from-brief` (first time? run hands-on-lab)
-2. [Preflight](../QUICKSTART.md#step-4--preflight-landing-zone--github-environment) — `/configure-landing-zone` + `/deploy-to-env` (tier choice + GitHub Environment + OIDC)
-3. [Provision customer Azure](getting-started/setup-and-prereqs.md) — `azd up` → Foundry · Search · KV · ACA
-4. [Iterate with Copilot](../QUICKSTART.md#step-7--iterate-with-copilot-ship-through-ci-gates) — PRs gated by lint + evals + redteam
-5. UAT support — eval tuning · HITL wiring · fixes
-6. [Ship a UI](../patterns/sales-research-frontend/README.md) — fork the React/Vite SSE starter for the customer demo
-7. Agent instructions live in [`docs/agent-specs/`](agent-specs/README.md) — edit the markdown, not Python
-
-→ [**Start here: Orientation**](getting-started/index.md) — routes you to Setup → Lab → Quickstart (first customer) or straight to Quickstart (returning).
-</div>
-
-<div class="role-card ops" markdown>
-**🏛️ Customer Ops**
-*Owns day-2 ops after handover*
-
-1. Receive [handover packet](handover/handover-packet-template.md) — endpoint URLs · approvers · alerts · SLAs
-2. [Day-2 ops](customer-runbook.md) — monitor · killswitch · eval re-run · secret rotation · model swap
-
-→ [**Start here: Customer runbook**](customer-runbook.md)
-</div>
-
-</div>
-
-<small>Want the full visual? See the [workflow map](partner-workflow.md) — same content, swim-lane diagram, clickable nodes.</small>
-
-!!! note "Wearing multiple hats at a small partner?"
-    The lanes above are **responsibilities, not job titles**. **Solo partner:** run the Lead lane through Stage 1, drop into the Engineer lane at Stage 2 (scaffold → provision → iterate), return to the Lead lane at Stage 5 (UAT) through Stage 7. **Customer ops is always the customer's lane** — never something the partner wears.
+| If this is true… | Start at |
+|---|---|
+| You haven't cloned the customer repo yet | [4. Clone for the customer](start/deliver/01-clone-for-the-customer.md) |
+| Repo is cloned, no brief yet | [5. Discover with the customer](start/deliver/02-discover-with-the-customer.md) |
+| Brief is filled in the repo, no scaffold yet | [6. Scaffold from the brief](start/deliver/03-scaffold-from-the-brief.md) |
+| Code scaffolded, not provisioned in customer Azure | [7. Provision the customer's Azure](start/deliver/04-provision-the-customers-azure.md) |
+| Provisioned, you're customising and running evals | [8. Iterate & evaluate](start/deliver/05-iterate-and-evaluate.md) |
+| Evals green, heading into UAT | [9. UAT & handover](start/deliver/06-uat-and-handover.md) |
+| Already in production | [10. Operate (Day 2)](start/deliver/07-operate-day-2.md) |
 
 ---
 
 ## Reference material
 
-> **When guidance conflicts:** see the precedence rules in [Orientation](getting-started/index.md#how-the-docs-fit-together). One canonical statement, one place.
+Deep dives that sit **outside** the walkthrough — open them when a step sends you there.
 
-<div class="grid cards" markdown>
+- **Architecture & governance** — [Reference architecture](patterns/architecture/README.md) · [Azure AI landing zone](patterns/azure-ai-landing-zone/README.md) · [WAF alignment](patterns/waf-alignment/README.md) · [Responsible AI](patterns/rai/README.md)
+- **Engineering reference** — [Agent specs](agent-specs/README.md) · [Tool catalog](foundry-tool-catalog.md) · [Version matrix](version-matrix.md)
+- **Frontend starter** — [`patterns/sales-research-frontend/`](patterns/sales-research-frontend/README.md)
+- **Reference scenarios** — [Customer service actioning](references/customer-service-actioning/README.md) · [RFP response](references/rfp-response/README.md)
+- **Delivery context** — [Partner playbook](partner-playbook.md) (narrative companion to the walkthrough) · [Solution brief guide](discovery/SOLUTION-BRIEF-GUIDE.md) · [Handover template](handover/handover-packet-template.md) · [Workflow map](partner-workflow.md)
 
--   :material-sitemap: **Patterns & compliance**
-
-    ---
-
-    [Reference architecture](patterns/architecture/README.md) · [WAF alignment](patterns/waf-alignment/README.md) · [Responsible AI](patterns/rai/README.md) · [Azure AI landing zone](patterns/azure-ai-landing-zone/README.md)
-
--   :material-application-braces: **Scenario walkthroughs**
-
-    ---
-
-    [Customer service actioning](references/customer-service-actioning/README.md) · [RFP response](references/rfp-response/README.md)
-
--   :material-wrench-cog: **Engineer deep-dives**
-
-    ---
-
-    [Tool catalog](foundry-tool-catalog.md) · [Agent specs](agent-specs/README.md) · [Version matrix](version-matrix.md) · [Architecture](patterns/architecture/README.md)
-
--   :material-github: **Repository**
-
-    ---
-
-    [GitHub repo](https://github.com/Azure-Samples/agentic-ai-solution-accelerator) · [Chatmodes](../.github/chatmodes/delivery-guide.chatmode.md) · [Contributing](../CONTRIBUTING.md)
-
-</div>
+[:material-github: GitHub repo](https://github.com/Azure-Samples/agentic-ai-solution-accelerator) · [Contributing](about/CONTRIBUTING.md) · [Support](about/SUPPORT.md)
 
 ---
 
