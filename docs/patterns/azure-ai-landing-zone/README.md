@@ -75,6 +75,8 @@ enterprise.
 - `infra/main.parameters.json` (shipped)
 - No overlay, no AVM references required.
 
+**Going private without leaving Tier 1.** Setting the Bicep param `enablePrivateLink=true` flips `publicNetworkAccess` to `Disabled` on both the Cognitive Services (Foundry) account and Azure AI Search, and sets `networkAcls.defaultAction` to `Deny` on the Foundry account. Creating the actual private endpoints and DNS zones requires a pre-existing VNet and subnet — this is **bring-your-own** in the accelerator and not created by `azd up`. Add private-endpoint + private DNS zone resources in your own fork when targeting a regulated customer; the accelerator's shape (GA API versions, disabled public access when requested) won't fight you. If you need this end-to-end (PEs + DNS provisioned for you), graduate to **Tier 2 (`avm`)** below.
+
 ## Tier 2 — `avm` (AVM-aligned standalone)
 
 **What it is.** Same topology as Tier 1 (no hub), but the Bicep is

@@ -38,8 +38,8 @@ You will need:
 
 Model quota: the accelerator deploys a `GlobalStandard` Azure OpenAI model
 (default `gpt-5-mini`, 30k TPM — overrideable through the `accelerator.yaml`
-`models:` block; see "Customizing models per agent" below). Confirm quota in
-your target region before running `azd up`.
+`models:` block; see [Customizing models per agent](#customizing-models-per-agent)
+below). Confirm quota in your target region before running `azd up`.
 
 ### Repo development (optional)
 
@@ -179,59 +179,9 @@ Failures to reach the approver are treated as rejections (fail-closed).
 
 ## Customizing models per agent
 
-The accelerator provisions a **single default model deployment** out of the box
-(`gpt-5-mini`). To give individual agents a different model — e.g. put the
-supervisor on `gpt-5` while workers stay on `gpt-5-mini` for speed and cost —
-add a `models:` block to `accelerator.yaml`:
+The accelerator deploys a single `gpt-5-mini` model by default. To assign different models to different agents (e.g. supervisor on `gpt-5`, workers on `gpt-5-mini`), declare a `models:` block in `accelerator.yaml` and set `scenario.agents[].model: <slug>` per agent. Bicep provisions each deployment under the shared content-filter policy on the next `azd up`; FastAPI startup re-points each Foundry agent. Two lint rules (`models_block_shape`, `agent_model_refs_exist`) keep the block well-formed.
 
-```yaml
-models:
-  - slug: default                 # reserved slug; must be the default entry
-    deployment_name: gpt-5-mini
-    model: gpt-5-mini
-    version: "2025-08-07"
-    capacity: 30
-    default: true
-  - slug: planner                 # arbitrary slug; agents reference by slug
-    deployment_name: gpt-5-planner
-    model: gpt-5
-    version: "2025-08-07"
-    capacity: 10
-
-scenario:
-  agents:
-    - { id: supervisor, foundry_name: accel-sales-research-supervisor, model: planner }
-    - { id: account_planner, foundry_name: accel-account-planner }   # no `model:` → default
-    # ...
-```
-
-How it flows:
-
-1. **Bicep** parses `accelerator.yaml` at compile time via `loadYamlContent`
-   in `infra/main.bicep`, splits the `models:` block into a default entry
-   plus extras, and provisions each in `infra/modules/foundry.bicep`
-   (`@batchSize(1)` — one at a time to avoid Foundry capacity-queue
-   rejections) bound to the same shared RAI (content filter) policy. Output
-   `AZURE_AI_FOUNDRY_MODEL_MAP` is a `slug -> deployment_name` object,
-   passed into the Container App as the `AZURE_AI_FOUNDRY_MODEL_MAP` env
-   var.
-2. **FastAPI startup** (`src/bootstrap.py`) reads the model map and resolves
-   each Foundry agent's `scenario.agents[].model` slug (or `default` when
-   omitted) before calling `create_or_update` against Foundry. The bootstrap
-   is idempotent — restarts re-converge to the manifest.
-
-Lint enforcement (both BLOCKING):
-
-- `models_block_shape` — every entry has slug/deployment_name/model/version/capacity;
-  slugs and deployment names are unique; exactly one entry has `default: true`
-  and uses `slug: default` (reserved).
-- `agent_model_refs_exist` — every `scenario.agents[].model` references a declared
-  slug; omitting the field falls through to slug `default`.
-
-Omitting the whole `models:` block is supported: `infra/main.bicep` falls back
-to a built-in default (gpt-5-mini / 2025-08-07 / capacity 30) — the same end
-state whether the block was ever there or not. Partners who want a different
-default deployment MUST use the `models:` block with a single default entry.
+Full mechanics, YAML example, and lint behavior live in [`docs/patterns/architecture/README.md` → Customizing models per agent](../patterns/architecture/README.md#customizing-models-per-agent).
 
 ## CI chain
 
@@ -253,15 +203,7 @@ between full `azd up` cycles.
 
 ## Private network access
 
-Setting the Bicep param `enablePrivateLink=true` flips
-`publicNetworkAccess` to `Disabled` on both the Cognitive Services
-(Foundry) account and Azure AI Search, and sets `networkAcls.defaultAction`
-to `Deny` on the Foundry account. Creating the actual private endpoints
-and DNS zones requires a pre-existing VNet and subnet — this is
-**bring-your-own** in the accelerator and not created by `azd up`. Add
-private-endpoint + private DNS zone resources in your own fork when
-targeting a regulated customer; the accelerator's shape (GA API versions,
-disabled public access when requested) won't fight you.
+For regulated customers, set the Bicep param `enablePrivateLink=true` to disable public access on Foundry and AI Search. Provisioning the actual VNet, private endpoints, and private-DNS zones is **bring-your-own** at Tier 1 (standalone) — see the full procedure and the path to Tier 2 (AVM with PEs provisioned for you) in [`docs/patterns/azure-ai-landing-zone/README.md` → Tier 1 / Going private without leaving Tier 1](../patterns/azure-ai-landing-zone/README.md#tier-1--standalone-default).
 
 ## What `azd up` provisions
 

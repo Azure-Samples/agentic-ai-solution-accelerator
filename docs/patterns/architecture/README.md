@@ -87,6 +87,44 @@ Run `python scripts/accelerator-lint.py` locally; CI runs the same thing.
 
 ---
 
+## Customizing models per agent
+
+The accelerator provisions a **single default model deployment** out of the box (`gpt-5-mini`). To give individual agents a different model — e.g. put the supervisor on `gpt-5` while workers stay on `gpt-5-mini` for speed and cost — add a `models:` block to `accelerator.yaml`:
+
+```yaml
+models:
+  - slug: default                 # reserved slug; must be the default entry
+    deployment_name: gpt-5-mini
+    model: gpt-5-mini
+    version: "2025-08-07"
+    capacity: 30
+    default: true
+  - slug: planner                 # arbitrary slug; agents reference by slug
+    deployment_name: gpt-5-planner
+    model: gpt-5
+    version: "2025-08-07"
+    capacity: 10
+
+scenario:
+  agents:
+    - { id: supervisor, foundry_name: accel-sales-research-supervisor, model: planner }
+    - { id: account_planner, foundry_name: accel-account-planner }   # no `model:` → default
+```
+
+How it flows:
+
+1. **Bicep** parses `accelerator.yaml` at compile time via `loadYamlContent` in `infra/main.bicep`, splits the `models:` block into a default entry plus extras, and provisions each in `infra/modules/foundry.bicep` (`@batchSize(1)` — one at a time to avoid Foundry capacity-queue rejections) bound to the same shared RAI (content filter) policy. Output `AZURE_AI_FOUNDRY_MODEL_MAP` is a `slug -> deployment_name` object, passed into the Container App as the `AZURE_AI_FOUNDRY_MODEL_MAP` env var.
+2. **FastAPI startup** (`src/bootstrap.py`) reads the model map and resolves each Foundry agent's `scenario.agents[].model` slug (or `default` when omitted) before calling `create_or_update` against Foundry. The bootstrap is idempotent — restarts re-converge to the manifest.
+
+Lint enforcement (both BLOCKING):
+
+- `models_block_shape` — every entry has slug/deployment_name/model/version/capacity; slugs and deployment names are unique; exactly one entry has `default: true` and uses `slug: default` (reserved).
+- `agent_model_refs_exist` — every `scenario.agents[].model` references a declared slug; omitting the field falls through to slug `default`.
+
+Omitting the whole `models:` block is supported: `infra/main.bicep` falls back to a built-in default (gpt-5-mini / 2025-08-07 / capacity 30) — the same end state whether the block was ever there or not. Partners who want a different default deployment MUST use the `models:` block with a single default entry.
+
+---
+
 ## Variations a partner can choose
 
 These are **documented walkthroughs** — not drop-in packages. Switching requires re-authoring the scenario under `src/scenarios/<new-id>/`. See `.github/chatmodes/switch-to-variant.chatmode.md` for guidance.
