@@ -64,31 +64,32 @@ def emit_event(event: Event) -> None:
         | where tostring(customDimensions.ok) == "true"
         | summarize count() by bin(timestamp, 1d)
 
-    A span event is *also* attached to the active span when one is recording, so
-    distributed traces show event timeline points alongside the request span.
-    The span event is **enrichment, not a separate counted item** — always
-    count from ``traces``.
+    Correlation to the active distributed trace happens automatically: the
+    Azure Monitor logging handler stamps the row with the active span's
+    ``operation_Id`` / ``operation_ParentId``. We deliberately do **not** also
+    call ``span.add_event(...)`` — the Azure Monitor exporter materialises
+    span events as their own ``traces`` rows, which would double-count every
+    business event. Use real child spans (around tool calls, retrieval,
+    model calls) for waterfall timing; ``emit_event`` is for queryable KPIs.
 
     Why the unconditional log: ``configure_azure_monitor(logger_name="accelerator")``
     pipes ``accelerator.*`` loggers through the Azure Monitor exporter. Relying
     on ``span.add_event`` alone silently dropped events because async streaming
-    paths often had no recording parent span (no FastAPI auto-instrumentation
-    or manual span scoping wrapped them).
+    paths often had no recording parent span.
     """
     payload = asdict(event)
     flat = _otel_flatten(payload)
 
     # `name` collides with stdlib ``logging.LogRecord.name``; reroute to
     # ``event_name`` so the log record fields don't blow up at emit time.
+    # ``event_name`` is also the field consumers should filter on in KQL to
+    # distinguish accelerator events from generic traces.
     flat.pop("name", None)
     flat["event_name"] = event.name
 
-    span = trace.get_current_span()
-    if span and span.is_recording():
-        span.add_event(name=event.name, attributes=_otel_flatten(payload))
-
-    # Always log — this is what makes the event visible in `traces`. The
-    # ``extra`` dict becomes ``customDimensions`` in App Insights.
+    # Single emission: log only. Span context is attached by the OTel logging
+    # handler so ``operation_Id`` / ``operation_ParentId`` correlate the row
+    # to the active request span without producing a duplicate.
     logger.info(event.name, extra=flat)
 
 

@@ -1,15 +1,15 @@
 {
   "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-  "_comment": "App Insights workbook JSON template. Scenario-agnostic by default: panels key off accelerator-wide telemetry events (response.returned, tool.hitl_*, cost.call, eval.result) emitted by `src/accelerator_baseline/telemetry.py::emit_event` and filter by cloud_RoleName so a partner can swap the scenario in accelerator.yaml without touching this file. Events land in the `traces` table (message=event.name, attrs in customDimensions) — see docs/customer-runbook.md Section 2 for the rationale. Partners rename the dashboard per engagement and add scenario-specific panels as needed.",
+  "_comment": "App Insights workbook JSON template. Scenario-agnostic by default: panels key off accelerator-wide telemetry events (response.returned, tool.hitl_*, cost.call, eval.result) emitted by `src/accelerator_baseline/telemetry.py::emit_event` and filter by cloud_RoleName so a partner can swap the scenario in accelerator.yaml without touching this file. Events land in the `traces` table (message=event.name, attrs in customDimensions) — see docs/customer-runbook.md Section 2 for the rationale. The `isnotempty(customDimensions.event_name)` filter on every panel keeps counts clean if a workspace still has older rows from the pre-dedup span-event path. Partners rename the dashboard per engagement and add scenario-specific panels as needed.",
   "dashboardName": "Agentic AI Accelerator ROI",
   "panels": [
     {
       "title": "Successful responses per day",
-      "kql": "traces | where message == 'response.returned' | where tostring(customDimensions.ok) == 'true' | summarize count() by bin(timestamp, 1d)"
+      "kql": "traces | where message == 'response.returned' | where isnotempty(customDimensions.event_name) | where tostring(customDimensions.ok) == 'true' | summarize count() by bin(timestamp, 1d)"
     },
     {
       "title": "HITL approval rate",
-      "kql": "traces | where message in ('tool.hitl_approved','tool.hitl_rejected') | summarize approvals=countif(message=='tool.hitl_approved'), rejections=countif(message=='tool.hitl_rejected') by bin(timestamp, 1d)"
+      "kql": "traces | where message in ('tool.hitl_approved','tool.hitl_rejected') | where isnotempty(customDimensions.event_name) | summarize approvals=countif(message=='tool.hitl_approved'), rejections=countif(message=='tool.hitl_rejected') by bin(timestamp, 1d)"
     },
     {
       "title": "P95 request latency (s)",
@@ -18,11 +18,11 @@
     },
     {
       "title": "$ per call (estimated)",
-      "kql": "traces | where message == 'cost.call' | extend cost = todouble(customDimensions.value) | summarize avg(cost) by bin(timestamp, 1d)"
+      "kql": "traces | where message == 'cost.call' | where isnotempty(customDimensions.event_name) | extend cost = todouble(customDimensions.value) | summarize avg(cost) by bin(timestamp, 1d)"
     },
     {
       "title": "Groundedness eval score trend",
-      "kql": "traces | where message == 'eval.result' and tostring(customDimensions.suite) == 'quality' | extend g = todouble(customDimensions.groundedness) | summarize avg(g) by bin(timestamp, 1d)"
+      "kql": "traces | where message == 'eval.result' | where isnotempty(customDimensions.event_name) and tostring(customDimensions.suite) == 'quality' | extend g = todouble(customDimensions.groundedness) | summarize avg(g) by bin(timestamp, 1d)"
     }
   ]
 }

@@ -244,6 +244,7 @@ Insights and trace it.
    | where message in ("request.received","supervisor.routed","worker.completed",
                        "retrieval.returned","response.returned","tool.executed",
                        "tool.hitl_approved","tool.hitl_rejected","aggregator.composed")
+   | where isnotempty(customDimensions.event_name)
    | project timestamp, message, operation_Id, operation_ParentId, customDimensions
    | order by timestamp asc
    ```
@@ -264,9 +265,10 @@ Insights and trace it.
    > `configure_azure_monitor(logger_name="accelerator")` pipes into App
    > Insights. Log records land in `traces` (one row per event) with
    > `message == event.name` and the event payload flattened into
-   > `customDimensions.<attr>`. The same call also adds an OTel span
-   > event for distributed-trace correlation; that's enrichment, not a
-   > separate counted item — always count events from `traces`.
+   > `customDimensions.<attr>`. The `isnotempty(customDimensions.event_name)`
+   > filter pins the result set to accelerator events specifically — it also
+   > screens out duplicate rows from older deployments that emitted both a
+   > log record and an OTel span event for each call.
 
    The `operation_Id` column lets you correlate one stream call to its
    parent `requests` row and any nested `dependencies`. Pivot from a
