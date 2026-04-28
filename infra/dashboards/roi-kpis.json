@@ -43,7 +43,7 @@
     {
       "type": 1,
       "content": {
-        "json": "### Responses by outcome\n\nOne bar per day. Each end-to-end frontend request emits exactly one `response.returned` event when the orchestrator finishes. **Green = success, red = failure.** If you see failures here, jump straight to **Latest failures and rejected actions** at the bottom for the actual error message and the component that raised it.\n\nThis is the partner-facing health signal you want to wire into Azure Monitor alerts (see `customer-runbook.md` Section 2)."
+        "json": "### Responses by outcome\n\nTwo bars per day, side-by-side: **successful responses** (green) and **failed responses** (red). Each end-to-end frontend request emits exactly one `response.returned` event when the orchestrator finishes. If you see red here, jump straight to **Latest failures and rejected actions** at the bottom for the actual error message and the component that raised it.\n\nThis is the partner-facing health signal you want to wire into Azure Monitor alerts (see `customer-runbook.md` Section 2)."
       },
       "name": "responses-by-outcome-explainer"
     },
@@ -58,7 +58,13 @@
         "noDataMessageStyle": 3,
         "timeContextFromParameter": "TimeRange",
         "queryType": 0,
-        "resourceType": "microsoft.insights/components"
+        "resourceType": "microsoft.insights/components",
+        "chartSettings": {
+          "seriesLabelSettings": [
+            {"seriesName": "success", "label": "success", "color": "green"},
+            {"seriesName": "failure", "label": "failure", "color": "redBright"}
+          ]
+        }
       },
       "name": "responses-by-outcome"
     },
@@ -87,7 +93,7 @@
     {
       "type": 1,
       "content": {
-        "json": "### Workers completed by agent\n\nThe flagship scenario fans out a single request across multiple specialist workers in parallel (e.g. `account_planner`, `news_signals`, `competitive_landscape`). Each emits a `worker.completed` event when it finishes. Bars are grouped by worker name (`customDimensions.external_system`) and split into **succeeded** vs **failed**.\n\n**Reading this panel:** if a worker you expected is missing, the supervisor skipped it (intent didn't match) or an upstream dependency failed. If a bar is mostly red, the failure pattern is concentrated in one specialist — its prompt or tool config is the place to look."
+        "json": "### Workers completed by agent\n\nThe flagship scenario fans out a single request across multiple specialist workers in parallel (e.g. `account_planner`, `news_signals`, `competitive_landscape`). Each emits a `worker.completed` event when it finishes. Bars are grouped by worker name (`customDimensions.external_system`) and split into **succeeded** (green) vs **failed** (red).\n\n**Reading this panel:** if a worker you expected is missing, the supervisor skipped it (intent didn't match) or an upstream dependency failed. If a bar is mostly red, the failure pattern is concentrated in one specialist — its prompt or tool config is the place to look."
       },
       "name": "workers-by-agent-explainer"
     },
@@ -102,7 +108,13 @@
         "noDataMessageStyle": 3,
         "timeContextFromParameter": "TimeRange",
         "queryType": 0,
-        "resourceType": "microsoft.insights/components"
+        "resourceType": "microsoft.insights/components",
+        "chartSettings": {
+          "seriesLabelSettings": [
+            {"seriesName": "succeeded", "label": "succeeded", "color": "green"},
+            {"seriesName": "failed", "label": "failed", "color": "redBright"}
+          ]
+        }
       },
       "name": "workers-by-agent"
     },
