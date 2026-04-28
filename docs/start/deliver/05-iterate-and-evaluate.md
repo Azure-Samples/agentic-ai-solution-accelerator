@@ -1,12 +1,15 @@
 # 8. Iterate & evaluate
 
-> **Goal.** Customise prompts, tools, and retrieval; grow the eval suite; ship through PR-gated CI until acceptance thresholds from `accelerator.yaml` are green and KPI events are emitting in App Insights.
->
-> **Prerequisite.** [7. Provision the customer's Azure](04-provision-the-customers-azure.md) complete — `/healthz` returns 200; API URL captured.
->
-> **Where you'll work.** VS Code (Copilot Chat for the agent edits, integrated terminal for `git push`); GitHub web (PRs + Actions runs).
->
-> **Done when.** Quality evals ≥ acceptance thresholds in `accelerator.yaml`; redteam green; lint green; KPI events emitting in App Insights against real traffic.
+*Step 8 of 10 · Deliver to a customer*
+
+!!! info "Step at a glance"
+    **🎯 Goal** — Customise prompts, tools, and retrieval; grow the eval suite; ship through PR-gated CI until acceptance thresholds from `accelerator.yaml` are green and KPI events are emitting in App Insights.
+
+    **📋 Prerequisite** — [7. Provision the customer's Azure](04-provision-the-customers-azure.md) complete — `/healthz` returns 200; API URL captured.
+
+    **💻 Where you'll work** — VS Code (Copilot Chat for the agent edits, integrated terminal for `git push`); GitHub web (PRs + Actions runs).
+
+    **✅ Done when** — Quality evals ≥ acceptance thresholds in `accelerator.yaml`; redteam green; lint green; KPI events emitting in App Insights against real traffic.
 
 ---
 
@@ -39,7 +42,10 @@ For agent edits, edit the spec markdown:
 docs/agent-specs/<agent>.md   # ## Instructions section
 ```
 
-…then `azd provision` (or the next `azd up`) syncs the spec to Foundry. Never edit instructions in the Foundry portal — `bootstrap.py` overwrites portal drift on next start.
+…then `azd provision` (or the next `azd up`) syncs the spec to Foundry.
+
+!!! warning "Never edit instructions in the Foundry portal"
+    `bootstrap.py` overwrites portal drift on next start. Edit `docs/agent-specs/<agent>.md` and re-provision instead.
 
 For new specialist workers, use the scaffolder:
 

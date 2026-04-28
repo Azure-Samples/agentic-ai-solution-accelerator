@@ -1,12 +1,15 @@
 # 6. Scaffold from the brief
 
-> **Goal.** Translate the brief into code, infra, evals, telemetry.
->
-> **Prerequisite.** [5. Discover with the customer](02-discover-with-the-customer.md) complete — `docs/discovery/solution-brief.md` has zero `TBD`.
->
-> **Where you'll work.** VS Code (Copilot Chat sidebar + Source Control panel for diff review).
->
-> **Done when.** `/scaffold-from-brief` has run; the diff is reviewed and committed; `python scripts/accelerator-lint.py` passes.
+*Step 6 of 10 · Deliver to a customer*
+
+!!! info "Step at a glance"
+    **🎯 Goal** — Translate the brief into code, infra, evals, telemetry.
+
+    **📋 Prerequisite** — [5. Discover with the customer](02-discover-with-the-customer.md) complete — `docs/discovery/solution-brief.md` has zero `TBD`.
+
+    **💻 Where you'll work** — VS Code (Copilot Chat sidebar + Source Control panel for diff review).
+
+    **✅ Done when** — `/scaffold-from-brief` has run; the diff is reviewed and committed; `python scripts/accelerator-lint.py` passes.
 
 ---
 

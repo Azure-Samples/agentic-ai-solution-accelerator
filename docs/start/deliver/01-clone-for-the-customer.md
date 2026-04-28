@@ -1,12 +1,15 @@
 # 4. Clone for the customer
 
-> **Goal.** Spin up a per-customer copy of the template, ready for the discovery workshop.
->
-> **Prerequisite.** Track 1 (*[Get ready](../ready/01-get-oriented.md)*) complete; engagement signed; customer short-name agreed.
->
-> **Where you'll work.** VS Code (terminal + Copilot sidebar).
->
-> **Done when.** `<customer-short-name>-agents` repo exists in your partner GitHub org, opens in VS Code, Copilot Chat sidebar shows the repo's chatmodes when you type `/`.
+*Step 4 of 10 · Deliver to a customer*
+
+!!! info "Step at a glance"
+    **🎯 Goal** — Spin up a per-customer copy of the template, ready for the discovery workshop.
+
+    **📋 Prerequisite** — Track 1 (*[Get ready](../ready/01-get-oriented.md)*) complete; engagement signed; customer short-name agreed.
+
+    **💻 Where you'll work** — VS Code (terminal + Copilot sidebar).
+
+    **✅ Done when** — `<customer-short-name>-agents` repo exists in your partner GitHub org, opens in VS Code, Copilot Chat sidebar shows the repo's chatmodes when you type `/`.
 
 ---
 

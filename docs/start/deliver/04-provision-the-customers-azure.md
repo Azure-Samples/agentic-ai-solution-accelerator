@@ -1,12 +1,15 @@
 # 7. Provision the customer's Azure
 
-> **Goal.** Stand up the customer's Foundry + supporting infra in their tenant via `azd up`, against a GitHub Environment that holds the customer's OIDC credentials.
->
-> **Prerequisite.** [6. Scaffold from the brief](03-scaffold-from-the-brief.md) complete — lint green; brief committed.
->
-> **Where you'll work.** VS Code (Copilot Chat + integrated terminal); GitHub web (Settings → Environments — `/deploy-to-env` walks you there); Azure portal (resource group inspection after).
->
-> **Done when.** Resource group exists in customer tenant; `/healthz` returns 200; Foundry agents are reachable; App Insights is wired; HITL approver endpoint is configured for the environment.
+*Step 7 of 10 · Deliver to a customer*
+
+!!! info "Step at a glance"
+    **🎯 Goal** — Stand up the customer's Foundry + supporting infra in their tenant via `azd up`, against a GitHub Environment that holds the customer's OIDC credentials.
+
+    **📋 Prerequisite** — [6. Scaffold from the brief](03-scaffold-from-the-brief.md) complete — lint green; brief committed.
+
+    **💻 Where you'll work** — VS Code (Copilot Chat + integrated terminal); GitHub web (Settings → Environments — `/deploy-to-env` walks you there); Azure portal (resource group inspection after).
+
+    **✅ Done when** — Resource group exists in customer tenant; `/healthz` returns 200; Foundry agents are reachable; App Insights is wired; HITL approver endpoint is configured for the environment.
 
 ---
 
@@ -38,7 +41,8 @@ For regulated customers: set `controls.private_endpoints = required` (implies Ti
 
 The chatmode adds an entry to `deploy/environments.yaml`, creates the matching **GitHub Environment**, wires the OIDC federated credential between the customer's Entra app registration and the GitHub Environment, scopes the per-environment secrets (`AZURE_CLIENT_ID` / `AZURE_TENANT_ID` / `AZURE_SUBSCRIPTION_ID`) and variable (`AZURE_LOCATION`), and dispatches a first deploy.
 
-> Never hand-edit `deploy.yml` to add envs. The manifest + the `resolve-env` job is the contract; the `deploy_matrix_matches_azure_envs` lint rule rejects drift. The azd environment name is **always** derived from `deploy/environments.yaml` — never set `vars.AZURE_ENV_NAME`.
+!!! warning "Never hand-edit `deploy.yml` to add envs"
+    The manifest + the `resolve-env` job is the contract; the `deploy_matrix_matches_azure_envs` lint rule rejects drift. The azd environment name is **always** derived from `deploy/environments.yaml` — never set `vars.AZURE_ENV_NAME`.
 
 If the environment will gate side-effect tools through a webhook approver (Logic Apps, Teams, ServiceNow), set `HITL_APPROVER_ENDPOINT` as an Environment secret on the same screen. Failures to reach the approver are treated as rejections (fail-closed).
 

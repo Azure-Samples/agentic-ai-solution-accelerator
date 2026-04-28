@@ -1,12 +1,15 @@
 # 1. Get oriented
 
-> **Goal.** Understand what the accelerator is, the supervisor + workers shape, and what's accelerator vs. partner-owned.
->
-> **Prerequisite.** None — you just landed on this site.
->
-> **Where you'll work.** Browser (this site).
->
-> **Done when.** You can name (a) what the accelerator gives you vs. what you still own, and (b) which steps are one-time vs. per-customer.
+*Step 1 of 10 · Get ready*
+
+!!! info "Step at a glance"
+    **🎯 Goal** — Understand what the accelerator is, the supervisor + workers shape, and what's accelerator vs. partner-owned.
+
+    **📋 Prerequisite** — None — you just landed on this site.
+
+    **💻 Where you'll work** — Browser (this site).
+
+    **✅ Done when** — You can name (a) what the accelerator gives you vs. what you still own, and (b) which steps are one-time vs. per-customer.
 
 ---
 

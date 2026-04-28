@@ -1,12 +1,15 @@
 # 2. Set up your machine
 
-> **Goal.** Install the toolchain you'll use on every engagement.
->
-> **Prerequisite.** [1. Get oriented](01-get-oriented.md) complete.
->
-> **Where you'll work.** Your workstation.
->
-> **Done when.** `gh --version`, `az --version`, `azd version`, `python --version` (3.11+) all succeed; Copilot Chat opens in VS Code; you can `az login` to a personal/dev subscription.
+*Step 2 of 10 · Get ready*
+
+!!! info "Step at a glance"
+    **🎯 Goal** — Install the toolchain you'll use on every engagement.
+
+    **📋 Prerequisite** — [1. Get oriented](01-get-oriented.md) complete.
+
+    **💻 Where you'll work** — Your workstation.
+
+    **✅ Done when** — `gh --version`, `az --version`, `azd version`, `python --version` (3.11+) all succeed; Copilot Chat opens in VS Code; you can `az login` to a personal/dev subscription.
 
 ---
 
@@ -25,7 +28,8 @@ This step is **one-time per partner machine**. You do not re-do it per customer 
 | **Python 3.11+** *(optional)* | Only if you want to run scripts, tests, or the FastAPI app locally — `azd up` itself does **not** require Python on your machine | `3.11`–`3.13` |
 | **Docker / Podman** *(optional)* | Only for local container builds; `azd up` builds in ACR remotely by default | Any recent |
 
-> **Microsoft Store Python alias warning.** On Windows, `%LOCALAPPDATA%\Microsoft\WindowsApps\python.exe` is **not** a real interpreter. If you need Python locally, install from python.org, winget, scoop, or use an activated Conda env.
+!!! warning "Microsoft Store Python alias"
+    On Windows, `%LOCALAPPDATA%\Microsoft\WindowsApps\python.exe` is **not** a real interpreter. If you need Python locally, install from python.org, winget, scoop, or use an activated Conda env.
 
 ## Verify
 

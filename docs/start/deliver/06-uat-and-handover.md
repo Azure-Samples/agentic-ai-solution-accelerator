@@ -1,12 +1,15 @@
 # 9. UAT & handover
 
-> **Goal.** Run customer UAT to acceptance, deliver the handover packet to customer ops.
->
-> **Prerequisite.** [8. Iterate & evaluate](05-iterate-and-evaluate.md) complete — quality + redteam evals green; KPI events emitting; dashboards populated.
->
-> **Where you'll work.** Customer environment (UAT pass) + handover meeting (live or recorded) + your delivery workspace (where the filled handover packet lands).
->
-> **Done when.** Acceptance criteria signed by customer sponsor; handover packet (alerts, dashboards, runbook, eval gates, rollback plan) delivered; customer ops named.
+*Step 9 of 10 · Deliver to a customer*
+
+!!! info "Step at a glance"
+    **🎯 Goal** — Run customer UAT to acceptance, deliver the handover packet to customer ops.
+
+    **📋 Prerequisite** — [8. Iterate & evaluate](05-iterate-and-evaluate.md) complete — quality + redteam evals green; KPI events emitting; dashboards populated.
+
+    **💻 Where you'll work** — Customer environment (UAT pass) + handover meeting (live or recorded) + your delivery workspace (where the filled handover packet lands).
+
+    **✅ Done when** — Acceptance criteria signed by customer sponsor; handover packet (alerts, dashboards, runbook, eval gates, rollback plan) delivered; customer ops named.
 
 ---
 
@@ -17,7 +20,10 @@ Acceptance is **objective + signed**, not "the demo went well."
 - **Objective:** every threshold in `accelerator.yaml -> acceptance` is green on the customer environment, against the customer's golden cases (`evals/quality/golden_cases.jsonl`) and the customer-specific redteam cases (`evals/redteam/`).
 - **Signed:** the customer sponsor named in `solution-brief.md` Section 1 signs off the acceptance report (the output of `python scripts/enforce-acceptance.py` against the customer environment, captured at the UAT cut-off).
 
-If a threshold misses, **don't ship** — loop back to [8. Iterate & evaluate](05-iterate-and-evaluate.md) and fix in PRs against the customer environment, with the regression suite guarding the merge.
+If a threshold misses, **don't ship**.
+
+!!! danger "Acceptance is a gate, not a target"
+    Loop back to [8. Iterate & evaluate](05-iterate-and-evaluate.md) and fix in PRs against the customer environment, with the regression suite guarding the merge. Shipping below the agreed threshold compromises the engagement's measurable ROI claim.
 
 ## Handover packet
 

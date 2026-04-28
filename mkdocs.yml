@@ -36,6 +36,7 @@ theme:
     - content.tabs.link
     - search.suggest
     - search.highlight
+    - content.tooltips
   palette:
     - media: "(prefers-color-scheme: light)"
       scheme: default

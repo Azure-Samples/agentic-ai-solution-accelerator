@@ -1,12 +1,15 @@
 # 3. Rehearse in a sandbox
 
-> **Goal.** Clone the template into your own dev subscription, run the full deploy + eval loop end-to-end, feel one HITL approval — before you face a customer.
->
-> **Prerequisite.** [2. Set up your machine](02-set-up-your-machine.md) complete.
->
-> **Where you'll work.** VS Code + Azure portal (your sandbox subscription) + Foundry portal (`ai.azure.com`).
->
-> **Done when.** Sandbox app responds to `/research/stream`; quality and redteam evals pass; you've watched one App Insights trace and approved one HITL prompt.
+*Step 3 of 10 · Get ready*
+
+!!! info "Step at a glance"
+    **🎯 Goal** — Clone the template into your own dev subscription, run the full deploy + eval loop end-to-end, feel one HITL approval — before you face a customer.
+
+    **📋 Prerequisite** — [2. Set up your machine](02-set-up-your-machine.md) complete.
+
+    **💻 Where you'll work** — VS Code + Azure portal (your sandbox subscription) + Foundry portal (`ai.azure.com`).
+
+    **✅ Done when** — Sandbox app responds to `/research/stream`; quality and redteam evals pass; you've watched one App Insights trace and approved one HITL prompt.
 
 ---
 

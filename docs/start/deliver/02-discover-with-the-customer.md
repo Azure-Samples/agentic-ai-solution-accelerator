@@ -1,12 +1,15 @@
 # 5. Discover with the customer
 
-> **Goal.** Run the workshop (or `/ingest-prd` if a PRD/BRD/spec exists) and fill `docs/discovery/solution-brief.md` with numeric success criteria, KPI events, RAI risks.
->
-> **Prerequisite.** [4. Clone for the customer](01-clone-for-the-customer.md) complete; customer stakeholder workshop scheduled or PRD in hand.
->
-> **Where you'll work.** Customer workshop room (or Teams) for the conversation; the cloned customer repo in VS Code + Copilot Chat to drive `/discover-scenario` after the workshop.
->
-> **Done when.** `docs/discovery/solution-brief.md` has zero `TBD`; success criteria are numeric (baseline → target with %); 3–6 KPI events named; solution shape chosen; 3–5 RAI risks listed; `accelerator.yaml` updated by the chatmode.
+*Step 5 of 10 · Deliver to a customer*
+
+!!! info "Step at a glance"
+    **🎯 Goal** — Run the workshop (or `/ingest-prd` if a PRD/BRD/spec exists) and fill `docs/discovery/solution-brief.md` with numeric success criteria, KPI events, RAI risks.
+
+    **📋 Prerequisite** — [4. Clone for the customer](01-clone-for-the-customer.md) complete; customer stakeholder workshop scheduled or PRD in hand.
+
+    **💻 Where you'll work** — Customer workshop room (or Teams) for the conversation; the cloned customer repo in VS Code + Copilot Chat to drive `/discover-scenario` after the workshop.
+
+    **✅ Done when** — `docs/discovery/solution-brief.md` has zero `TBD`; success criteria are numeric (baseline → target with %); 3–6 KPI events named; solution shape chosen; 3–5 RAI risks listed; `accelerator.yaml` updated by the chatmode.
 
 ---
 

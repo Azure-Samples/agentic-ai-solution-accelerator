@@ -1,12 +1,15 @@
 # 10. Operate (Day 2)
 
-> **Goal.** Monthly KPI review, alert tuning, drift checks, regression evals against `main`. The accelerator runs in production; this step is what keeps it healthy.
->
-> **Prerequisite.** [9. UAT & handover](06-uat-and-handover.md) complete — customer ops has the packet; production is live.
->
-> **Where you'll work.** App Insights + GitHub Actions (scheduled evals) + the customer's PR review surface.
->
-> **Done when.** First monthly KPI review held; first alert tuned; first regression-eval run green on `main`. After that, this is a recurring loop, not a one-shot step.
+*Step 10 of 10 · Deliver to a customer*
+
+!!! info "Step at a glance"
+    **🎯 Goal** — Monthly KPI review, alert tuning, drift checks, regression evals against `main`. The accelerator runs in production; this step is what keeps it healthy.
+
+    **📋 Prerequisite** — [9. UAT & handover](06-uat-and-handover.md) complete — customer ops has the packet; production is live.
+
+    **💻 Where you'll work** — App Insights + GitHub Actions (scheduled evals) + the customer's PR review surface.
+
+    **✅ Done when** — First monthly KPI review held; first alert tuned; first regression-eval run green on `main`. After that, this is a recurring loop, not a one-shot step.
 
 ---
 
