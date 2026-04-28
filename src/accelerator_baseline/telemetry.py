@@ -57,11 +57,13 @@ def emit_event(event: Event) -> None:
 
     **Canonical query surface: the App Insights ``traces`` table.** Each event
     becomes a log record with ``message == event.name`` and flattened attributes
-    available as ``customDimensions.<attr>``. Example KQL::
+    available as ``customDimensions.<attr>``. Booleans are normalised to the
+    JSON-style strings ``"true"`` / ``"false"`` so KQL queries can use the
+    obvious form; cast explicitly with ``tobool()`` for safety. Example::
 
         traces
         | where message == "response.returned"
-        | where tostring(customDimensions.ok) == "true"
+        | where tobool(customDimensions.ok) == true
         | summarize count() by bin(timestamp, 1d)
 
     Correlation to the active distributed trace happens automatically: the
@@ -105,7 +107,15 @@ def _otel_flatten(payload: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def _stringify(v: Any) -> Any:
-    if isinstance(v, (str, int, float, bool)) or v is None:
+    # Bool branch must come before the int branch -- ``bool`` is a subclass
+    # of ``int`` in Python and would otherwise pass through as ``True``/``False``.
+    # Azure Monitor's logging exporter serialises Python bools using their
+    # ``repr`` (``"True"`` / ``"False"``), which trips KQL queries that
+    # naturally reach for the JSON-style ``'true'`` / ``'false'``. Normalise
+    # to the JSON form here so customDimensions stay query-friendly.
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    if isinstance(v, (str, int, float)) or v is None:
         return v
     return str(v)
 

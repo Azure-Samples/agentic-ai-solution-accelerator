@@ -62,7 +62,7 @@ def test_emit_event_flattens_attributes_for_querying(
 ) -> None:
     """Event payload fields must appear as flat attributes on the LogRecord
     so they show up as top-level keys in App Insights ``customDimensions``
-    (queryable as e.g. ``tostring(customDimensions.ok) == 'false'``).
+    (queryable as e.g. ``tobool(customDimensions.ok) == false``).
     """
     caplog.set_level(logging.INFO, logger="accelerator.telemetry")
 
@@ -79,8 +79,27 @@ def test_emit_event_flattens_attributes_for_querying(
     record = next(
         r for r in caplog.records if r.message == "tool.hitl_rejected"
     )
-    assert record.ok is False
+    # Bools are normalised to the JSON-style strings "true" / "false" so KQL
+    # against ``customDimensions`` works with the obvious comparison. Python
+    # repr ("True"/"False") would silently break partner-authored queries.
+    assert record.ok == "false"
     assert record.error == "reviewer_denied"
     assert record.external_system == "crm_write_contact"
     # Nested mapping is flattened into dotted keys.
     assert getattr(record, "args_redacted.to_count") == 1
+
+
+def test_emit_event_normalises_true_bool_to_lowercase(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Regression for the dashboard-blank bug: bools must serialise as the
+    JSON-style ``"true"`` / ``"false"`` so ``customDimensions.ok`` is
+    comparable with KQL's natural ``== 'true'`` / ``tobool(...)`` patterns
+    rather than Python's ``"True"`` / ``"False"`` repr.
+    """
+    caplog.set_level(logging.INFO, logger="accelerator.telemetry")
+
+    emit_event(Event(name="response.returned", ok=True))
+
+    record = next(r for r in caplog.records if r.message == "response.returned")
+    assert record.ok == "true"

@@ -44,7 +44,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "traces\n| where message == 'response.returned'\n| where isnotempty(customDimensions.event_name)\n| where tostring(customDimensions.ok) == 'true'\n| summarize count() by bin(timestamp, 1d)\n| render timechart",
+        "query": "traces\n| where message == 'response.returned'\n| where isnotempty(customDimensions.event_name)\n| where tobool(customDimensions.ok) == true\n| summarize count() by bin(timestamp, 1d)\n| render timechart",
         "size": 0,
         "title": "Successful responses per day",
         "timeContextFromParameter": "TimeRange",

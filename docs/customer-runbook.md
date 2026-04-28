@@ -52,7 +52,7 @@ If you've been paged for a P1 (bad output, unsafe tool behavior, model outage), 
 
 Detail: [Section 3 — Killswitch](#killswitch). Re-enable by setting the var back to empty or `off`.
 
-2. **Check App Insights** — query the `traces` table (the canonical event surface; see [Section 2 — Monitoring](#2-monitoring) for why) for `message == 'response.returned'` with `tostring(customDimensions.ok) == 'false'` and for `message == 'tool.hitl_misconfigured'` over the incident window. Correlate to a specific agent / tool. Workbook panels are in [Section 2 — Monitoring](#2-monitoring).
+2. **Check App Insights** — query the `traces` table (the canonical event surface; see [Section 2 — Monitoring](#2-monitoring) for why) for `message == 'response.returned'` with `tobool(customDimensions.ok) == false` and for `message == 'tool.hitl_misconfigured'` over the incident window. Correlate to a specific agent / tool. Workbook panels are in [Section 2 — Monitoring](#2-monitoring).
 
 3. **Page the partner approver / delivery lead** — the partner's handover packet lists the named contact and SLA. HITL approver reachability and the customer-specific rollback path live there, not here.
 
@@ -486,7 +486,7 @@ for those follows the partner's runbook, not this one.
 
 1. **Flip the killswitch** (Section 3). Side-effect tools halt immediately;
    read-only paths keep working so in-flight sessions don't error.
-2. In App Insights, query `traces` for `message in ('tool.executed','tool.hitl_approved','tool.hitl_rejected','tool.hitl_misconfigured','response.returned')` and `tostring(customDimensions.ok) == 'false'` over
+2. In App Insights, query `traces` for `message in ('tool.executed','tool.hitl_approved','tool.hitl_rejected','tool.hitl_misconfigured','response.returned')` and `tobool(customDimensions.ok) == false` over
    the incident window. Correlate to a specific agent / tool.
 3. If a prompt regression is suspected, **do not** trust Foundry
    portal history as a durable record — check
