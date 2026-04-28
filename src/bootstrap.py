@@ -476,10 +476,10 @@ async def _grant_agent_search_access(
                 },
             }
             try:
-                await auth.role_assignments.create(  # type: ignore[arg-type]
+                await auth.role_assignments.create(
                     scope=search_resource_id,
                     role_assignment_name=ra_name,
-                    parameters=params,
+                    parameters=params,  # type: ignore[arg-type]
                 )
                 logger.info(
                     "bootstrap.foundry: granted '%s' to %s "
