@@ -9,16 +9,23 @@
 
     **💻 Where you'll work** — VS Code + Azure portal (your sandbox subscription) + Foundry portal (`ai.azure.com`).
 
-    **✅ Done when** — Sandbox app responds to `/research/stream`; quality and redteam evals pass; you've watched one App Insights trace and approved one HITL prompt.
+    **✅ Done when** — You ran the reference frontend at `http://localhost:5173`, clicked **Run research**, and saw a streamed briefing render with citations from the deployed `/research/stream` API; you read the matching App Insights trace; quality + redteam evals pass; you approved one HITL prompt.
 
 ??? success "What success looks like"
-    `curl <api-url>/healthz` returns:
+    **Primary signal — the browser path (Lab 2).** A partner engineer's first proof the accelerator works:
 
-    ```json
-    {"status": "ok", "bootstrap": "complete"}
+    1. Reference frontend running at `http://localhost:5173` (from `patterns/sales-research-frontend/`).
+    2. Click **Run research** with the pre-filled form.
+    3. Streamed `status` → `partial` → `final` events render in the viewer; the result panel shows a usable briefing with citations.
+
+    **Backend smoke test (Lab 1).** Diagnostic only — proves the Container App booted and bootstrap completed. Not a workflow validation.
+
+    ```bash
+    curl <api-url>/healthz
+    # {"status": "ok", "bootstrap": "complete"}
     ```
 
-    `python evals/quality/run.py --api-url <api-url>` ends with something like:
+    **Eval gate (Lab 4).** `python evals/quality/run.py --api-url <api-url>` ends with something like:
 
     ```
     quality: 18/20 passed (0.90) ≥ threshold 0.85  ✅
@@ -76,7 +83,7 @@ azd env new sandbox-dev
 azd up
 ```
 
-`azd up` returns the API URL. Hit `/healthz` to confirm the scenario loaded; hit `/research/stream` with a sample payload to run the flagship end-to-end.
+`azd up` returns the API URL. Hit `/healthz` to confirm the Container App booted and bootstrap completed — that's the backend smoke test, not a workflow validation. **Lab 2 is where you exercise `/research/stream` end-to-end through the reference frontend** and see the accelerator actually work.
 
 Cleanup when done: `azd down --purge`.
 
@@ -86,9 +93,9 @@ The 8 labs walk the same surface with check-yourself prompts so you can self-che
 
 | # | One-line goal | Check yourself | Full lab |
 |---|---|---|---|
-| 1 | Deploy the flagship to your sandbox with `azd up` and confirm `/healthz` returns 200. | `curl <api>/healthz` returns `{"status":"ok"}` and resource group has AIServices + Container App + AI Search + App Insights. | [Lab 1](../../enablement/hands-on-lab.md#lab-1--first-deploy) |
-| 2 | Run the reference frontend locally and stream a research request from the browser. | Browser shows a streamed response with citations; App Insights shows a single end-to-end trace for the call. | [Lab 2](../../enablement/hands-on-lab.md#lab-2--see-it-work-in-a-browser) |
-| 3 | Read the App Insights trace for that one call — find the supervisor decision and worker spans. | You can name (a) which workers ran, (b) which tools fired, (c) where HITL would have been called if it were a write. | [Lab 3](../../enablement/hands-on-lab.md#lab-3--read-the-telemetry) |
+| 1 | Deploy the flagship backend to your sandbox with `azd up`. | **Backend smoke test only:** `curl <api>/healthz` returns `{"status":"ok"}` and the resource group has AIServices + Container App + AI Search + App Insights. This proves the container booted; Lab 2 is the first user-facing validation. | [Lab 1](../../enablement/hands-on-lab.md#lab-1--first-deploy) |
+| 2 | Run the reference frontend locally and stream a research request from the browser. | **Primary success signal:** `http://localhost:5173` renders a streamed briefing with citations after you click **Run research**. This is the traffic Lab 3 inspects in App Insights. | [Lab 2](../../enablement/hands-on-lab.md#lab-2--see-it-work-in-a-browser) |
+| 3 | Read the App Insights trace for the Lab 2 call — find the supervisor decision and worker spans. | App Insights shows a single end-to-end trace; you can name (a) which workers ran, (b) which tools fired, (c) where HITL would have been called if it were a write. | [Lab 3](../../enablement/hands-on-lab.md#lab-3--read-the-telemetry) |
 | 4 | Run quality + redteam evals against your sandbox; capture the baseline. | `python scripts/enforce-acceptance.py` reports green; you saved the output as your sandbox baseline. | [Lab 4](../../enablement/hands-on-lab.md#lab-4--run-evals--acceptance-baseline) |
 | 5 | Edit an agent spec in `docs/agent-specs/`, run `azd provision`, watch the change land in Foundry. | Foundry portal shows the new instructions; portal-only edits get reverted on next provision. | [Lab 5](../../enablement/hands-on-lab.md#lab-5--edit-an-agents-instructions-the-supported-way) |
 | 6 | Swap the model via `accelerator.yaml -> models[]` and re-deploy. | The chosen agent now runs on the new model; lint passes; eval scores haven't regressed. | [Lab 6](../../enablement/hands-on-lab.md#lab-6--swap-the-model) |

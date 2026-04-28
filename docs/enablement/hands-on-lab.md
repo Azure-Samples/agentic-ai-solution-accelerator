@@ -88,8 +88,7 @@ Lab 2 also has you open a local browser tab at `http://localhost:5173` for the r
 
 **Where:** VS Code (integrated terminal for the `gh` / `az` / `azd` commands; editor to confirm the repo loaded with `.github/copilot-instructions.md`); Azure portal (portal.azure.com → your resource group) for the **Check your work** verification.
 
-**Goal:** reproduce the 15-minute path end-to-end from an unmodified
-template clone.
+**Goal:** deploy the unmodified template to a sandbox and confirm the backend bootstrapped successfully. This is a backend smoke test — Lab 2 is where you exercise the workflow through the reference frontend.
 
 1. Clone the template into your own private repo:
 
@@ -139,8 +138,13 @@ template clone.
 
 **Check your work:**
 
+This lab is a **backend smoke test**, not a workflow validation. Lab 2 is the first user-facing success signal.
+
 - The final line of `azd up` prints an API URL. Hit `/healthz` —
-  expect 200.
+  expect 200 with `{"status": "ok", "bootstrap": "complete"}`. This
+  only proves the Container App booted and bootstrap completed; it
+  does **not** prove `/research/stream` produces a usable briefing.
+  That's Lab 2.
 - In the Azure portal, open the resource group and confirm you have
   a Foundry AIServices account, a model deployment
   (`gpt-5-mini` by default) bound to the `accelerator-default-policy`
@@ -186,6 +190,22 @@ UX is the partner's value-add; this lab just proves the wiring.
    **Show raw JSON** to inspect the structured output.
 
 **Check your work:**
+
+**Primary success signal — this is the first time you're seeing the accelerator actually work end-to-end:**
+
+- The form at `http://localhost:5173` loads with default values.
+- Clicking **Run research** streams `status` → `partial` → `final` events
+  into the live viewer (no errors in the browser console, no CORS rejection).
+- The result panel renders a usable research briefing with citations. Toggle
+  **Show raw JSON** to confirm the structured output matches the briefing.
+
+If the stream stalls, errors, or returns an empty briefing, the workflow
+has a problem that Lab 1's `/healthz` smoke test could not detect — most
+common causes are model quota exhaustion, AI Search index seeding failure,
+or a regression in `src/scenarios/sales_research/workflow.py`. Capture the
+App Insights trace (Lab 3 walks this) before debugging.
+
+**Deeper check (for partners customising the briefing shape):**
 
 - Every event in the live stream maps to one yielded dict from
   `SalesResearchWorkflow.stream` (see `src/scenarios/sales_research/workflow.py`)
