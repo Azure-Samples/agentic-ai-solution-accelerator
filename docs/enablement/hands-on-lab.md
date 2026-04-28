@@ -266,9 +266,8 @@ Insights and trace it.
    > Insights. Log records land in `traces` (one row per event) with
    > `message == event.name` and the event payload flattened into
    > `customDimensions.<attr>`. The `isnotempty(customDimensions.event_name)`
-   > filter pins the result set to accelerator events specifically — it also
-   > screens out duplicate rows from older deployments that emitted both a
-   > log record and an OTel span event for each call.
+   > filter scopes the result set to accelerator events specifically, since
+   > `traces` also collects FastAPI/uvicorn/OTel internal log rows.
 
    The `operation_Id` column lets you correlate one stream call to its
    parent `requests` row and any nested `dependencies`. Pivot from a
