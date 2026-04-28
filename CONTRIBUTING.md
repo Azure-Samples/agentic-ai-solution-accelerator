@@ -2,7 +2,7 @@
 
 This accelerator is a Microsoft-maintained template for partners
 delivering agentic AI solutions to customers on Microsoft Agent
-Framework + Azure AI Foundry. Contributions — bug reports, doc
+Framework + Microsoft Foundry. Contributions — bug reports, doc
 fixes, pattern suggestions, new reference scenarios — are welcome
 from partners and the broader community.
 

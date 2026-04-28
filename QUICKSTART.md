@@ -121,7 +121,7 @@ azd env new <customer-short-name>-dev
 azd up
 ```
 
-`azd up` provisions: Azure AI Foundry · Azure AI Search · Key Vault · Container Apps · Application Insights · Managed Identity. No keys. Content filters via IaC. Dashboards pre-wired to the brief's KPI events.
+`azd up` provisions: Microsoft Foundry · Azure AI Search · Key Vault · Container Apps · Application Insights · Managed Identity. No keys. Content filters via IaC. Dashboards pre-wired to the brief's KPI events.
 
 ~10–15 minutes; URL of the deployed agent prints at the end.
 

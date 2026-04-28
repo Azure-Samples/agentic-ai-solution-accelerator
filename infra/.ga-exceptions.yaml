@@ -26,7 +26,7 @@ exceptions:
   - resource_type: Microsoft.CognitiveServices/accounts/projects
     api_version: 2025-04-01-preview
     reason: >-
-      Azure AI Foundry project sub-resource does not yet have a non-preview
+      Microsoft Foundry project sub-resource does not yet have a non-preview
       api-version. Model deployments and RAI policies (the actual enforcement
       surfaces) are on GA 2024-10-01; only the project container is preview.
     revisit_by: 2026-10

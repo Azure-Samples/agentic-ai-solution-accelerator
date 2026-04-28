@@ -3,7 +3,7 @@
 > This file is read by GitHub Copilot (VS Code, Chat, code review) on every interaction in this repo. It encodes the **non-negotiable rules** that make a solution built from this template production-grade and compliant. Keep it in sync with the top-level `AGENTS.md`.
 
 ## What this repo is
-A partner cloned the **Azure Agentic AI Solution Accelerator** template to build an agentic solution for a specific customer. The flagship shape is a **supervisor + specialist workers** orchestration on Microsoft Agent Framework + Azure AI Foundry. The customer-specific scope lives in `docs/discovery/solution-brief.md`. The accelerator's consistency contract lives in `accelerator.yaml`.
+A partner cloned the **Azure Agentic AI Solution Accelerator** template to build an agentic solution for a specific customer. The flagship shape is a **supervisor + specialist workers** orchestration on Microsoft Agent Framework + Microsoft Foundry. The customer-specific scope lives in `docs/discovery/solution-brief.md`. The accelerator's consistency contract lives in `accelerator.yaml`.
 
 Preserve every rule below. When a request conflicts with a rule, refuse or propose a compliant alternative — do not "make it work" by weakening a guardrail.
 
@@ -17,7 +17,7 @@ Preserve every rule below. When a request conflicts with a rule, refuse or propo
 - NEVER commit `.env`, `*.pfx`, or any file with secrets. Don't weaken `.gitignore`.
 
 ### SDK & platform
-- MUST use Microsoft Agent Framework (`agent_framework`) with Azure AI Foundry as the model backend.
+- MUST use Microsoft Agent Framework (`agent_framework`) with Microsoft Foundry as the model backend.
 - MUST retrieve Foundry agents with `AzureAIClient(agent_name=..., use_latest_version=True)`. NEVER construct agent instructions in code — instructions live in the Foundry portal.
 - MUST pin SDK versions per `pyproject.toml` / `docs/version-matrix.md`.
 - NEVER introduce LangChain, LlamaIndex, Haystack, or any other orchestration SDK. Microsoft Agent Framework only.

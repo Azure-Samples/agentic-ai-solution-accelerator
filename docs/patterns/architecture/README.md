@@ -204,7 +204,7 @@ Deeper walk of how the flagship scenario actually runs end-to-end in the custome
 │     ├── uses DefaultAzureCredential               │                │
 │     └── emits OpenTelemetry → App Insights        │                │
 │                                                   │                │
-│   Azure AI Foundry project ◀──────────────────────┤                │
+│   Microsoft Foundry project ◀──────────────────────┤                │
 │     agents retrieved by name; instructions in portal               │
 │     content filters applied via IaC                                │
 │                                                   │                │

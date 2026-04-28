@@ -17,7 +17,7 @@
 
 A Microsoft-published **GitHub template repo** that partners clone — once per customer — to deliver an agentic AI solution into the customer's Azure subscription. It ships a working flagship scenario (Sales Research & Personalised Outreach), a full discovery → handover → measure motion, and the CI gates, evals, telemetry, and HITL plumbing a regulated production workload needs.
 
-The platform is **Microsoft Agent Framework + Azure AI Foundry** — no other orchestration SDKs. Identity is **Managed Identity + Entra everywhere** — no keys, no connection strings.
+The platform is **Microsoft Agent Framework + Microsoft Foundry** — no other orchestration SDKs. Identity is **Managed Identity + Entra everywhere** — no keys, no connection strings.
 
 ## The shape: supervisor + workers
 

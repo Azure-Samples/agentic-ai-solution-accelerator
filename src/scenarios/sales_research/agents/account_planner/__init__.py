@@ -2,7 +2,7 @@
 
 Produces a grounded company profile, strategic initiatives, and
 buying-committee details with citations. The agent's runtime
-instructions live in Azure AI Foundry portal; this module only shapes
+instructions live in Microsoft Foundry portal; this module only shapes
 I/O (prompt / transform / validate).
 """
 from .prompt import build_prompt

@@ -1,4 +1,4 @@
-// Azure AI Foundry (Cognitive Services AIServices) — GA-only shape.
+// Microsoft Foundry (Cognitive Services AIServices) — GA-only shape.
 //
 // Provisions:
 //   - Cognitive Services account (kind=AIServices)         GA 2024-10-01

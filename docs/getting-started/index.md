@@ -6,7 +6,7 @@
 
 ## What this accelerator is
 
-A Microsoft-published **template repo** for partners delivering agentic AI solutions to customers on **Azure AI Foundry + Microsoft Agent Framework**. Partners fork it once per customer, fill in the discovery brief, and `azd up` lands a working agentic solution in the customer's Azure subscription in ~15 minutes.
+A Microsoft-published **template repo** for partners delivering agentic AI solutions to customers on **Microsoft Foundry + Microsoft Agent Framework**. Partners fork it once per customer, fill in the discovery brief, and `azd up` lands a working agentic solution in the customer's Azure subscription in ~15 minutes.
 
 The flagship scenario (Sales Research & Personalised Outreach) runs out of the box; you customise it from the `docs/discovery/solution-brief.md` the partner produces during discovery.
 

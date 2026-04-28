@@ -18,7 +18,7 @@ you help with MUST preserve the accelerator's guardrails.
 - **NEVER** commit `.env` files or secrets. `.gitignore` covers the common ones; don't weaken it.
 
 ### SDK & platform
-- **MUST** use Microsoft Agent Framework (`agent_framework`) with Azure AI Foundry as the model backend. Do not introduce other orchestration frameworks.
+- **MUST** use Microsoft Agent Framework (`agent_framework`) with Microsoft Foundry as the model backend. Do not introduce other orchestration frameworks.
 - **MUST** retrieve Foundry agents via `AzureAIClient(agent_name=..., use_latest_version=True)`; never construct agent instructions in code. Instructions live in the Foundry portal.
 - **MUST** pin SDK versions per `pyproject.toml`. See `docs/version-matrix.md`; a weekly CI job validates against latest.
 

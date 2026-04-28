@@ -33,7 +33,7 @@ code .
 
 VS Code opens with Copilot already configured via `.github/copilot-instructions.md`. Copilot now knows the hard rules:
 
-- Microsoft Agent Framework + Azure AI Foundry only.
+- Microsoft Agent Framework + Microsoft Foundry only.
 - `DefaultAzureCredential` only — no keys.
 - HITL required for every side-effect tool call.
 - PR evals gate merges; a post-deploy regression suite guards `main`.
