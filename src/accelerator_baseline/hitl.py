@@ -11,10 +11,14 @@ Every side-effect tool MUST call ``checkpoint`` before executing.
   approve actions. This is deliberate to prevent a misconfigured production
   environment from side-effecting without a human in the loop.
 
-Policy format (from accelerator.yaml + per-tool):
+Policy format (per-tool / per-call; `accelerator.yaml.solution.hitl` is
+engagement-level documentation read by the lint, not by ``checkpoint`` at
+runtime):
     always           — block until a human approves
-    never            — skip (only if action is reversible AND
-                       accelerator.yaml.solution.hitl = none)
+    never            — skip the checkpoint unconditionally. Only safe
+                       when the action is reversible AND the engagement
+                       has documented `accelerator.yaml.solution.hitl =
+                       none` in the handover packet.
     threshold:<expr> — block when the boolean expression over args is true
                        e.g. threshold:priority == "high"
                             threshold:amount > 1000

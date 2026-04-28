@@ -172,7 +172,7 @@ covers Tier 3 day-2 operations.
 Regardless of mode, **every** tier ships with:
 
 - Entra-only auth, no shared keys.
-- Microsoft-managed content safety filter on all Foundry deployments.
+- Repo-managed `accelerator-default-policy` content safety filter (based on `Microsoft.Default`) bound to all chat / generative model deployments. Embedding deployments have no RAI binding by design.
 - App Insights + Log Analytics diagnostics (workspace-based).
 - Key Vault with soft-delete + purge protection, RBAC-only.
 - Managed Identity end-to-end (no SPN secrets).

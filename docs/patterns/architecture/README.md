@@ -75,11 +75,10 @@ partner lifts into their own pipeline once they've customised it.
 | Invariant | Rule |
 |---|---|
 | Agent instructions authored in `docs/agent-specs/*.md`, synced to Foundry at startup | `agent_specs_no_hardcoded_model`, spec + prompt modules reference by Foundry agent name |
-| `accelerator.yaml` resolves to importable modules | `manifest_imports_resolve` |
-| Every side-effect tool has a HITL checkpoint | `tool_registers_hitl` |
-| Retrieval index schema matches Bicep | `search_index_schema_matches_bicep` |
-| Content filter in Bicep (not portal) | `content_filter_iac_only` |
-| No key-based secrets in code | `no_inline_credentials`, `kv_references_only` |
+| `accelerator.yaml` resolves to importable modules and has well-formed retrieval schema refs | `scenario_manifest_valid` |
+| Every side-effect tool has a HITL checkpoint | `side_effect_tools_call_hitl` |
+| Content filter declared in Bicep (not portal) | `bicep_has_content_filter` |
+| No key-based secrets in code; managed identity only; Key Vault uses RBAC | `no_hardcoded_secrets`, `uses_default_azure_credential`, `key_vault_rbac_only` |
 | SDK matrix cannot drift from GA | `sdks_pinned_to_ga`, `dockerfile_matches_ga_pins` |
 | Container image ships the manifest | `dockerfile_copies_manifest` |
 
@@ -113,7 +112,7 @@ scenario:
 
 How it flows:
 
-1. **Bicep** parses `accelerator.yaml` at compile time via `loadYamlContent` in `infra/main.bicep`, splits the `models:` block into a default entry plus extras, and provisions each in `infra/modules/foundry.bicep` (`@batchSize(1)` — one at a time to avoid Foundry capacity-queue rejections) bound to the same shared RAI (content filter) policy. Output `AZURE_AI_FOUNDRY_MODEL_MAP` is a `slug -> deployment_name` object, passed into the Container App as the `AZURE_AI_FOUNDRY_MODEL_MAP` env var.
+1. **Bicep** parses `accelerator.yaml` at compile time via `loadYamlContent` in `infra/main.bicep`, splits the `models:` block into a default entry plus extras, and provisions each in `infra/modules/foundry.bicep` (`@batchSize(1)` — one at a time to avoid Foundry capacity-queue rejections). All **chat / generative** model deployments are bound to the shared RAI (content filter) policy `accelerator-default-policy`; the embedding deployment is provisioned without a RAI binding (content filtering doesn't apply to embeddings — they don't generate). Output `AZURE_AI_FOUNDRY_MODEL_MAP` is a `slug -> deployment_name` object, passed into the Container App as the `AZURE_AI_FOUNDRY_MODEL_MAP` env var.
 2. **FastAPI startup** (`src/bootstrap.py`) reads the model map and resolves each Foundry agent's `scenario.agents[].model` slug (or `default` when omitted) before calling `create_or_update` against Foundry. The bootstrap is idempotent — restarts re-converge to the manifest.
 
 Lint enforcement (both BLOCKING):
