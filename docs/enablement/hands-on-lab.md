@@ -556,10 +556,9 @@ didn't regress the scenario.
 
 ## Lab 8 — Scaffold a new scenario
 
-**Where:** VS Code — Copilot Chat sidebar for `/discover-scenario`, integrated terminal for `scaffold-scenario.py` and `accelerator-lint.py`, editor for pasting the printed YAML block and inspecting/editing the generated stubs.
+**Where:** VS Code — Copilot Chat sidebar for `/discover-scenario` and `/scaffold-from-brief`, integrated terminal for `accelerator-lint.py`, editor for inspecting and customising the generated files.
 
-**Goal:** understand what `/scaffold-from-brief` actually generates
-vs what you still author.
+**Goal:** use `/scaffold-from-brief` as the default partner path, then inspect the generated structure and the brief-driven files you must still customise before customer deployment.
 
 1. In Copilot Chat, run `/discover-scenario` against a realistic
    sandbox scenario you make up (e.g. "summarize support tickets
@@ -568,41 +567,77 @@ vs what you still author.
    `accelerator.yaml` `solution.*`, `acceptance.*`, and `kpis[]`
    from your answers — it does **not** touch the `scenario:`
    block (that comes next).
-2. Run `python scripts/scaffold-scenario.py ticket-summary --display "Ticket Summary"`.
-   Inspect what it generated under `src/scenarios/ticket_summary/`:
-   `schema.py`, `workflow.py`, `retrieval.py`, and a single
-   supervisor agent package (`agents/supervisor/{prompt,transform,validate}.py`)
-   plus one supervisor spec stub at
-   `docs/agent-specs/accel-ticket-summary-supervisor.md`. The
-   script also prints a `scenario:` YAML block to your terminal
-   for you to paste into `accelerator.yaml`.
-3. Paste the printed `scenario:` block over the existing
-   `scenario:` block in `accelerator.yaml`.
+
+2. In Copilot Chat, run `/scaffold-from-brief`. When prompted, give
+   it a scenario id (e.g. `ticket-summary`) and a display name
+   (e.g. `Ticket Summary`). The chatmode:
+
+   - Calls `scripts/scaffold-scenario.py` to materialise
+     `src/scenarios/ticket_summary/` (schema, workflow, retrieval,
+     supervisor agent package) plus the supervisor spec stub at
+     `docs/agent-specs/accel-ticket-summary-supervisor.md`.
+   - Pastes the printed `scenario:` YAML block into
+     `accelerator.yaml`, replacing the existing `scenario:` block.
+   - Walks the brief-to-files customisation checklist below so you
+     know exactly which files the brief wants you to touch.
+
+   Treat its output as a **guided checklist, not a finished
+   implementation.** The scaffold gives you structure; the brief
+   tells you what to fill in.
+
+   !!! info "Behind the scenes / fallback path"
+       `/scaffold-from-brief` is a thin wrapper over a Python script.
+       If the chatmode fails midway, or if you're working without
+       Copilot Chat (Codex CLI, Claude Code, Cursor, etc.), run the
+       script directly:
+
+       ```bash
+       python scripts/scaffold-scenario.py ticket-summary --display "Ticket Summary"
+       ```
+
+       Then paste the printed `scenario:` YAML block into
+       `accelerator.yaml` by hand and walk the brief-to-files
+       checklist below manually. The script only handles the
+       structural scaffold — it does not do the brief-driven
+       per-file customisation.
+
+3. Walk the **brief → files** checklist. The authoritative copy
+   lives in `.github/chatmodes/scaffold-from-brief.chatmode.md` —
+   the condensed version below mirrors it for lab use. If the two
+   ever diverge, update both in the same PR.
+
+   | Brief area | Files to verify / customise |
+   |---|---|
+   | Problem + persona (Section 1) | `src/scenarios/<package>/agents/supervisor/prompt.py` — rewrite the intro |
+   | Solution shape (Section 5, if not supervisor-routing) | Re-shape `src/scenarios/<package>/workflow.py` for `single-agent` or `chat-with-actioning` |
+   | Grounding sources (Section 5) | `src/scenarios/<package>/retrieval.py` + declare indexes under `scenario.retrieval.indexes` |
+   | Side-effect tools + HITL (Section 5) | `src/tools/<tool_name>.py` (each wrapped in `hitl.checkpoint(...)`); `src/accelerator_baseline/hitl.py` per-tool rules |
+   | Constraints / controls (Section 6) | `infra/main.parameters.json` + `accelerator.yaml.controls.*` |
+   | Acceptance / evals (Sections 3 + 7) | `evals/quality/golden_cases.jsonl` (replace flagship cases); `evals/redteam/cases.jsonl` (one case per RAI risk) |
+   | KPIs (Section 4) | Register each event in `src/accelerator_baseline/telemetry.py`; append a `KqlItem/1.0` per KPI to `infra/dashboards/roi-kpis.json` |
+   | Worker agents (if supervisor-routing) | `python scripts/scaffold-agent.py <worker-id> --scenario <scenario-id> --capability "..."` for each worker named in the brief |
+
 4. Run `python scripts/accelerator-lint.py`. In a fresh scaffold,
    most lint rules will pass because the generated files are
-   syntactically valid and the supervisor spec ships with a
-   generic baseline. But the `prompt.py`, `transform.py`,
-   `validate.py`, and `retrieval.py` are minimal placeholders —
-   read them, then build them out: tighten the supervisor
-   spec for your domain, add worker agents with
-   `scripts/scaffold-agent.py`, author retrieval schema, and
-   author golden + redteam cases before deploying to a customer.
+   syntactically valid and the supervisor spec ships with a generic
+   baseline. The `prompt.py`, `transform.py`, `validate.py`, and
+   `retrieval.py` are minimal placeholders — the checklist above is
+   what turns them into a real scenario.
 
 **Check your work:**
 
 - Open the generated prompt / transform / validate stubs under
-  `src/scenarios/ticket_summary/agents/supervisor/`. They're
-  deliberate placeholders. The supervisor spec ships with generic
-  baseline instructions that run as-is but aren't domain-aware —
-  tighten those instructions for your scenario. Don't ship to a
-  customer until real behavior is authored, the supervisor spec
-  reflects your domain, golden + redteam cases exist, and lint
-  reports `0 blocking, 0 warning findings`.
-- `/scaffold-from-brief` drives all of the above in one chatmode
-  invocation; the CLI `scripts/scaffold-scenario.py` is the
-  underlying mechanic `scaffold-from-brief` calls into. Knowing
-  the difference matters when something goes wrong mid-chatmode
-  and you have to finish by hand.
+  `src/scenarios/<package>/agents/supervisor/`. They're deliberate
+  placeholders. The supervisor spec ships with generic baseline
+  instructions that run as-is but aren't domain-aware — tighten
+  those instructions for your scenario. Don't ship to a customer
+  until real behaviour is authored, the supervisor spec reflects
+  your domain, golden + redteam cases exist, and lint reports
+  `0 blocking, 0 warning findings`.
+- Decision rule for future engagements: **default path is
+  `/scaffold-from-brief`; the Python script is the debug / fallback
+  mechanic.** Knowing both matters when a chatmode run fails
+  partway and you have to finish by hand.
 
 ---
 
