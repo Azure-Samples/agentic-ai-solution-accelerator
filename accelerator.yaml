@@ -132,6 +132,12 @@ scenario:
       - name: accounts
         seed: data/samples/accounts.json
         schema: retrieval:index_definition
+        # FoundryIQ Knowledge Source per-document metadata fields (citations).
+        # Defaults to ["source"] when omitted. Flagship cites company_name as
+        # additional account-level metadata alongside the source URL.
+        source_data_fields:
+          - source
+          - company_name
   evals:
     quality_dataset: evals/quality/golden_cases.jsonl
     redteam_dataset: evals/redteam/cases.jsonl

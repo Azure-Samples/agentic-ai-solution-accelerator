@@ -9,7 +9,7 @@ Creates:
 - ``src/scenarios/<package>/__init__.py``
 - ``src/scenarios/<package>/schema.py``         (request BaseModel stub)
 - ``src/scenarios/<package>/workflow.py``       (BaseWorkflow + build_workflow factory)
-- ``src/scenarios/<package>/retrieval.py``      (index_definition stub)
+- ``src/scenarios/<package>/retrieval.py``      (FoundryIQ-shaped index_definition)
 - ``src/scenarios/<package>/agents/__init__.py``
 - ``src/scenarios/<package>/agents/supervisor/{__init__,prompt,transform,validate}.py``
 - ``docs/agent-specs/accel-<scenario-id>-supervisor.md`` (spec stub)
@@ -21,6 +21,12 @@ Behaviour:
   rollback; existing files are left untouched).
 - Does NOT edit ``accelerator.yaml`` automatically; prints the ``scenario:``
   block to paste in manually so operator review is explicit.
+- Defaults the printed ``scenario:`` snippet to FoundryIQ-shape grounding
+  (``mode: foundry_tool`` on the supervisor, AI Search index underneath
+  with vectorizer + semantic + HNSW). FoundryIQ is the consolidated
+  enterprise knowledge layer and the recommended starting point for every
+  scenario; partners on read-only-from-input scenarios can pass
+  ``--no-retrieval`` to omit the retrieval blocks.
 
 Guardrails:
 - Scenario IDs may contain hyphens (``order-triage``); package dirs are
@@ -64,22 +70,118 @@ TEMPLATES: dict[str, Callable[[str, str], str]] = {
         '    query: str\n'
     ).format(sid=sid),
     "retrieval.py": lambda sid, leaf: (
-        '"""Index definitions for the {sid} scenario."""\n'
+        '"""Index definitions for the {sid} scenario (FoundryIQ pattern).\n\n'
+        'The ``schema`` callable is referenced from ``accelerator.yaml`` and is\n'
+        'the single source of truth for the AI Search index shape that sits\n'
+        'underneath the FoundryIQ Knowledge Source + Knowledge Base. The\n'
+        'index is created by ``src/bootstrap.py`` at FastAPI startup; at\n'
+        'runtime the application code does not need the schema -- agents\n'
+        'query the index transparently through the FoundryIQ MCPTool.\n\n'
+        'The vectorizer + semantic + HNSW shape mirrors the flagship so a\n'
+        'scaffolded scenario is FoundryIQ-ready out of the box. Partners\n'
+        'extend ``fields`` with domain-specific filterables / facetables;\n'
+        'the embedding wiring is intentionally not partner-tunable.\n'
+        '"""\n'
         'from __future__ import annotations\n\n'
+        'import os\n\n'
         'from azure.search.documents.indexes.models import (\n'
+        '    AzureOpenAIVectorizer,\n'
+        '    AzureOpenAIVectorizerParameters,\n'
+        '    HnswAlgorithmConfiguration,\n'
         '    SearchableField,\n'
+        '    SearchField,\n'
         '    SearchFieldDataType,\n'
         '    SearchIndex,\n'
+        '    SemanticConfiguration,\n'
+        '    SemanticField,\n'
+        '    SemanticPrioritizedFields,\n'
+        '    SemanticSearch,\n'
         '    SimpleField,\n'
-        ')\n\n\n'
+        '    VectorSearch,\n'
+        '    VectorSearchProfile,\n'
+        ')\n\n'
+        '# text-embedding-3-small. Changing this invalidates every stored\n'
+        '# vector in the index -- not a partner-tunable parameter.\n'
+        'EMBEDDING_DIMENSIONS = 1536\n\n'
+        'ALGORITHM_NAME = "accel-hnsw"\n'
+        'VECTORIZER_NAME = "accel-aoai"\n'
+        'PROFILE_NAME = "accel-vector-profile"\n\n\n'
         'def index_definition(name: str) -> SearchIndex:\n'
-        '    """Return the default index for this scenario."""\n'
+        '    """Return the FoundryIQ-shaped index for this scenario.\n\n'
+        '    Reads two env vars wired by ``infra/modules/container-app.bicep``:\n'
+        '        - ``AZURE_AI_FOUNDRY_OPENAI_ENDPOINT``\n'
+        '        - ``AZURE_AI_FOUNDRY_EMBEDDING_DEPLOYMENT``\n'
+        '    The Search service authenticates as its SystemAssigned MI\n'
+        '    (Cognitive Services OpenAI User on the Foundry account, granted\n'
+        '    in ``main.bicep``); no keys.\n'
+        '    """\n'
+        '    aoai_endpoint = os.environ.get(\n'
+        '        "AZURE_AI_FOUNDRY_OPENAI_ENDPOINT", ""\n'
+        '    )\n'
+        '    embedding_deployment = os.environ.get(\n'
+        '        "AZURE_AI_FOUNDRY_EMBEDDING_DEPLOYMENT",\n'
+        '        "text-embedding-3-small",\n'
+        '    )\n\n'
         '    return SearchIndex(\n'
         '        name=name,\n'
         '        fields=[\n'
-        '            SimpleField(name="id", type=SearchFieldDataType.String, key=True),\n'
-        '            SearchableField(name="content", type=SearchFieldDataType.String),\n'
+        '            SimpleField(\n'
+        '                name="id", type=SearchFieldDataType.String, key=True\n'
+        '            ),\n'
+        '            SearchableField(\n'
+        '                name="content", type=SearchFieldDataType.String\n'
+        '            ),\n'
+        '            SearchField(\n'
+        '                name="contentVector",\n'
+        '                type=SearchFieldDataType.Collection(\n'
+        '                    SearchFieldDataType.Single\n'
+        '                ),\n'
+        '                searchable=True,\n'
+        '                vector_search_dimensions=EMBEDDING_DIMENSIONS,\n'
+        '                vector_search_profile_name=PROFILE_NAME,\n'
+        '            ),\n'
+        '            SimpleField(\n'
+        '                name="source",\n'
+        '                type=SearchFieldDataType.String,\n'
+        '                filterable=True,\n'
+        '            ),\n'
+        '            # TODO: add domain-specific filterable / facetable fields here.\n'
         '        ],\n'
+        '        vector_search=VectorSearch(\n'
+        '            algorithms=[\n'
+        '                HnswAlgorithmConfiguration(name=ALGORITHM_NAME)\n'
+        '            ],\n'
+        '            profiles=[\n'
+        '                VectorSearchProfile(\n'
+        '                    name=PROFILE_NAME,\n'
+        '                    algorithm_configuration_name=ALGORITHM_NAME,\n'
+        '                    vectorizer_name=VECTORIZER_NAME,\n'
+        '                )\n'
+        '            ],\n'
+        '            vectorizers=[\n'
+        '                AzureOpenAIVectorizer(\n'
+        '                    vectorizer_name=VECTORIZER_NAME,\n'
+        '                    parameters=AzureOpenAIVectorizerParameters(\n'
+        '                        resource_url=aoai_endpoint,\n'
+        '                        deployment_name=embedding_deployment,\n'
+        '                        model_name="text-embedding-3-small",\n'
+        '                        auth_identity=None,\n'
+        '                    ),\n'
+        '                )\n'
+        '            ],\n'
+        '        ),\n'
+        '        semantic_search=SemanticSearch(\n'
+        '            configurations=[\n'
+        '                SemanticConfiguration(\n'
+        '                    name="default",\n'
+        '                    prioritized_fields=SemanticPrioritizedFields(\n'
+        '                        content_fields=[\n'
+        '                            SemanticField(field_name="content")\n'
+        '                        ],\n'
+        '                    ),\n'
+        '                )\n'
+        '            ]\n'
+        '        ),\n'
         '    )\n'
     ).format(sid=sid),
     "workflow.py": lambda sid, leaf: (
@@ -180,7 +282,7 @@ side-effect tools directly.
 """
 
 
-MANIFEST_SNIPPET = """# Paste this under the existing `scenario:` block, or replace the current one.
+MANIFEST_SNIPPET_FOUNDRYIQ = """# Paste this under the existing `scenario:` block, or replace the current one.
 scenario:
   id: {sid}
   package: src.scenarios.{leaf}
@@ -189,7 +291,24 @@ scenario:
   endpoint:
     path: /{leaf}/stream
   agents:
-    - {{ id: supervisor, foundry_name: {agent_name} }}
+    - id: supervisor
+      foundry_name: {agent_name}
+      retrieval:
+        # FoundryIQ Knowledge Base pattern (default; recommended starting point).
+        # Bootstrap creates a Knowledge Source + Knowledge Base on the AI Search
+        # index below, then wires the agent with an MCPTool pointing at the
+        # Bicep-provisioned RemoteTool MCP connection. AI Search appears under
+        # the agent's **Knowledge** section in the Foundry portal. The workflow
+        # does NOT inject Python grounding into the prompt for this agent --
+        # the agent retrieves through the MCPTool when the model decides to.
+        mode: foundry_tool
+        index: {leaf}
+        # top_k / query_type are advisory descriptors today (FoundryIQ MCPTool
+        # does not yet consume them at runtime). Keep them documented so the
+        # intent is visible; they will be honoured once the MCPTool surface
+        # exposes per-call tuning.
+        top_k: 5
+        query_type: vector_semantic_hybrid
   retrieval:
     indexes:
       - name: {leaf}
@@ -201,12 +320,32 @@ scenario:
 """
 
 
-def _plan(scenario_id: str) -> list[tuple[pathlib.Path, str]]:
+MANIFEST_SNIPPET_NO_RETRIEVAL = """# Paste this under the existing `scenario:` block, or replace the current one.
+# `--no-retrieval`: scenario operates on input only; no AI Search / FoundryIQ.
+scenario:
+  id: {sid}
+  package: src.scenarios.{leaf}
+  request_schema: schema:ScenarioRequest
+  workflow_factory: workflow:build_workflow
+  endpoint:
+    path: /{leaf}/stream
+  agents:
+    - {{ id: supervisor, foundry_name: {agent_name} }}
+  evals:
+    quality_dataset: evals/quality/golden_cases.jsonl
+    redteam_dataset: evals/redteam/cases.jsonl
+"""
+
+
+def _plan(scenario_id: str, *, no_retrieval: bool = False) -> list[tuple[pathlib.Path, str]]:
     leaf = _package_leaf(scenario_id)
     pkg_root = ROOT / "src" / "scenarios" / leaf
     agent_name = _supervisor_foundry_name(scenario_id)
     files: list[tuple[pathlib.Path, str]] = []
     for rel, tmpl in TEMPLATES.items():
+        # Skip retrieval.py when --no-retrieval; the manifest won't reference it.
+        if no_retrieval and rel == "retrieval.py":
+            continue
         files.append((pkg_root / rel, tmpl(scenario_id, leaf)))
     files.append((
         ROOT / "docs" / "agent-specs" / f"{agent_name}.md",
@@ -241,6 +380,11 @@ def main() -> int:
                     help="slug (lowercase; hyphens ok). E.g. 'order-triage'.")
     ap.add_argument("--display", default="",
                     help="(reserved) human-readable display name")
+    ap.add_argument("--no-retrieval", action="store_true",
+                    help="emit a scenario without grounding (no retrieval.py "
+                         "and no scenario.retrieval.indexes block in the "
+                         "printed manifest snippet). Default is FoundryIQ "
+                         "grounding -- the recommended starting point.")
     args = ap.parse_args()
 
     sid = args.scenario_id.strip()
@@ -249,7 +393,7 @@ def main() -> int:
               f"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$", file=sys.stderr)
         return 2
 
-    plan = _plan(sid)
+    plan = _plan(sid, no_retrieval=args.no_retrieval)
     conflicts = [p for p, _ in plan if p.exists()]
     if conflicts:
         print("::error::targets already exist; refusing to overwrite:",
@@ -272,13 +416,20 @@ def main() -> int:
             created.append(path)
         leaf = _package_leaf(sid)
         agent_name = _supervisor_foundry_name(sid)
+        snippet = (
+            MANIFEST_SNIPPET_NO_RETRIEVAL if args.no_retrieval
+            else MANIFEST_SNIPPET_FOUNDRYIQ
+        )
         print(f"scaffolded scenario: src/scenarios/{leaf}/")
+        if args.no_retrieval:
+            print("(no retrieval -- scenario operates on input only)")
+        else:
+            print("(default: FoundryIQ grounding -- AI Search underneath, "
+                  "MCPTool wired by bootstrap)")
         print("")
         print("Next step — paste this into accelerator.yaml:")
         print("")
-        print(MANIFEST_SNIPPET.format(
-            sid=sid, leaf=leaf, agent_name=agent_name,
-        ))
+        print(snippet.format(sid=sid, leaf=leaf, agent_name=agent_name))
         return 0
     except Exception as exc:
         print(f"::error::scaffold failed: {exc}", file=sys.stderr)

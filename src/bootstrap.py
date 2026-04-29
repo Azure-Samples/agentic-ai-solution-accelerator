@@ -229,13 +229,18 @@ async def _bootstrap_knowledge(bundle: ScenarioBundle) -> None:
 
     cred = DefaultAzureCredential()
     try:
-        # Collect unique index names from retrieval agents.
-        seen_indexes: set[str] = set()
+        # Collect unique index names from retrieval agents, plus the
+        # index entry that declares them (so we know each index's
+        # `sourceDataFields`). Order-stable for deterministic logs.
+        seen_indexes: list[str] = []
+        idx_to_entry: dict[str, "ScenarioIndex"] = {  # noqa: F821
+            i.name: i for i in bundle.retrieval_indexes
+        }
         for agent in foundry_tool_agents:
             assert agent.retrieval is not None
             idx_name = agent.retrieval.index
             if idx_name and idx_name not in seen_indexes:
-                seen_indexes.add(idx_name)
+                seen_indexes.append(idx_name)
 
         # ---- 1. Create Knowledge Source(s) per search index ----
         ks_names: list[str] = []
@@ -245,6 +250,10 @@ async def _bootstrap_knowledge(bundle: ScenarioBundle) -> None:
                 f"{search_endpoint}/knowledgesources/{ks_name}"
                 f"?api-version={_KB_API_VERSION}"
             )
+            # Resolve sourceDataFields from the manifest entry. Defaults to
+            # ("source",) -- every scaffolded scenario has that field.
+            entry = idx_to_entry.get(idx_name)
+            sdf = entry.source_data_fields if entry else ("source",)
             ks_body: dict[str, Any] = {
                 "name": ks_name,
                 "kind": "searchIndex",
@@ -253,10 +262,7 @@ async def _bootstrap_knowledge(bundle: ScenarioBundle) -> None:
                 ),
                 "searchIndexParameters": {
                     "searchIndexName": idx_name,
-                    "sourceDataFields": [
-                        {"name": "source"},
-                        {"name": "company_name"},
-                    ],
+                    "sourceDataFields": [{"name": n} for n in sdf],
                 },
             }
 

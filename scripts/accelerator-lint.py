@@ -226,8 +226,9 @@ def scenario_manifest_valid(ctx: Ctx) -> list[Finding]:
     if "workflow_factory" in scenario:
         _check_ref("workflow_factory", scenario["workflow_factory"])
 
-    # Agents: non-empty list of {id, foundry_name}
+    # Agents: non-empty list of {id, foundry_name}; per-agent retrieval.mode validated.
     agents = scenario.get("agents") or []
+    valid_modes = {"foundry_tool", "none"}
     if not isinstance(agents, list) or not agents:
         out.append(Finding("scenario-manifest", "block", "accelerator.yaml",
                            "scenario.agents must be a non-empty list"))
@@ -238,6 +239,24 @@ def scenario_manifest_valid(ctx: Ctx) -> list[Finding]:
                                    "accelerator.yaml",
                                    f"scenario.agents[{i}] needs 'id' and "
                                    "'foundry_name'"))
+                continue
+            r = a.get("retrieval")
+            if r is None:
+                continue
+            if not isinstance(r, dict):
+                out.append(Finding("scenario-manifest", "block",
+                                   "accelerator.yaml",
+                                   f"scenario.agents[{i}].retrieval must be a "
+                                   "mapping (or omit it entirely)"))
+                continue
+            mode = r.get("mode")
+            if mode not in valid_modes:
+                out.append(Finding(
+                    "scenario-manifest", "block", "accelerator.yaml",
+                    f"scenario.agents[{i}].retrieval.mode={mode!r} is invalid; "
+                    f"must be one of {sorted(valid_modes)}. "
+                    "Use 'foundry_tool' for FoundryIQ Knowledge Base "
+                    "(recommended) or 'none' to disable grounding."))
 
     # Retrieval indexes (optional, but if present each must be well-formed)
     retrieval = scenario.get("retrieval") or {}

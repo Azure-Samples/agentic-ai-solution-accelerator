@@ -64,6 +64,11 @@ class ScenarioIndex:
     name: str
     seed: str
     schema_callable: Callable[[str], Any]
+    # FoundryIQ Knowledge Source `sourceDataFields` — the per-document
+    # metadata fields the agent receives as citations alongside content.
+    # Defaults to ("source",) which exists in every scaffolded scenario.
+    # Flagship adds richer metadata (e.g. company_name, industry).
+    source_data_fields: tuple[str, ...] = ("source",)
 
 
 @dataclass(frozen=True)
@@ -238,8 +243,19 @@ def load_scenario(manifest_path: pathlib.Path | None = None) -> ScenarioBundle:
             raise ValueError(
                 f"scenario.retrieval.indexes[{i}].schema must resolve to a callable"
             )
+        sdf_raw = entry.get("source_data_fields")
+        if sdf_raw is None:
+            sdf_tuple: tuple[str, ...] = ("source",)
+        elif isinstance(sdf_raw, list) and all(isinstance(x, str) for x in sdf_raw):
+            sdf_tuple = tuple(sdf_raw) or ("source",)
+        else:
+            raise ValueError(
+                f"scenario.retrieval.indexes[{i}].source_data_fields must be "
+                "a list of strings (or omit it for the default ['source'])"
+            )
         indexes.append(ScenarioIndex(
-            name=entry["name"], seed=entry["seed"], schema_callable=schema_fn
+            name=entry["name"], seed=entry["seed"], schema_callable=schema_fn,
+            source_data_fields=sdf_tuple,
         ))
 
     evals = scenario.get("evals") or {}
