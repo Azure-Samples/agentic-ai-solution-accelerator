@@ -605,11 +605,17 @@ didn't regress the scenario.
    ever diverge, update both in the same PR.
 
 4. Run `python scripts/accelerator-lint.py`. In a fresh scaffold,
-   most lint rules will pass because the generated files are
-   syntactically valid and the supervisor spec ships with a generic
-   baseline. The `prompt.py`, `transform.py`, `validate.py`, and
-   `retrieval.py` are minimal placeholders — the checklist below is
-   what turns them into a real scenario.
+   **all rules should pass `0 blocking, 0 warning findings`** — the
+   scaffolder also seeded `evals/quality/golden_cases.jsonl` with a
+   stub case (`q-001`, `exercises: ["supervisor"]`, `must_cite: false`,
+   TODO query) so the `agent_has_golden_case` and
+   `golden_cases_exercises_valid` rules pass immediately. Each
+   `python scripts/scaffold-agent.py …` you run later transparently
+   appends the new agent id to that stub's `exercises` array, so lint
+   stays green as you grow the scenario. The `prompt.py`,
+   `transform.py`, `validate.py`, and `retrieval.py` are minimal
+   placeholders, and the stub's `query`/`expected` are TODOs — the
+   checklist below is what turns them into a real scenario.
 
 ### Brief → files checklist
 
@@ -620,7 +626,7 @@ didn't regress the scenario.
 | Grounding sources (Section 5) | `src/scenarios/<package>/retrieval.py` + declare indexes under `scenario.retrieval.indexes` |
 | Side-effect tools + HITL (Section 5) | `src/tools/<tool_name>.py` (each wrapped in `hitl.checkpoint(...)`); `src/accelerator_baseline/hitl.py` per-tool rules |
 | Constraints / controls (Section 6) | `infra/main.parameters.json` + `accelerator.yaml.controls.*` |
-| Acceptance / evals (Sections 3 + 7) | `evals/quality/golden_cases.jsonl` (replace flagship cases); `evals/redteam/cases.jsonl` (one case per RAI risk) |
+| Acceptance / evals (Sections 3 + 7) | `evals/quality/golden_cases.jsonl` (scaffolder seeded a stub `q-001` exercising every scaffolded worker — refine `query`/`expected` and grow the suite); `evals/redteam/cases.jsonl` (one case per RAI risk) |
 | KPIs (Section 4) | Register each event in `src/accelerator_baseline/telemetry.py`; append a `KqlItem/1.0` per KPI to `infra/dashboards/roi-kpis.json` |
 | Worker agents (if supervisor-routing) | `python scripts/scaffold-agent.py <worker-id> --scenario <scenario-id> --capability "..."` for each worker named in the brief |
 

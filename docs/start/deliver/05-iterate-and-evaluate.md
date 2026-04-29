@@ -75,7 +75,7 @@ python scripts/scaffold-agent.py <agent_id> --scenario <scenario-id> \
   --capability "<one-sentence capability>" [--depends-on a,b]
 ```
 
-The scaffolder appends to the declarative `WORKERS` registry in `src/scenarios/<id>/workflow.py`, creates the three-layer files (`prompt.py`, `transform.py`, `validate.py`), and writes a Foundry agent spec stub. It is transactional and re-run safe.
+The scaffolder appends to the declarative `WORKERS` registry in `src/scenarios/<id>/workflow.py`, creates the three-layer files (`prompt.py`, `transform.py`, `validate.py`), writes a Foundry agent spec stub, **and appends the new agent id to every existing case's `exercises` array in `evals/quality/golden_cases.jsonl`** so the `agent_has_golden_case` lint rule stays green automatically. It is transactional and re-run safe; refine each case's `query` and `expected` to actually exercise the new worker before the next eval run.
 
 ## Ship through CI
 

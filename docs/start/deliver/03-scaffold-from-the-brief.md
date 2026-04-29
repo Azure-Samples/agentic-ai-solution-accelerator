@@ -55,7 +55,7 @@ If you scaffold a **new** scenario via `python scripts/scaffold-scenario.py <sce
 | Side-effect tools | New files under `src/tools/` with HITL scaffolding |
 | HITL gates | Per-tool `HITL_POLICY` constant + `checkpoint(...)` calls; `accelerator.yaml -> solution.hitl` engagement-level summary |
 | Constraints | `infra/main.parameters.json` + `accelerator.yaml` |
-| Success criteria | `evals/quality/golden_cases.jsonl` + CI gates |
+| Success criteria | `evals/quality/golden_cases.jsonl` — scaffolder seeds stub `q-001` so lint stays green; you refine `query` + `expected` to encode the real customer success criteria + CI gates |
 | RAI risks | `evals/redteam/` custom adversarial cases |
 | ROI KPIs | `src/accelerator_baseline/telemetry.py` events + `infra/dashboards/roi-kpis.json` (panels are scenario-agnostic; rename the dashboard per engagement) |
 
