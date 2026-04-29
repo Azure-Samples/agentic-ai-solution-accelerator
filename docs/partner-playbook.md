@@ -40,7 +40,7 @@ This matters for scoping the SOW honestly.
 | Infra                        | `infra/` (AVM-based) + `azure.yaml` + `deploy/environments.yaml`                     | Customer network / private-link overlay if required |
 | CI / CD                      | `.github/workflows/{deploy,evals,lint}.yml` + `scripts/accelerator-lint.py`         | Branch protection, required reviewers               |
 | Quality + safety evals       | `evals/quality/`, `evals/redteam/`                                                  | Customer golden cases, customer-specific redteam    |
-| Agent definitions            | Bootstrap script + agent-spec docs (`docs/agent-specs/`)                            | Foundry portal instructions + tool attachment       |
+| Agent definitions            | Bootstrap script + agent-spec docs (`docs/agent-specs/`)                            | Customer-specific spec content + Foundry portal catalog-tool attachment (instructions themselves are spec-driven, not portal-edited) |
 | Telemetry baseline           | `src/accelerator_baseline/` (telemetry / HITL / killswitch / cost / evals helpers)  | Customer dashboards, alerting thresholds            |
 | Landing-zone overlay         | `infra/avm-reference/` + `infra/modules/` (Tier 2 `avm`) and `infra/alz-overlay/` (Tier 3 `alz-integrated`) | Customer ALZ alignment, change control              |
 | End-user / app-level auth    | Service-to-service Managed Identity everywhere (Foundry, Search, Key Vault all Entra-only, no keys); HTTPS-only ingress | **Who can call the API / load the UI** — Entra Easy Auth on Container Apps, App Gateway + WAF, or Front Door. The shipped API has no end-user auth dependency. |
@@ -99,17 +99,28 @@ hypothesis, solution shape, constraints/risks, acceptance evals.
 
 ## Stage 2 — Scaffold
 
-**Where:** VS Code throughout — Copilot Chat sidebar for `/scaffold-from-brief`, editor for the manual customizations (rewriting `prompt.py`, editing `accelerator.yaml`, authoring agent specs), integrated terminal for `python scripts/scaffold-scenario.py`, `accelerator-lint.py`, and `pytest`.
+**Where:** VS Code throughout — Copilot Chat sidebar (open via `Ctrl+Alt+I`; pick a chatmode from the **agents dropdown** at the top of the panel), editor for diff review, integrated terminal for the lint/test/preflight commands.
 
 **Goal:** adapt the repo to the customer's scenario — a clean diff reviewers
 can follow.
 
-**How:** run `/scaffold-from-brief`. The chatmode is a thin wrapper over
-`scripts/scaffold-scenario.py`; it drives the CLI and then walks you
-through the customization steps below.
+**How:** run three chatmodes in sequence. Each chatmode is declarative — it
+edits files and updates the manifest; you review the diff after each step
+before moving to the next.
 
-**What the CLI materializes automatically** (one command,
-`python scripts/scaffold-scenario.py <scenario-id>`):
+```
+/scaffold-from-brief    →  structural shape (folders, stub three-layer files, manifest skeleton)
+/define-grounding       →  per-worker FoundryIQ vs none mode + AI Search indexes + catalog tools
+/implement-workers      →  fills every stub prompt.py / transform.py / validate.py + Foundry agent spec
+```
+
+`/scaffold-from-brief` is a thin wrapper over `scripts/scaffold-scenario.py`;
+the script and the `scaffold-agent.py` it pairs with auto-seed
+`evals/quality/golden_cases.jsonl` with a stub `q-001` so lint stays green
+without manual eval-file edits.
+
+**What `/scaffold-from-brief` materializes** (one chatmode invocation;
+the underlying CLI is `python scripts/scaffold-scenario.py <scenario-id>`):
 
 - `src/scenarios/<package>/{__init__,schema,workflow,retrieval}.py`
 - `src/scenarios/<package>/agents/supervisor/{__init__,prompt,transform,validate}.py`
@@ -117,26 +128,44 @@ through the customization steps below.
 - `data/samples/<package>.json`
 - A `scenario:` snippet printed to your terminal to paste into
   `accelerator.yaml`
+- A stub `q-001` in `evals/quality/golden_cases.jsonl` (refine the
+  `query` and `expected` fields to encode real customer success criteria)
 
-**Manual follow-ups after the CLI runs** (chatmode step 3):
+**What `/define-grounding` writes:** per-worker `retrieval:` blocks
+(mode = `foundry_tool` or `none`) and `catalog_tools:` lists in
+`accelerator.yaml -> scenario.agents[]`, plus matching entries in
+`scenario.retrieval.indexes[]`. FoundryIQ is the consolidated enterprise
+knowledge layer; AI Search lives underneath it. **Always start with
+`foundry_tool` unless the worker is purely transformational** (router,
+formatter, aggregator). The startup bootstrap (`src/bootstrap.py`)
+provisions FoundryIQ Knowledge Sources + Knowledge Bases + agent
+attachments on the next `azd deploy`.
+
+**What `/implement-workers` writes:** real `prompt.py`, `transform.py`,
+`validate.py`, and `docs/agent-specs/<foundry_name>.md` for every
+scaffolded-but-unfinished worker, walked in dependency order off the
+`WORKERS` registry in `src/scenarios/<id>/workflow.py`. Use
+`/implement-worker <worker_id>` to fill a single worker (same code path,
+narrower scope).
+
+**Manual touch-ups after the chatmode trio runs:**
 
 - Paste the `scenario:` snippet into `accelerator.yaml` and re-sync
   `solution.*`, `acceptance.*`, and `kpis[]` from the brief
-- Rewrite the supervisor's `prompt.py` intro for the scenario
-- If the chosen pattern is not supervisor-routing, reshape `workflow.py` for
-  `single-agent` or `chat-with-actioning`
-- Edit `retrieval.py` to match the chosen grounding sources
-- Create `src/tools/<tool_name>.py` per side-effect tool (each wrapped in
-  `hitl.checkpoint(...)`)
-- Register KPI events in `src/accelerator_baseline/telemetry.py` and append
-  a `KqlItem/1.0` entry per KPI under `items[]` in `infra/dashboards/roi-kpis.json`
-- Replace flagship golden cases in `evals/quality/golden_cases.jsonl`
-  (5+ for this scenario)
+- Refine each golden case's `query` and `expected` fields to encode
+  real customer success criteria; add 4+ more cases per scenario
 - Add a redteam case per RAI risk in `evals/redteam/cases.jsonl`
-- Add additional worker agents with `/add-worker-agent` (or directly via
-  `python scripts/scaffold-agent.py <agent_id> --scenario <scenario-id> --capability "<one-sentence capability>"`).
-  Each new agent needs a matching `docs/agent-specs/<foundry_name>.md` spec;
-  `src/bootstrap.py` picks them up at FastAPI startup on the next `azd up` / `azd deploy`.
+- Register each KPI event in `src/accelerator_baseline/telemetry.py` and
+  append a `KqlItem/1.0` entry per KPI under `items[]` in
+  `infra/dashboards/roi-kpis.json`
+- Create `src/tools/<tool_name>.py` per side-effect tool via `/add-tool`
+  (each wrapped in `hitl.checkpoint(...)`)
+
+**Escape hatch (advanced / fallback):** if a chatmode fails midway, the
+underlying scripts run directly — `python scripts/scaffold-scenario.py
+<id>`, `python scripts/scaffold-agent.py <agent_id> --scenario <scenario-id>
+--capability "<one-liner>"`. The chatmodes wrap these with brief-driven
+customization; the scripts alone only do the structural scaffold.
 
 **What "good" looks like:**
 
@@ -385,7 +414,10 @@ no spreadsheets, no screenshots of runs.
 | When you need to…                            | Use                                                                  |
 |----------------------------------------------|----------------------------------------------------------------------|
 | Run structured discovery                     | `/discover-scenario`                                                 |
+| Pre-draft the brief from a customer PRD      | `/ingest-prd`                                                        |
 | Adapt the repo to the brief                  | `/scaffold-from-brief`                                               |
+| Wire FoundryIQ + AI Search + catalog tools per worker | `/define-grounding`                                                  |
+| Fill every scaffolded worker (3-layer + Foundry spec) | `/implement-workers` (or `/implement-worker <id>` for a single worker) |
 | Add a worker agent post-scaffold             | `/add-worker-agent`                                                  |
 | Add a tool (local Python or Foundry)         | `/add-tool`                                                          |
 | Swap from flagship to a variant pattern      | `/switch-to-variant`                                                 |

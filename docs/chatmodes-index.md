@@ -5,8 +5,19 @@ Chatmodes are slash commands you run inside **GitHub Copilot Chat** in VS Code, 
 !!! info "How to invoke"
     1. Open the customer repo in VS Code.
     2. Open the Copilot Chat sidebar (`Ctrl+Alt+I` or the 💬 icon).
-    3. Type `/` — the picker shows every chatmode shipped in `.github/chatmodes/`.
-    4. Pick one and follow the prompts.
+    3. At the top of the Chat panel, click the **agents dropdown** (the
+       selector showing `Agent` / `Ask` / `Plan`). Every chatmode shipped
+       in `.github/chatmodes/` appears in that dropdown — pick one and
+       follow the prompts.
+
+    !!! warning "Discovery requires a workspace setting"
+        The repo ships `.vscode/settings.json` with
+        `chat.agentFilesLocations` pointing at `.github/chatmodes/`.
+        VS Code reads this on workspace open. If you cloned with
+        Restricted Mode enabled, **trust the workspace** when prompted —
+        otherwise the dropdown stays empty and the chatmodes are
+        silently ignored. Reload the window
+        (`Ctrl+Shift+P` → **Developer: Reload Window**) after trusting.
 
 The full prompt for each chatmode is published in the navigation under [Reference → Chatmodes](#when-to-run-which--by-walkthrough-step) — open one if you want to see exactly what Copilot will be told.
 

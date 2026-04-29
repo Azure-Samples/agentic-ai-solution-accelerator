@@ -16,7 +16,7 @@ You'll move between three places as you go through this guide. Every step below 
 
 | Where | What you do there | How to open it |
 |---|---|---|
-| **VS Code** | Run all repo-local commands in the integrated terminal (`` Ctrl+` ``), edit files (`accelerator.yaml`, agent specs, `solution-brief.md`), and talk to GitHub Copilot Chat in the right sidebar (💬 icon or `Ctrl+Alt+I`; type `/` to see the chatmode picker like `/discover-scenario`, `/scaffold-from-brief`, `/configure-landing-zone`, `/deploy-to-env`, `/add-tool`, `/explain-change`, `/delivery-guide`) | After cloning, `code .` from any shell opens it on the repo |
+| **VS Code** | Run all repo-local commands in the integrated terminal (`` Ctrl+` ``), edit files (`accelerator.yaml`, agent specs, `solution-brief.md`), and talk to GitHub Copilot Chat in the right sidebar (💬 icon or `Ctrl+Alt+I`). Pick a chatmode from the **agents dropdown** at the top of the Chat panel — `/discover-scenario`, `/scaffold-from-brief`, `/define-grounding`, `/implement-workers`, `/configure-landing-zone`, `/deploy-to-env`, `/add-tool`, `/explain-change`, `/delivery-guide`, etc. The repo's `.vscode/settings.json` registers `.github/chatmodes/` so they appear automatically — **trust the workspace** when VS Code prompts, otherwise the dropdown is empty. | After cloning, `code .` from any shell opens it on the repo |
 | **GitHub web (github.com)** | Configure repo Settings → Environments (secrets + OIDC), open PRs, watch Actions runs | Your browser, on the cloned repo |
 | **Azure portal (portal.azure.com)** | Inspect the resource group, Foundry quota, Application Insights logs and dashboards | Your browser, signed into the customer's tenant |
 

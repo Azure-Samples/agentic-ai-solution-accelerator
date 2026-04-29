@@ -68,7 +68,7 @@ Add a new agent by running `python scripts/scaffold-agent.py <agent_id> --scenar
 - Hardcoded resource names/IDs. Use env + Bicep params.
 - `print()` for observability. Use structured telemetry.
 - Editing `src/accelerator_baseline/` to wrap Azure SDKs (it is for primitives only).
-- Moving agent instructions into code. They live in Foundry portal.
+- Moving agent instructions into code. They live in `docs/agent-specs/<foundry_name>.md` (`src/bootstrap.py` syncs them to the Foundry portal at FastAPI startup; never author instructions directly in the portal — they get overwritten on next deploy).
 
 ## When adding things
 - **New tool** → `/add-tool` chat mode → creates `src/tools/<tool>.py` with HITL scaffolding + unit test.
