@@ -277,6 +277,131 @@ def scenario_manifest_valid(ctx: Ctx) -> list[Finding]:
 
 
 # ---------------------------------------------------------------------------
+# Retrieval source_data_fields ⊆ index.fields
+# ---------------------------------------------------------------------------
+def _ast_extract_field_names(path: pathlib.Path, attr: str) -> set[str] | None:
+    """AST-extract field names declared inside ``attr``'s SearchIndex(...).
+
+    Returns a set of field names (the ``name="..."`` kwargs of each entry in
+    the ``fields=[...]`` list passed to the ``SearchIndex(...)`` call inside
+    function ``attr``). Returns ``None`` if the file or function shape isn't
+    recognisable (so callers can fail-open rather than block on novel
+    schema-construction styles).
+    """
+    if not path.exists():
+        return None
+    try:
+        import ast as _ast
+        tree = _ast.parse(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    fn: _ast.FunctionDef | None = None
+    for node in tree.body:
+        if isinstance(node, (_ast.FunctionDef, _ast.AsyncFunctionDef)) \
+                and node.name == attr:
+            fn = node  # type: ignore[assignment]
+            break
+    if fn is None:
+        return None
+    # Find the SearchIndex(...) call and pull its ``fields=[...]`` kwarg
+    for sub in _ast.walk(fn):
+        if not isinstance(sub, _ast.Call):
+            continue
+        callee = sub.func
+        if isinstance(callee, _ast.Name) and callee.id != "SearchIndex":
+            continue
+        if isinstance(callee, _ast.Attribute) and callee.attr != "SearchIndex":
+            continue
+        if not (isinstance(callee, _ast.Name) and callee.id == "SearchIndex") \
+                and not (isinstance(callee, _ast.Attribute)
+                         and callee.attr == "SearchIndex"):
+            continue
+        for kw in sub.keywords:
+            if kw.arg != "fields" or not isinstance(kw.value, _ast.List):
+                continue
+            names: set[str] = set()
+            for elt in kw.value.elts:
+                if not isinstance(elt, _ast.Call):
+                    continue
+                for fkw in elt.keywords:
+                    if fkw.arg == "name" and isinstance(fkw.value, _ast.Constant) \
+                            and isinstance(fkw.value.value, str):
+                        names.add(fkw.value.value)
+            return names
+    return None
+
+
+@check
+def retrieval_source_data_fields_in_schema(ctx: Ctx) -> list[Finding]:
+    """Each ``source_data_fields[]`` name must exist in the index schema.
+
+    Catches the common partner footgun where ``accelerator.yaml`` declares a
+    field name that the schema callable doesn't actually emit. Bootstrap
+    sends the (invalid) name to the Knowledge Source API and ``azd deploy``
+    fails opaque. AST-only — never executes the schema callable.
+    """
+    m = ROOT / "accelerator.yaml"
+    if not m.exists():
+        return []
+    try:
+        import yaml
+    except ImportError:
+        return []
+    try:
+        data = yaml.safe_load(m.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return []
+    scenario = data.get("scenario") or {}
+    package = scenario.get("package")
+    if not isinstance(package, str) or not package:
+        return []
+    retrieval = scenario.get("retrieval") or {}
+    idx = retrieval.get("indexes") or []
+    out: list[Finding] = []
+    for i, entry in enumerate(idx):
+        if not isinstance(entry, dict):
+            continue
+        sdf = entry.get("source_data_fields")
+        ref = entry.get("schema")
+        if not sdf or not isinstance(sdf, list) or not isinstance(ref, str):
+            continue
+        if not _IMPORT_REF_RE.match(ref):
+            continue
+        try:
+            fs_path, attr = _resolve_ref_path(package, ref)
+        except ValueError:
+            continue
+        names = _ast_extract_field_names(fs_path, attr)
+        if names is None:
+            # Schema shape not recognisable — fail-open with a warn so
+            # partners using non-stdlib SearchIndex construction styles
+            # don't get blocked, but still see the gap.
+            out.append(Finding(
+                "retrieval-source-data-fields", "warn", "accelerator.yaml",
+                f"scenario.retrieval.indexes[{i}]: could not statically "
+                f"resolve fields from {ref!r}; skipping source_data_fields "
+                f"validation. (Add fields via SearchIndex(fields=[...]) with "
+                f"name=\"...\" kwargs to enable this lint.)"))
+            continue
+        for f in sdf:
+            if not isinstance(f, str):
+                out.append(Finding(
+                    "retrieval-source-data-fields", "block", "accelerator.yaml",
+                    f"scenario.retrieval.indexes[{i}].source_data_fields "
+                    f"entries must be strings, got {f!r}"))
+                continue
+            if f not in names:
+                out.append(Finding(
+                    "retrieval-source-data-fields", "block", "accelerator.yaml",
+                    f"scenario.retrieval.indexes[{i}].source_data_fields: "
+                    f"{f!r} is not declared in {ref!r}'s SearchIndex; known "
+                    f"fields: {sorted(names)}. Bootstrap will reject this on "
+                    f"`azd deploy`. Either remove the entry or add the field "
+                    f"to the schema callable."))
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Agent code shape
 # ---------------------------------------------------------------------------
 def _scenario_agents_root() -> pathlib.Path | None:
