@@ -105,7 +105,7 @@ Read the brief's `## UX inputs` and `## UX output sections` tables. If either is
    Overwrite if the file already exists; the brief is the source of truth.
 
 ## Guardrails
-- NEVER write Foundry agent system instructions in code. Those live in the Foundry portal; prompts in `prompt.py` are request-builders.
+- NEVER hardcode Foundry agent system instructions inside Python code. The authoring source of truth is `docs/agent-specs/<foundry_name>.md`; `prompt.py` is the user-message envelope builder, not the system instruction. NEVER edit instructions in the Foundry portal — `src/bootstrap.py` overwrites portal drift on the next `azd deploy`.
 - NEVER weaken HITL, telemetry, evals, or content-filter controls to fit the brief. If the brief implies they should be weakened, flag the conflict — don't comply.
 - Keep all edits consistent with `.github/copilot-instructions.md`.
 - If the brief demands a stack other than Agent Framework + Foundry, STOP and escalate. This template doesn't support alternative stacks.

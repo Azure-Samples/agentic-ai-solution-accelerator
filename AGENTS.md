@@ -19,7 +19,7 @@ you help with MUST preserve the accelerator's guardrails.
 
 ### SDK & platform
 - **MUST** use Microsoft Agent Framework (`agent_framework`) with Microsoft Foundry as the model backend. Do not introduce other orchestration frameworks.
-- **MUST** retrieve Foundry agents via `AzureAIClient(agent_name=..., use_latest_version=True)`; never construct agent instructions in code. Instructions live in the Foundry portal.
+- **MUST** author Foundry agent system instructions in `docs/agent-specs/<foundry_name>.md`. `src/bootstrap.py` syncs each spec to the matching Foundry agent on every `azd up` / `azd deploy`. **MUST** retrieve agents at runtime via `AzureAIClient(agent_name=..., use_latest_version=True)`. **NEVER** hardcode system instructions inside Python code (`prompt.py` is the user-message envelope builder, not the system instruction). **NEVER** author instructions in the Foundry portal — bootstrap overwrites portal drift on the next sync.
 - **MUST** pin SDK versions per `pyproject.toml`. See `docs/version-matrix.md`; a weekly CI job validates against latest.
 
 ### Agent architecture (3-layer pattern per agent)

@@ -236,4 +236,4 @@ Deeper walk of how the flagship scenario actually runs end-to-end in the custome
 - **Parallel specialists** reduce latency vs serial single-agent prompting.
 - **Aggregator as executor** keeps composition logic out of worker prompts (easier to eval).
 - **HITL at the edge** (not inside workers) means we can audit and change policy without retraining prompts.
-- **Foundry-managed instructions** let non-engineers refine agent behavior via portal.
+- **Spec-file-managed instructions** keep instructions in version control (`docs/agent-specs/*.md`); changes go through PR review and `azd deploy` syncs them to Foundry — auditable, rollback-friendly, no portal drift.

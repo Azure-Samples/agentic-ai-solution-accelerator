@@ -52,6 +52,19 @@ deploys but is not a durable authoring surface — manual portal edits are
 The supported authoring loop is: edit the `.md` → `azd deploy` → re-run evals.
 The supported rollback path is: `git revert` the spec file → `azd deploy`.
 
+!!! warning "Bootstrap rewrites the full agent definition (model + instructions + tools)"
+    `src/bootstrap.py` calls `proj.agents.create_version(...)` with the complete
+    `PromptAgentDefinition(model=..., instructions=..., tools=[...])` derived
+    from this spec file plus the manifest's grounding mode. **Any tool a
+    partner attaches manually in the Foundry portal (e.g. a Foundry catalog
+    MCP / OpenAPI / Function / Logic Apps connector) is dropped on the next
+    sync** because the new version's tools list comes from code, not from
+    the previous portal state. To keep portal-attached tools across deploys,
+    declare them in the manifest (`scenario.agents[].foundry_tools[]` —
+    coming in a future accelerator release) so bootstrap can re-attach them
+    by name. Until that lands, treat manual portal tool attachments the
+    same as portal-edited instructions: transient, lost on next `azd deploy`.
+
 If an engagement intentionally opts out of bootstrap sync (sets
 `BOOTSTRAP_SKIP=1` so the portal becomes the authoring surface for that
 deployment), the deviation must be recorded in the handover packet's

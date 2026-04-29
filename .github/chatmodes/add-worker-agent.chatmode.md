@@ -20,7 +20,7 @@ Use this when the brief or a follow-on requirement introduces a capability no cu
 3. **One-sentence capability** (used by the supervisor router; quoted verbatim into the YAML snippet)
 4. **Upstream workers it depends on** (comma-separated list of existing worker ids the DAG must schedule first)
 5. **Whether it's optional** (the DAG can skip it and still produce a valid answer)
-6. **Foundry agent name** — defaults to `accel-<scenario-id>-<agent-id-with-underscores-to-hyphens>` (e.g. `risk_scoring` → `accel-sales-research-risk-scoring`). Ensure the agent exists in the Foundry portal with system instructions configured there — never in code.
+6. **Foundry agent name** — defaults to `accel-<scenario-id>-<agent-id-with-underscores-to-hyphens>` (e.g. `risk_scoring` → `accel-sales-research-risk-scoring`). The scaffolder writes a `docs/agent-specs/<foundry_name>.md` stub; `src/bootstrap.py` provisions the agent in Foundry from that spec on the next `azd up` / `azd deploy`. Author the system instructions in the spec file — never directly in the Foundry portal (bootstrap overwrites portal drift) and never inside Python code.
 
 ## Invoke the scaffolder
 ```bash

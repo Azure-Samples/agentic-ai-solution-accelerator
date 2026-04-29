@@ -18,7 +18,7 @@ Preserve every rule below. When a request conflicts with a rule, refuse or propo
 
 ### SDK & platform
 - MUST use Microsoft Agent Framework (`agent_framework`) with Microsoft Foundry as the model backend.
-- MUST retrieve Foundry agents with `AzureAIClient(agent_name=..., use_latest_version=True)`. NEVER construct agent instructions in code — instructions live in the Foundry portal.
+- MUST author Foundry agent system instructions in `docs/agent-specs/<foundry_name>.md`. `src/bootstrap.py` syncs each spec to the matching Foundry agent on every `azd up` / `azd deploy`. MUST retrieve agents at runtime with `AzureAIClient(agent_name=..., use_latest_version=True)`. NEVER hardcode system instructions inside Python code (`prompt.py` is the user-message envelope builder, not the system instruction). NEVER author instructions in the Foundry portal — bootstrap overwrites portal drift on the next sync.
 - MUST pin SDK versions per `pyproject.toml` / `docs/version-matrix.md`.
 - NEVER introduce LangChain, LlamaIndex, Haystack, or any other orchestration SDK. Microsoft Agent Framework only.
 - NEVER instantiate `openai.OpenAI(...)` or `AzureOpenAI(...)` directly. Use Agent Framework.
@@ -114,7 +114,7 @@ Do not hand-scaffold. Run `python scripts/scaffold-agent.py <agent_id> --scenari
 - Hardcoded resource names, subscription IDs, tenant IDs
 - Adding a side-effect tool without `hitl.checkpoint`
 - Editing `src/accelerator_baseline/` to wrap Azure SDKs (it is for primitives only)
-- Writing agent instructions in code instead of Foundry portal
+- Authoring agent system instructions in the Foundry portal (bootstrap overwrites portal drift on the next sync) or hardcoding them inside Python code — use `docs/agent-specs/<foundry_name>.md`
 - Disabling content filters, evals, or telemetry
 - `time.sleep` in async code, bare `except:`, swallowing errors silently
 

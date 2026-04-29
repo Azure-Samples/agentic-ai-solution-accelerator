@@ -4,7 +4,8 @@ Key properties (enforced by scripts/accelerator-lint.py):
 - DefaultAzureCredential only; no secrets in env.
 - OpenTelemetry configured at startup for App Insights correlation.
 - SSE streaming for agent progress; no WebSockets / long polling.
-- No agent instructions in code - Foundry portal holds them.
+- Foundry agent system instructions live in `docs/agent-specs/*.md`;
+  bootstrap syncs them on startup.
 - No scenario-specific imports here - all scenario wiring comes from the
   manifest via :mod:`src.workflow.registry`.
 - CORS allow-list driven by the ``ALLOWED_ORIGINS`` env var (comma-separated
