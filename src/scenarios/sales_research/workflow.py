@@ -462,6 +462,7 @@ class SalesResearchWorkflow:
             # to pre-streaming workflow.
             result = await agent.run(prompt)
             self._merge_usage(state, getattr(result, "usage", None))
+            self._capture_retrieved_uris(state, agent_name, result)
             return result.text
 
         # Streaming path: iterate updates, push chunk events, reassemble.
@@ -503,7 +504,33 @@ class SalesResearchWorkflow:
             # the orchestrator's ``_error`` channel rather than hanging.
             raise
         self._merge_usage(state, getattr(final_response, "usage", None))
+        self._capture_retrieved_uris(state, agent_name, final_response)
         return getattr(final_response, "text", None) or "".join(chunks_buf)
+
+    @staticmethod
+    def _capture_retrieved_uris(
+        state: WorkerState, agent_name: str, response: Any
+    ) -> None:
+        """Stash citation URIs from a Foundry tool trace onto ``state``.
+
+        The supervisor reads this back via
+        ``state.retrieved_uris[agent_name]`` and stamps it onto the
+        parsed dict (as ``_retrieved_uris``) before invoking the
+        worker's validator, so per-agent validators can call
+        :func:`assert_no_hallucinated_urls` in ``foundry_tool``
+        retrieval mode where Python never sees the search call
+        directly. The capture failing gracefully (empty list) is the
+        documented contract — validators fail open on empty allowed
+        sets.
+        """
+        try:
+            from src.accelerator_baseline.citations import (
+                extract_tool_trace_uris,
+            )
+            uris = extract_tool_trace_uris(response)
+            state.retrieved_uris[agent_name] = sorted(uris)
+        except Exception:  # noqa: BLE001 - never fail the run on telemetry
+            state.retrieved_uris.setdefault(agent_name, [])
 
     @staticmethod
     def _merge_usage(state: WorkerState, usage: Any) -> None:

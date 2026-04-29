@@ -83,6 +83,16 @@ class WorkerState:
     grounding_chunks: dict[str, list[Mapping[str, Any]]] = field(default_factory=dict)
     usage_totals: dict[str, int] = field(default_factory=dict)
     status: dict[str, WorkerStatus] = field(default_factory=dict)
+    # URIs the Foundry tool trace surfaced for each agent's most recent
+    # turn, keyed by ``foundry_name`` (== ``spec.module.AGENT_NAME``).
+    # Populated by the workflow's ``_invoke_agent`` via
+    # :func:`src.accelerator_baseline.citations.extract_tool_trace_uris`
+    # so per-agent validators can reject hallucinated URLs in
+    # ``foundry_tool`` retrieval mode (where Python never sees the
+    # search call directly). Empty list when no annotations were
+    # surfaced — validators receive ``[]`` and fail open per the
+    # ``assert_no_hallucinated_urls`` contract.
+    retrieved_uris: dict[str, list[str]] = field(default_factory=dict)
     # Optional sink for streaming chunk events. Scenarios that want
     # token-level streaming during ``_invoke_agent`` create a queue per
     # request and the workflow merges it into the SSE event stream. Left
@@ -425,7 +435,19 @@ class SupervisorDAG:
                 raw = await self._invoke(spec.module.AGENT_NAME, prompt, state)
                 last_raw = raw or ""
                 data = spec.module.transform_response(raw or "{}")
-                ok, err = spec.module.validate_response(data)
+                # Stamp the per-call retrieved-URI set onto the parsed
+                # dict so validators can call
+                # ``assert_no_hallucinated_urls`` without a signature
+                # change. Popped after validation so downstream
+                # consumers (other workers, the SSE wire format) never
+                # see the private key.
+                data["_retrieved_uris"] = list(
+                    state.retrieved_uris.get(spec.module.AGENT_NAME, [])
+                )
+                try:
+                    ok, err = spec.module.validate_response(data)
+                finally:
+                    data.pop("_retrieved_uris", None)
                 if ok:
                     return data
                 last_err = err
