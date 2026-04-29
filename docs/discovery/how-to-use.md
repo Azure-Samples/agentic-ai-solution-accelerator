@@ -156,9 +156,9 @@ What `/ingest-prd` does **not** do:
 - `docs/enablement/hands-on-lab.md` is the sandbox rehearsal; Lab 8
   walks a partner engineer through `/discover-scenario` +
   `scaffold-scenario.py`.
-- `.github/chatmodes/discover-scenario.chatmode.md` is the chatmode
+- `.github/agents/discover-scenario.agent.md` is the chatmode
   that produces the solution brief from workshop notes or live.
-- `.github/chatmodes/ingest-prd.chatmode.md` is the chatmode that
+- `.github/agents/ingest-prd.agent.md` is the chatmode that
   pre-drafts the solution brief from a customer PRD/BRD/spec;
   `/discover-scenario` gap-fill mode then fills the TBDs it leaves.
 

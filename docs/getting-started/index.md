@@ -39,7 +39,7 @@ orientation (you are here)
 
 This is the canonical precedence rule for the whole site — other pages link here rather than restate it.
 
-1. **Chatmodes** in `.github/chatmodes/` win on the executable surface they drive (they are the runtime contract).
+1. **Custom agents** in `.github/agents/` win on the executable surface they drive (they are the runtime contract).
 2. **[Setup & prereqs](setup-and-prereqs.md)** wins on setup mechanics — prereqs, secrets, `azd` invocation, troubleshooting.
 3. **[Partner playbook](../partner-playbook.md)** wins on delivery motion — when to run discovery, how to scope an SOW, handover sequence.
 4. **[Quickstart](../QUICKSTART.md)** is the engineer's executable summary of the playbook; if it disagrees with the playbook on motion or with Setup on mechanics, those win.

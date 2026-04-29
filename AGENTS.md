@@ -10,6 +10,30 @@ as a template, fills `docs/discovery/solution-brief.md` with a customer,
 runs `/scaffold-from-brief`, then customizes with your help. Every change
 you help with MUST preserve the accelerator's guardrails.
 
+## Glossary — three things called "agent"
+
+The word "agent" is overloaded in this repo. Disambiguate before you act:
+
+1. **Foundry agent** — a model + system-prompt + tools deployment in
+   Azure AI Foundry. System instructions live in
+   `docs/agent-specs/<name>.md` and are synced to the portal at FastAPI
+   startup by `src/bootstrap.py`. Code retrieves them via
+   `AzureAIClient(agent_name=..., use_latest_version=True)`.
+2. **Microsoft Agent Framework worker** — a Python module under
+   `src/scenarios/<scenario>/agents/<agent_name>/` with the three-layer
+   shape (`prompt.py` / `transform.py` / `validate.py`). The supervisor
+   DAG composes these. Created via `python scripts/scaffold-agent.py …`.
+3. **VS Code custom agent** — a `.agent.md` file in `.github/agents/`
+   that shows up in the GitHub Copilot Chat agents dropdown (and as a
+   `/<slug>` slash command). These drive the partner delivery motion
+   (`/discover-scenario`, `/scaffold-from-brief`, `/define-grounding`,
+   etc.). Historically called "chatmodes" — the migration to `.agent.md`
+   was completed in Phase 2f-B.
+
+When a doc or code comment says "agent" without qualifier, infer from
+context: a `.py` file is meaning #2, a `docs/agent-specs/` reference is
+#1, a `/slash-command` is #3.
+
 ## Non-negotiable rules (MUST / NEVER)
 
 ### Identity & secrets

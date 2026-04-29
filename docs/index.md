@@ -73,13 +73,13 @@ Deep dives that sit **outside** the walkthrough — open them when a step sends 
 | If you want to… | Go to |
 |---|---|
 | See which chatmode runs at which step | [Chatmodes overview](chatmodes-index.md) |
-| Add a side-effect tool with HITL baked in | [`/add-tool`](../.github/chatmodes/add-tool.chatmode.md) (used in step 8) |
-| Add a specialist worker agent | [`/add-worker-agent`](../.github/chatmodes/add-worker-agent.chatmode.md) (used in step 8) |
-| Scaffold the customer's repo from a filled brief | [`/scaffold-from-brief`](../.github/chatmodes/scaffold-from-brief.chatmode.md) (used in step 6) |
-| Onboard a new Azure environment (dev/UAT/prod) | [`/deploy-to-env`](../.github/chatmodes/deploy-to-env.chatmode.md) (used in step 7) |
-| Pick a landing-zone tier (standalone / AVM / ALZ-integrated) | [`/configure-landing-zone`](../.github/chatmodes/configure-landing-zone.chatmode.md) (used in step 7) |
-| Preflight a change against lint / eval / deploy gates | [`/explain-change`](../.github/chatmodes/explain-change.chatmode.md) (used in step 8) |
-| Re-author the scenario as single-agent or chat-with-actioning | [`/switch-to-variant`](../.github/chatmodes/switch-to-variant.chatmode.md) (used in step 8) |
+| Add a side-effect tool with HITL baked in | [`/add-tool`](../.github/agents/add-tool.agent.md) (used in step 8) |
+| Add a specialist worker agent | [`/add-worker-agent`](../.github/agents/add-worker-agent.agent.md) (used in step 8) |
+| Scaffold the customer's repo from a filled brief | [`/scaffold-from-brief`](../.github/agents/scaffold-from-brief.agent.md) (used in step 6) |
+| Onboard a new Azure environment (dev/UAT/prod) | [`/deploy-to-env`](../.github/agents/deploy-to-env.agent.md) (used in step 7) |
+| Pick a landing-zone tier (standalone / AVM / ALZ-integrated) | [`/configure-landing-zone`](../.github/agents/configure-landing-zone.agent.md) (used in step 7) |
+| Preflight a change against lint / eval / deploy gates | [`/explain-change`](../.github/agents/explain-change.agent.md) (used in step 8) |
+| Re-author the scenario as single-agent or chat-with-actioning | [`/switch-to-variant`](../.github/agents/switch-to-variant.agent.md) (used in step 8) |
 
 ### Deep dives
 

@@ -7,6 +7,16 @@ A partner cloned the **Azure Agentic AI Solution Accelerator** template to build
 
 Preserve every rule below. When a request conflicts with a rule, refuse or propose a compliant alternative — do not "make it work" by weakening a guardrail.
 
+## Glossary — three things called "agent"
+
+The word "agent" is overloaded. Disambiguate before you act:
+
+1. **Foundry agent** — model + system-prompt + tools in Azure AI Foundry. Instructions live in `docs/agent-specs/<name>.md`, synced to portal by `src/bootstrap.py` at startup. Retrieved via `AzureAIClient(agent_name=..., use_latest_version=True)`.
+2. **Microsoft Agent Framework worker** — Python module under `src/scenarios/<scenario>/agents/<agent_name>/` with the three-layer shape (`prompt.py` / `transform.py` / `validate.py`). Composed by the supervisor DAG. Scaffold via `scripts/scaffold-agent.py`.
+3. **VS Code custom agent** — `.agent.md` file in `.github/agents/` that drives the partner delivery motion via Copilot Chat (`/discover-scenario`, `/scaffold-from-brief`, etc.). Historically called "chatmodes" before the Phase 2f-B migration.
+
+When a doc/comment says "agent" without qualifier, infer from context: `.py` → #2, `docs/agent-specs/` → #1, `/slash-command` → #3.
+
 ---
 
 ## Hard rules — MUST / NEVER

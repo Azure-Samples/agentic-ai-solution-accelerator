@@ -12,7 +12,7 @@
     **✅ Done when** — Quality evals ≥ acceptance thresholds in `accelerator.yaml`; redteam green; lint green; KPI events emitting in App Insights against real traffic.
 
 !!! tip "Chatmodes used here"
-    [`/add-tool`](../../../.github/chatmodes/add-tool.chatmode.md) · [`/add-worker-agent`](../../../.github/chatmodes/add-worker-agent.chatmode.md) · [`/implement-worker`](../../../.github/chatmodes/implement-worker.chatmode.md) · [`/explain-change`](../../../.github/chatmodes/explain-change.chatmode.md) · [`/switch-to-variant`](../../../.github/chatmodes/switch-to-variant.chatmode.md)
+    [`/add-tool`](../../../.github/agents/add-tool.agent.md) · [`/add-worker-agent`](../../../.github/agents/add-worker-agent.agent.md) · [`/implement-worker`](../../../.github/agents/implement-worker.agent.md) · [`/explain-change`](../../../.github/agents/explain-change.agent.md) · [`/switch-to-variant`](../../../.github/agents/switch-to-variant.agent.md)
 
     Full reference: [Chatmodes overview](../../chatmodes-index.md).
 

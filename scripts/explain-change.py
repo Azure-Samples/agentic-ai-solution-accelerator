@@ -243,7 +243,7 @@ CATEGORIES: list[Category] = [
             "lint: landing_zone_mode_consistent — asserts infra/ shape matches accelerator.yaml `landing_zone.mode` (standalone | avm | alz-integrated).",
             "Tier 2 (avm): partners copy exemplars from infra/avm-reference/ into infra/modules/. Changes to exemplars should keep WAF/CAF baseline (soft-delete, purge protection, diagnostics, RBAC-only).",
             "Tier 3 (alz-integrated): subscription-scope deploy in infra/alz-overlay/ runs BEFORE the workload deploy. CHANGEME placeholders MUST be replaced; lint fails if any remain.",
-            "docs: /configure-landing-zone chatmode walks partners between tiers. Keep docs/patterns/azure-ai-landing-zone/README.md in sync with changes here.",
+            "docs: /configure-landing-zone agent walks partners between tiers. Keep docs/patterns/azure-ai-landing-zone/README.md in sync with changes here.",
         ],
         patterns=[
             "infra/avm-reference/**",
@@ -286,16 +286,16 @@ CATEGORIES: list[Category] = [
     ),
     Category(
         id="copilot-cascade",
-        title="Copilot / chatmode cascade",
+        title="Copilot / custom-agent cascade",
         impact=[
             "lint: copilot_assets_present, no_dead_paths",
-            "cascade: AGENTS.md + .github/copilot-instructions.md + .github/chatmodes/*.md must stay coherent — partners discover features via all three surfaces",
+            "cascade: AGENTS.md + .github/copilot-instructions.md + .github/agents/*.agent.md must stay coherent — partners discover features via all three surfaces",
         ],
         patterns=[
             ".github/copilot-instructions.md",
             "AGENTS.md",
             "CLAUDE.md",
-            ".github/chatmodes/*.md",
+            ".github/agents/*.agent.md",
         ],
     ),
     Category(

@@ -91,7 +91,7 @@ def solution_brief_present(ctx: Ctx) -> list[Finding]:
                         "docs/discovery/solution-brief.md is required")]
     txt = brief.read_text(encoding="utf-8")
     # Skip the placeholder check while the brief is still the unmodified
-    # shipped template — chatmodes (/discover-scenario, /ingest-prd)
+    # shipped template — agents (/discover-scenario, /ingest-prd)
     # overwrite this banner on completion, so its presence guarantees
     # discovery has not run yet for this engagement.
     if "STATUS: TEMPLATE" in txt:
@@ -526,7 +526,7 @@ def catalog_tool_hitl(ctx: Ctx) -> list[Finding]:
     Catalog tools call out from inside Foundry, so ``src/accelerator_baseline/
     hitl.py`` does not gate them. Either re-implement as an in-process tool
     (``/add-tool``) or configure portal-side approvals; either way the partner
-    must consciously opt in. See ``define-grounding`` chatmode Step 3.
+    must consciously opt in. See ``define-grounding`` agent Step 3.
     """
     manifest = _read_manifest_lines(ctx)
     if not manifest:
@@ -650,13 +650,72 @@ def copilot_assets_present(ctx: Ctx) -> list[Finding]:
     out: list[Finding] = []
     required = [
         ".github/copilot-instructions.md",
-        ".github/chatmodes/discover-scenario.chatmode.md",
-        ".github/chatmodes/scaffold-from-brief.chatmode.md",
+        ".github/agents/discover-scenario.agent.md",
+        ".github/agents/scaffold-from-brief.agent.md",
         "AGENTS.md",
     ]
     for r in required:
         if not (ROOT / r).exists():
             out.append(Finding("copilot-asset", "block", r, f"missing {r}"))
+    return out
+
+
+@check
+def no_legacy_chatmode_files(ctx: Ctx) -> list[Finding]:
+    """Block reintroduction of legacy `.chatmode.md` files.
+
+    Phase 2f-B migrated all VS Code custom-agents to `.github/agents/*.agent.md`.
+    The `.chatmode.md` extension is deprecated; new files in that shape
+    are silently ignored by current VS Code releases.
+    """
+    out: list[Finding] = []
+    chatmodes_dir = ROOT / ".github/chatmodes"
+    if chatmodes_dir.exists():
+        out.append(Finding("legacy-chatmodes-dir", "block", ".github/chatmodes/",
+                           ".github/chatmodes/ is deprecated; move files to "
+                           ".github/agents/<slug>.agent.md"))
+    for p in ROOT.rglob("*.chatmode.md"):
+        if any(part in {".git", "node_modules", "__pycache__"} for part in p.parts):
+            continue
+        out.append(Finding("legacy-chatmode-file", "block", _rel(p),
+                           "rename to .agent.md and move under .github/agents/"))
+    return out
+
+
+@check
+def agent_handoff_targets_exist(ctx: Ctx) -> list[Finding]:
+    """Validate every `handoffs:` `agent:` slug resolves to a real file."""
+    out: list[Finding] = []
+    agents_dir = ROOT / ".github/agents"
+    if not agents_dir.exists():
+        return out
+    known = {p.stem.replace(".agent", ""): p for p in agents_dir.glob("*.agent.md")}
+    agent_re = re.compile(r"^\s*-?\s*agent\s*:\s*['\"]?([a-z0-9][a-z0-9\-]*)['\"]?\s*$",
+                          re.M)
+    for path, txt in ctx.iter(".md"):
+        if path.parent != agents_dir:
+            continue
+        if "handoffs:" not in txt:
+            continue
+        # Only scan the YAML frontmatter block.
+        if not txt.startswith("---"):
+            continue
+        end = txt.find("\n---", 3)
+        if end < 0:
+            continue
+        fm = txt[:end]
+        if "handoffs:" not in fm:
+            continue
+        for m in agent_re.finditer(fm):
+            slug = m.group(1)
+            # Skip the file's own `name:` field by checking it occurs after
+            # `handoffs:`.
+            if fm.find("handoffs:") > m.start():
+                continue
+            if slug not in known:
+                out.append(Finding("handoff-target-missing", "block", _rel(path),
+                                   f"handoff agent '{slug}' has no matching "
+                                   f".github/agents/{slug}.agent.md"))
     return out
 
 
@@ -2061,7 +2120,7 @@ def landing_zone_mode_consistent(ctx: Ctx) -> list[Finding]:
                 "landing-zone-mode-consistent", "block", "accelerator.yaml",
                 "landing_zone.mode='alz-integrated' requires "
                 "infra/alz-overlay/main.bicep; not found. Run the "
-                "/configure-landing-zone chatmode.",
+                "/configure-landing-zone agent.",
             ))
         else:
             try:
@@ -2341,6 +2400,10 @@ def doc_links_resolve(ctx: Ctx) -> list[Finding]:
 
     # Pages-only files use site-relative paths (QUICKSTART.md,
     # chatmodes/..., about/...) that resolve only after the
+    # prepare-pages.py staging step (custom agents are sourced from
+    # .github/agents/<slug>.agent.md and staged into
+    # docs-build/chatmodes/<slug>.md — the .agent.md suffix is dropped
+    # so partner-facing URLs stay /chatmodes/<slug>/).
     # scripts/prepare-pages.py staging hook runs. Their link
     # integrity is validated by `mkdocs build --strict`, so skip
     # them here to avoid false positives.
@@ -2381,7 +2444,7 @@ def doc_links_resolve(ctx: Ctx) -> list[Finding]:
 # ---------------------------------------------------------------------------
 _MKDOCS_EXCLUDED_FROM_NAV: set[str] = {
     # Canonical docs intentionally not in the site nav (deep-linked only,
-    # chatmodes included wholesale, or flowchart source of truth):
+    # chatmodes included wholesale (sourced from .github/agents/), or flowchart source of truth):
     "docs/partner-workflow.md",
     "docs/discovery/prd-conversion-prompt.md",
     "docs/discovery/solution-brief.md",
@@ -2438,7 +2501,7 @@ def mkdocs_nav_integrity(ctx: Ctx) -> list[Finding]:
     # Mapping rules mirror scripts/prepare-pages.py:
     #   docs-build/QUICKSTART.md   <- QUICKSTART.md
     #   docs-build/about/X.md      <- AGENTS/SECURITY/SUPPORT/CONTRIBUTING/.github/CLA
-    #   docs-build/chatmodes/X.md  <- .github/chatmodes/X.md
+    #   docs-build/chatmodes/X.md  <- .github/agents/X.agent.md (.agent.md suffix dropped during staging)
     #   docs-build/X.md            <- docs/X.md
     def staged_to_source(staged: str) -> pathlib.Path:
         s = staged.strip()
@@ -2450,7 +2513,12 @@ def mkdocs_nav_integrity(ctx: Ctx) -> list[Finding]:
                 return ROOT / ".github" / "CLA.md"
             return ROOT / tail  # AGENTS.md / SECURITY.md / SUPPORT.md / CONTRIBUTING.md
         if s.startswith("chatmodes/"):
-            return ROOT / ".github" / s
+            # Staged filename drops the .agent.md suffix; re-add it
+            # to resolve the canonical source under .github/agents/.
+            tail = s[len("chatmodes/"):]
+            if tail.endswith(".md") and not tail.endswith(".agent.md"):
+                tail = tail[: -len(".md")] + ".agent.md"
+            return ROOT / ".github" / "agents" / tail
         # Pattern READMEs may live at repo root (patterns/<id>/README.md) or
         # under docs/patterns/. Check the repo-root location first; fall
         # through to docs/ otherwise. prepare-pages.py stages root-level

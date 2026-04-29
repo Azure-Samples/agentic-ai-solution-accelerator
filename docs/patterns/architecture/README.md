@@ -126,7 +126,7 @@ Omitting the whole `models:` block is supported: `infra/main.bicep` falls back t
 
 ## Variations a partner can choose
 
-These are **stub scaffolds + chatmode-driven walkthroughs** — not drop-in packages. Each variant ships a minimal source file under `patterns/<variant>/src/` and a `/switch-to-variant <variant>` chatmode that copies it over `src/main.py`, prunes the flagship workers, and updates `accelerator.yaml.solution.pattern`. Partner finishes the re-authoring under `src/scenarios/<new-id>/`. See `.github/chatmodes/switch-to-variant.chatmode.md` for guidance.
+These are **stub scaffolds + chatmode-driven walkthroughs** — not drop-in packages. Each variant ships a minimal source file under `patterns/<variant>/src/` and a `/switch-to-variant <variant>` chatmode that copies it over `src/main.py`, prunes the flagship workers, and updates `accelerator.yaml.solution.pattern`. Partner finishes the re-authoring under `src/scenarios/<new-id>/`. See `.github/agents/switch-to-variant.agent.md` for guidance.
 
 | Variant | Status today | When to reach for it |
 |---|---|---|

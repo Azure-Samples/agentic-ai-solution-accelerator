@@ -49,7 +49,7 @@ After the lab you can:
    (Azure CLI, `azd`, `gh`, `git`, PowerShell 7 on Windows, Python 3.11+). Docker/Podman is optional — `azd up` builds the container image remotely in Azure Container Registry by default.
 4. A GitHub org/account where you can push a private template clone.
 5. VS Code with GitHub Copilot Chat enabled (required for the
-   chatmodes under `.github/chatmodes/`).
+   custom agents under `.github/agents/`).
 
 If any prereq is missing, fix it before continuing — this lab does
 not work around a broken local environment. The troubleshooting
@@ -500,7 +500,7 @@ try again. The acceptance gate is the contract.
 **Goal:** experience the scaffolded-with-HITL contract.
 
 1. In Copilot Chat, invoke `/add-tool`. The chatmode (see
-   `.github/chatmodes/add-tool.chatmode.md`) asks for seven inputs:
+   `.github/agents/add-tool.agent.md`) asks for seven inputs:
    tool name, external system, operation, reversibility, HITL
    policy, which worker uses it, and auth approach.
 2. Pick something plausible — e.g. create a ticket in a ticketing
@@ -600,7 +600,7 @@ didn't regress the scenario.
     per-file customisation.
 
 3. Walk the **brief → files** checklist below. The authoritative
-   copy lives in `.github/chatmodes/scaffold-from-brief.chatmode.md`
+   copy lives in `.github/agents/scaffold-from-brief.agent.md`
    — the condensed version here mirrors it for lab use. If the two
    ever diverge, update both in the same PR.
 

@@ -7,7 +7,7 @@ Layout after staging:
   docs-build/                     <- docs/**
   docs-build/QUICKSTART.md        <- QUICKSTART.md
   docs-build/about/<name>.md      <- AGENTS | SECURITY | SUPPORT | CONTRIBUTING | CLA
-  docs-build/chatmodes/*.md       <- .github/chatmodes/*.md
+  docs-build/chatmodes/*.md       <- .github/agents/*.agent.md (suffix stripped)
 
 Rewrites links inside each staged file based on the file's origin and
 staged depth so cross-doc links resolve within the published tree.
@@ -26,14 +26,14 @@ STAGE = REPO_ROOT / "docs-build"
 
 ROOT_TOP = ["QUICKSTART.md"]
 ROOT_ABOUT = ["AGENTS.md", "SECURITY.md", "SUPPORT.md", "CONTRIBUTING.md"]
-CHATMODES_SRC = REPO_ROOT / ".github" / "chatmodes"
+AGENTS_SRC = REPO_ROOT / ".github" / "agents"
 CLA_SRC = REPO_ROOT / ".github" / "CLA.md"
 
 
 def rewrites_for_root_top() -> list[tuple[re.Pattern[str], str]]:
     return [
         (re.compile(r"\]\(docs/"), "]("),
-        (re.compile(r"\]\(\.github/chatmodes/([^)#]+)\.md"), r"](chatmodes/\1.md"),
+        (re.compile(r"\]\(\.github/agents/([^)#]+)\.agent\.md"), r"](chatmodes/\1.md"),
         (re.compile(r"\]\(\.github/CLA\.md"), "](about/CLA.md"),
     ]
 
@@ -41,7 +41,7 @@ def rewrites_for_root_top() -> list[tuple[re.Pattern[str], str]]:
 def rewrites_for_root_about() -> list[tuple[re.Pattern[str], str]]:
     return [
         (re.compile(r"\]\(docs/"), "](../"),
-        (re.compile(r"\]\(\.github/chatmodes/([^)#]+)\.md"), r"](../chatmodes/\1.md"),
+        (re.compile(r"\]\(\.github/agents/([^)#]+)\.agent\.md"), r"](../chatmodes/\1.md"),
         (re.compile(r"\]\(\.github/CLA\.md"), "](CLA.md"),
         (re.compile(r"\]\(README\.md\)"), "](../index.md)"),
     ]
@@ -54,7 +54,7 @@ def rewrites_for_docs_tree(depth: int) -> list[tuple[re.Pattern[str], str]]:
     root. After staging, the file lives at docs-build/<same path>, so it
     needs N ``../`` segments to reach docs-build root. We therefore
     consume one ``../`` from every repo-root-bound link, plus remap the
-    destination folders (docs/, .github/chatmodes/, .github/CLA.md) to
+    destination folders (docs/, .github/agents/, .github/CLA.md) to
     their staged locations.
 
     Works generically for any depth ≥ 0.
@@ -80,13 +80,19 @@ def rewrites_for_docs_tree(depth: int) -> list[tuple[re.Pattern[str], str]]:
         # Repo-root pattern READMEs (e.g. patterns/sales-research-frontend/)
         # are staged into docs-build/patterns/<id>/README.md by prepare-pages.
         _md(r"patterns/", "patterns/"),
-        _md(r"\.github/chatmodes/", "chatmodes/"),
+        # Custom agents are authored at .github/agents/<slug>.agent.md and
+        # staged at docs-build/chatmodes/<slug>.md (the .agent.md suffix is
+        # stripped during staging). The public URL path stays "chatmodes/"
+        # for partner-facing search continuity.
+        (re.compile(r"\]\(" + up_in + r"\.github/agents/([^)#]+)\.agent\.md"),
+         "](" + up_out + r"chatmodes/\1.md"),
         _md(r"\.github/CLA\.md", "about/CLA.md"),
     ]
     click_rules: list[tuple[re.Pattern[str], str]] = [
         _click(r"QUICKSTART\.md", "QUICKSTART.md"),
         _click(r"README\.md", "index.md"),
-        _click(r"\.github/chatmodes/", "chatmodes/"),
+        (re.compile(r'(click\s+\w+\s+")' + up_in + r"\.github/agents/([^)#]+)\.agent\.md"),
+         r"\1" + up_out + r"chatmodes/\2.md"),
         _click(r"docs/", ""),
     ]
     return md_rules + click_rules
@@ -213,21 +219,21 @@ _FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*\n?", re.DOTALL)
 _DESCRIPTION_RE = re.compile(r"^description:\s*(.+?)\s*$", re.MULTILINE)
 
 
-def wrap_chatmode_for_pages(text: str, filename: str) -> str:
-    """Wrap a `*.chatmode.md` source for partner-facing publication.
+def wrap_agent_for_pages(text: str, filename: str) -> str:
+    """Wrap a `*.agent.md` source for partner-facing publication.
 
-    Chatmodes are runtime system prompts for Copilot Chat — a wall of
-    LLM instructions that's confusing as a standalone Pages URL. This
-    function:
+    Custom agents are runtime system prompts for VS Code Copilot Chat — a
+    wall of LLM instructions that's confusing as a standalone Pages URL.
+    This function:
       1. Prepends a short partner-facing intro (what / when / what to ask).
       2. Collapses the original prompt body inside a `<details>` block so
          the page reads as orientation by default but still exposes the
          full prompt for partners who want it.
 
-    Handles chatmodes with or without YAML frontmatter; the `description`
-    field, if present, seeds the intro paragraph. Source `.chatmode.md`
-    files are never modified — runtime consumers (Copilot Chat) keep
-    seeing the original content.
+    Handles agents with or without YAML frontmatter; the `description`
+    field, if present, seeds the intro paragraph. Source `.agent.md`
+    files are never modified — runtime consumers (VS Code Copilot Chat)
+    keep seeing the original content.
     """
     description = ""
     body = text
@@ -239,34 +245,34 @@ def wrap_chatmode_for_pages(text: str, filename: str) -> str:
             description = desc_m.group(1).strip().strip('"\'')
 
     slug = filename
-    for suffix in (".chatmode.md", ".md"):
+    for suffix in (".agent.md", ".md"):
         if slug.endswith(suffix):
             slug = slug[: -len(suffix)]
             break
     command = f"/{slug}"
 
     intro_blurb = description or (
-        "A scoped Copilot Chat mode bundled with this accelerator for a "
-        "specific partner-delivery task."
+        "A scoped VS Code Copilot Chat custom agent bundled with this "
+        "accelerator for a specific partner-delivery task."
     )
 
     body_stripped = body.strip()
 
     return (
-        f"# `{command}` chatmode\n\n"
+        f"# `{command}` custom agent\n\n"
         f"!!! info \"Partner-facing intro\"\n"
         f"    **What it is:** {intro_blurb}\n\n"
         f"    **When to load it:** In **VS Code with GitHub Copilot Chat** "
-        f"installed, after cloning this template repo. Type `{command}` in the "
-        f"chat input — Copilot picks up the mode from `.github/chatmodes/` "
-        f"automatically. (Other LLM IDEs that read `.github/chatmodes/` work "
-        f"the same way.)\n\n"
-        f"    **What to ask:** Open-ended task questions in the area above; the "
-        f"chatmode walks you through the inputs it needs and produces the "
+        f"installed, after cloning this template repo. Open the **agents "
+        f"dropdown** at the top of the Chat panel and pick `{slug}`, or "
+        f"type `{command}` in the chat input. VS Code auto-discovers files "
+        f"under `.github/agents/` (no workspace setting required).\n\n"
+        f"    **What to ask:** Open-ended task questions in the area above; "
+        f"the agent walks you through the inputs it needs and produces the "
         f"expected artifacts.\n\n"
         f"The full system prompt is reproduced below for transparency. You "
-        f"don't need to read it to use the chatmode — Copilot loads it for "
-        f"you when you invoke the command.\n\n"
+        f"don't need to read it to use the agent — Copilot loads it for "
+        f"you when you select the agent or invoke `{command}`.\n\n"
         f"<details markdown=\"1\">\n"
         f"<summary><strong>System prompt (full text)</strong></summary>\n\n"
         f"{body_stripped}\n\n"
@@ -357,12 +363,15 @@ def stage() -> None:
     if CLA_SRC.exists() and stage_file(CLA_SRC, STAGE / "about" / "CLA.md", about_rules):
         rewritten += 1
 
-    if CHATMODES_SRC.exists():
-        chatmodes_dst = STAGE / "chatmodes"
-        chatmodes_dst.mkdir(exist_ok=True)
-        for cm in CHATMODES_SRC.glob("*.md"):
-            wrapped = wrap_chatmode_for_pages(cm.read_text(encoding="utf-8"), cm.name)
-            (chatmodes_dst / cm.name).write_text(wrapped, encoding="utf-8")
+    if AGENTS_SRC.exists():
+        agents_dst = STAGE / "chatmodes"
+        agents_dst.mkdir(exist_ok=True)
+        for agent in AGENTS_SRC.glob("*.agent.md"):
+            wrapped = wrap_agent_for_pages(agent.read_text(encoding="utf-8"), agent.name)
+            # Strip the .agent.md suffix in the staged filename so the
+            # public URL becomes /chatmodes/<slug>/ (no .agent in the path).
+            staged_name = agent.name[: -len(".agent.md")] + ".md"
+            (agents_dst / staged_name).write_text(wrapped, encoding="utf-8")
 
     # Stage the sales-research-frontend pattern README so the published
     # nav entry resolves. Sibling pattern READMEs (single-agent /

@@ -12,7 +12,7 @@
     **✅ Done when** — `/scaffold-from-brief` has run; the diff is reviewed and committed; `python scripts/accelerator-lint.py` passes.
 
 !!! tip "Chatmodes used here"
-    [`/scaffold-from-brief`](../../../.github/chatmodes/scaffold-from-brief.chatmode.md) → [`/define-grounding`](../../../.github/chatmodes/define-grounding.chatmode.md) → [`/implement-workers`](../../../.github/chatmodes/implement-workers.chatmode.md)
+    [`/scaffold-from-brief`](../../../.github/agents/scaffold-from-brief.agent.md) → [`/define-grounding`](../../../.github/agents/define-grounding.agent.md) → [`/implement-workers`](../../../.github/agents/implement-workers.agent.md)
 
     Run them in that order. `/scaffold-from-brief` lays down the structural shape (folders, stub three-layer files, manifest skeleton). `/define-grounding` wires FoundryIQ + AI Search indexes + catalog tools into each worker declaratively. `/implement-workers` walks the supervisor DAG and fills every stub `prompt.py` / `transform.py` / `validate.py` + Foundry agent spec in dependency order.
 

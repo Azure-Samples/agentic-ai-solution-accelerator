@@ -45,7 +45,7 @@
 <details>
 <summary><b>Full doc precedence when guidance disagrees</b> (click to expand)</summary>
 
-Chatmodes in `.github/chatmodes/` (they drive the executable surface) → `docs/partner-playbook.md` (delivery motion) and `docs/getting-started/setup-and-prereqs.md` (setup mechanics) → this README. The engagement-specific handover packet supersedes the generic `docs/customer-runbook.md` for the customer ops lane.
+Custom agents in `.github/agents/` (they drive the executable surface) → `docs/partner-playbook.md` (delivery motion) and `docs/getting-started/setup-and-prereqs.md` (setup mechanics) → this README. The engagement-specific handover packet supersedes the generic `docs/customer-runbook.md` for the customer ops lane.
 
 </details>
 

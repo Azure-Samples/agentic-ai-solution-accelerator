@@ -39,7 +39,7 @@
 
 # Copilot kit — eng owns normative rules, partner delivery reviews
 /.github/copilot-instructions.md    @microsoft/smb-agentic-ai-champs @microsoft/smb-partner-delivery
-/.github/chatmodes/                 @microsoft/smb-agentic-ai-champs @microsoft/smb-partner-delivery
+/.github/agents/                    @microsoft/smb-agentic-ai-champs @microsoft/smb-partner-delivery
 /AGENTS.md                          @microsoft/smb-agentic-ai-champs @microsoft/smb-partner-delivery
 
 # CI workflows — eng owns the gates
