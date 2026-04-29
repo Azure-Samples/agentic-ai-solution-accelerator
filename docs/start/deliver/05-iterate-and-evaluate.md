@@ -12,7 +12,7 @@
     **✅ Done when** — Quality evals ≥ acceptance thresholds in `accelerator.yaml`; redteam green; lint green; KPI events emitting in App Insights against real traffic.
 
 !!! tip "Chatmodes used here"
-    [`/add-tool`](../../../.github/chatmodes/add-tool.chatmode.md) · [`/add-worker-agent`](../../../.github/chatmodes/add-worker-agent.chatmode.md) · [`/explain-change`](../../../.github/chatmodes/explain-change.chatmode.md) · [`/switch-to-variant`](../../../.github/chatmodes/switch-to-variant.chatmode.md)
+    [`/add-tool`](../../../.github/chatmodes/add-tool.chatmode.md) · [`/add-worker-agent`](../../../.github/chatmodes/add-worker-agent.chatmode.md) · [`/implement-worker`](../../../.github/chatmodes/implement-worker.chatmode.md) · [`/explain-change`](../../../.github/chatmodes/explain-change.chatmode.md) · [`/switch-to-variant`](../../../.github/chatmodes/switch-to-variant.chatmode.md)
 
     Full reference: [Chatmodes overview](../../chatmodes-index.md).
 
@@ -76,6 +76,8 @@ python scripts/scaffold-agent.py <agent_id> --scenario <scenario-id> \
 ```
 
 The scaffolder appends to the declarative `WORKERS` registry in `src/scenarios/<id>/workflow.py`, creates the three-layer files (`prompt.py`, `transform.py`, `validate.py`), writes a Foundry agent spec stub, **and appends the new agent id to every existing case's `exercises` array in `evals/quality/golden_cases.jsonl`** so the `agent_has_golden_case` lint rule stays green automatically. It is transactional and re-run safe; refine each case's `query` and `expected` to actually exercise the new worker before the next eval run.
+
+Then fill the stubs with `/implement-worker <worker_id>` (single worker) or `/implement-workers` (every scaffolded-but-unfinished worker, walked in dependency order). Both read the brief + the worker's manifest entry and produce real `prompt.py` / `transform.py` / `validate.py` + Foundry agent spec — no manual three-layer authoring required.
 
 ## Ship through CI
 

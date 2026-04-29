@@ -12,7 +12,9 @@
     **✅ Done when** — `/scaffold-from-brief` has run; the diff is reviewed and committed; `python scripts/accelerator-lint.py` passes.
 
 !!! tip "Chatmodes used here"
-    [`/scaffold-from-brief`](../../../.github/chatmodes/scaffold-from-brief.chatmode.md)
+    [`/scaffold-from-brief`](../../../.github/chatmodes/scaffold-from-brief.chatmode.md) → [`/define-grounding`](../../../.github/chatmodes/define-grounding.chatmode.md) → [`/implement-workers`](../../../.github/chatmodes/implement-workers.chatmode.md)
+
+    Run them in that order. `/scaffold-from-brief` lays down the structural shape (folders, stub three-layer files, manifest skeleton). `/define-grounding` wires FoundryIQ + AI Search indexes + catalog tools into each worker declaratively. `/implement-workers` walks the supervisor DAG and fills every stub `prompt.py` / `transform.py` / `validate.py` + Foundry agent spec in dependency order.
 
     Full reference: [Chatmodes overview](../../chatmodes-index.md).
 
@@ -78,6 +80,24 @@ flowchart LR
 ```
 
 Re-run `/scaffold-from-brief` whenever the brief changes — the same expansion reapplies across every artefact.
+
+## Wire grounding & implement workers
+
+`/scaffold-from-brief` only materialises the **structural** shape — folders, stub three-layer files, manifest skeleton. Two follow-up chatmodes turn the stubs into a working scenario, and they're the natural next steps before you commit:
+
+```
+/define-grounding
+```
+
+…declaratively wires each worker to its facts source. Two grounding modes: `foundry_tool` (FoundryIQ Knowledge Base — start here for any worker that makes factual claims; AI Search lives underneath FoundryIQ) and `none` (purely transformational workers — routers, formatters, aggregators). It also lets you list any Foundry portal **catalog tools** each worker should call. Output: a fully populated `scenario.agents[]` block plus matching `scenario.retrieval.indexes[]` entries, all validated by lint. No Python written; the startup bootstrap (`src/bootstrap.py`) provisions FoundryIQ Knowledge Sources + Knowledge Bases + agent attachments on the next `azd deploy`.
+
+```
+/implement-workers
+```
+
+…walks the supervisor DAG in dependency order and invokes `/implement-worker` for each scaffolded-but-unfinished worker. It fills `prompt.py`, `transform.py`, `validate.py`, and the Foundry agent spec (`docs/agent-specs/<foundry_name>.md`) from the brief, the manifest, and the worker's `capability` declaration. Use `/implement-worker <worker_id>` for a single worker — same code path, narrower scope.
+
+After both have run, the scenario has real prompts, real validators, real grounding wiring, and a green lint — but the eval `query`/`expected` pairs are still TODOs. That's the next step.
 
 ## Authoring agent instructions
 

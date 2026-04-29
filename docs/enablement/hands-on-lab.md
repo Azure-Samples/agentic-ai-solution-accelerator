@@ -628,7 +628,7 @@ didn't regress the scenario.
 | Constraints / controls (Section 6) | `infra/main.parameters.json` + `accelerator.yaml.controls.*` |
 | Acceptance / evals (Sections 3 + 7) | `evals/quality/golden_cases.jsonl` (scaffolder seeded a stub `q-001` exercising every scaffolded worker — refine `query`/`expected` and grow the suite); `evals/redteam/cases.jsonl` (one case per RAI risk) |
 | KPIs (Section 4) | Register each event in `src/accelerator_baseline/telemetry.py`; append a `KqlItem/1.0` per KPI to `infra/dashboards/roi-kpis.json` |
-| Worker agents (if supervisor-routing) | `python scripts/scaffold-agent.py <worker-id> --scenario <scenario-id> --capability "..."` for each worker named in the brief |
+| Worker agents (if supervisor-routing) | `python scripts/scaffold-agent.py <worker-id> --scenario <scenario-id> --capability "..."` for each worker named in the brief, then run `/define-grounding` (wires FoundryIQ + AI Search indexes + catalog tools per worker) and `/implement-workers` (fills every stub three-layer file in dependency order). Both are declarative — no Python written by hand. |
 
 **Check your work:**
 
