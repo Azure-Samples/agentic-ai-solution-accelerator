@@ -12,6 +12,7 @@ Use this when `/scaffold-from-brief` (or a sequence of `/add-worker-agent` calls
 - `src/scenarios/<scenario>/workflow.py` declares the canonical `WORKERS: dict[str, WorkerSpec] = { ... }` registry.
 - `docs/discovery/solution-brief.md` is filled.
 - `/define-grounding` has run (every agent has a settled `retrieval.mode` and the index list is final).
+- `evals/quality/golden_cases.jsonl` is auto-seeded by the scaffolders: `scaffold-scenario.py` creates a stub `q-001` and `scaffold-agent.py` appends each new worker id to the case's `exercises` array. The `agent_has_golden_case` lint rule passes out of the box; **partner refines the case `query` and `expected` fields** so the eval encodes real customer success criteria before the first `python evals/quality/run.py` invocation.
 
 If any precondition fails, fix it first — implementing workers against a moving manifest produces drift.
 

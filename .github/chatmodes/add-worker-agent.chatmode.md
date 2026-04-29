@@ -41,12 +41,13 @@ The scaffolder will:
 
 The scaffolder is **transactional**: it snapshots `workflow.py` and `agents/__init__.py` before any write and rolls everything back (including deleting newly created files) on any failure, including a post-write `ast.parse` syntax check. It is also **re-run safe**: a second run with the same `<agent_id>` exits non-zero without changing anything.
 
-## Three manual follow-ups
+## Two manual follow-ups
 The scaffolder cannot do these; you must.
 
 1. **Paste the printed YAML snippet** into `accelerator.yaml -> scenario.agents[]`. The lint rule `agents_registered_in_manifest_match_code` enforces parity between the manifest and the `WORKERS` dict.
-2. **Add the agent id to at least one golden case's `exercises` array** in `evals/quality/golden_cases.jsonl`. Example: `"exercises": ["account_planner", "<new_agent_id>"]`. The blocking lint rule `agent_has_golden_case` rejects any registered worker that no golden case exercises. A separate rule `golden_cases_exercises_valid` checks the ids resolve.
-3. **Tune the `_build_input_<agent_id>` stub** in `workflow.py` if the default (pass each declared dependency's output plus `request`) isn't the right payload. The TODO comment marks the spot.
+2. **Tune the `_build_input_<agent_id>` stub** in `workflow.py` if the default (pass each declared dependency's output plus `request`) isn't the right payload. The TODO comment marks the spot.
+
+The scaffolder also extends `evals/quality/golden_cases.jsonl` for you: every existing case's `exercises` array gets the new agent id appended so the `agent_has_golden_case` lint rule passes immediately. Refine each case's `query` and `expected` fields when you wire the real evaluator — the stub only guarantees lint coverage, not eval quality.
 
 ## Tools
 If the agent needs a side-effect tool (writes to a system, sends email/webhook, destructive action), run `/add-tool` for each separately — never mix tool creation with worker scaffolding, and ensure the tool flows through `src/accelerator_baseline/hitl.py`.

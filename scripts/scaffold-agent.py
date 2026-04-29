@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+import json
 import pathlib
 import re
 import sys
@@ -416,11 +417,44 @@ def _rollback(
 MANIFEST_SNIPPET = """# Append under `scenario.agents` in accelerator.yaml:
     - {{ id: {aid}, foundry_name: {agent_name} }}
 
-# Then add at least one golden case that exercises this worker in
-# evals/quality/golden_cases.jsonl (or extend an existing case). The
-# `agent_has_golden_case` lint rule blocks until this is done:
-#   "exercises": [... , "{aid}"]
+# evals/quality/golden_cases.jsonl was extended in place: every existing
+# case's `exercises` array now includes "{aid}". Refine each case body
+# (query / expected) when you wire the real evaluator.
 """
+
+
+def _extend_golden_cases(text: str, agent_id: str) -> str:
+    """Append ``agent_id`` to every case's ``exercises`` array.
+
+    Keeps the original line order and JSON shape; only the ``exercises``
+    list is mutated. Cases without an ``exercises`` key get one created
+    with ``["supervisor", agent_id]`` so the case is self-describing.
+    Cases that already include ``agent_id`` are left untouched (idempotent).
+    Lines that fail to parse as JSON are passed through verbatim so a
+    partner-authored comment line doesn't break scaffold.
+    """
+    out_lines: list[str] = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            out_lines.append(line)
+            continue
+        try:
+            case = json.loads(stripped)
+        except json.JSONDecodeError:
+            out_lines.append(line)
+            continue
+        if not isinstance(case, dict):
+            out_lines.append(line)
+            continue
+        ex = case.get("exercises")
+        if not isinstance(ex, list):
+            ex = ["supervisor"]
+        if agent_id not in ex:
+            ex = list(ex) + [agent_id]
+        case["exercises"] = ex
+        out_lines.append(json.dumps(case, separators=(",", ":")))
+    return "\n".join(out_lines) + ("\n" if text.endswith("\n") else "")
 
 
 def main() -> int:
@@ -512,6 +546,11 @@ def main() -> int:
         agents_init: agents_init.read_text(encoding="utf-8"),
         workflow_py: workflow_py.read_text(encoding="utf-8"),
     }
+    golden_cases_path = ROOT / "evals" / "quality" / "golden_cases.jsonl"
+    if golden_cases_path.exists():
+        snapshots[golden_cases_path] = golden_cases_path.read_text(
+            encoding="utf-8"
+        )
 
     created: list[pathlib.Path] = []
     try:
@@ -520,6 +559,10 @@ def main() -> int:
         new_agents_init = _patch_agents_init(snapshots[agents_init], agent_id)
         new_workflow = _patch_workflow(
             snapshots[workflow_py], agent_id, depends_on, args.required
+        )
+        new_golden_cases = (
+            _extend_golden_cases(snapshots[golden_cases_path], agent_id)
+            if golden_cases_path in snapshots else None
         )
 
         # Write new files.
@@ -536,6 +579,8 @@ def main() -> int:
         # Write patched files.
         agents_init.write_text(new_agents_init, encoding="utf-8")
         workflow_py.write_text(new_workflow, encoding="utf-8")
+        if new_golden_cases is not None:
+            golden_cases_path.write_text(new_golden_cases, encoding="utf-8")
 
         # Syntax-validate the mutated workflow so a broken patch can't sneak
         # into CI. A syntax error here triggers rollback.

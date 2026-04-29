@@ -43,7 +43,7 @@ Copy the `scenario:` snippet the CLI printed and paste it into `accelerator.yaml
 | 5. Side-effect tools | Create `src/tools/<tool_name>.py`, each wrapped with `hitl.checkpoint(...)`; reference the tool name from the supervisor's `requires_approval` output |
 | 5. HITL gates | `src/accelerator_baseline/hitl.py` — rules per tool + confidence threshold |
 | 6. Constraints | `infra/main.parameters.json` + `accelerator.yaml.controls.*` |
-| 3+7. Success criteria → acceptance | `evals/quality/golden_cases.jsonl` — replace flagship cases with 5+ for this scenario |
+| 3+7. Success criteria → acceptance | `evals/quality/golden_cases.jsonl` — the scaffolder seeded a stub case `q-001` exercising every scaffolded worker; refine the `query` and `expected` fields to encode real success criteria, then add 4+ more cases |
 | 6. RAI risks | `evals/redteam/cases.jsonl` — one case per risk |
 | 4. KPIs | `src/accelerator_baseline/telemetry.py` — register each named KPI event; `infra/dashboards/roi-kpis.json` — append a `KqlItem/1.0` entry under `items[]` per KPI |
 

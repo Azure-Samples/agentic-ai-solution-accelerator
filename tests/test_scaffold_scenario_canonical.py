@@ -42,6 +42,9 @@ def fresh_scenario():
     for p in paths:
         if p.exists():
             shutil.rmtree(p) if p.is_dir() else p.unlink()
+    # Snapshot golden_cases.jsonl since scaffold-scenario rewrites it.
+    golden = ROOT / "evals" / "quality" / "golden_cases.jsonl"
+    golden_backup = golden.read_text(encoding="utf-8") if golden.exists() else None
     result = subprocess.run(  # noqa: S603 — fixed argv, not user input
         [sys.executable, str(SCAFFOLD_SCENARIO), sid],
         cwd=ROOT, capture_output=True, text=True,
@@ -51,6 +54,8 @@ def fresh_scenario():
     for p in paths:
         if p.exists():
             shutil.rmtree(p) if p.is_dir() else p.unlink()
+    if golden_backup is not None:
+        golden.write_text(golden_backup, encoding="utf-8")
 
 
 def test_scaffolded_workflow_has_canonical_workers_dict(fresh_scenario):

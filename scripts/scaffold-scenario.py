@@ -37,6 +37,7 @@ Guardrails:
 from __future__ import annotations
 
 import argparse
+import json
 import pathlib
 import re
 import sys
@@ -387,6 +388,30 @@ def _plan(scenario_id: str, *, no_retrieval: bool = False) -> list[tuple[pathlib
     return files
 
 
+def _golden_cases_stub(scenario_id: str) -> str:
+    """One-line JSONL stub case exercising only the supervisor.
+
+    `scaffold-agent.py` appends each new worker id to the case's ``exercises``
+    array as workers are added, so by the time the partner runs `/implement-
+    workers` the file is well-formed and the ``agent_has_golden_case`` lint
+    rule passes. Partner refines the case body (``query``, ``expected``) when
+    they wire the real evaluator. The stub deliberately uses ``must_cite:
+    false`` so the case doesn't require grounding before the workers exist.
+    """
+    case = {
+        "case_id": "q-001",
+        "scenario": scenario_id,
+        "query": (
+            f"TODO: replace with a representative {scenario_id} request. "
+            "Refine `expected` to encode the success criteria from your "
+            "discovery brief."
+        ),
+        "expected": {"must_cite": False},
+        "exercises": ["supervisor"],
+    }
+    return json.dumps(case, separators=(",", ":")) + "\n"
+
+
 def _rollback(created: list[pathlib.Path]) -> None:
     for p in reversed(created):
         try:
@@ -414,6 +439,14 @@ def main() -> int:
                          "and no scenario.retrieval.indexes block in the "
                          "printed manifest snippet). Default is FoundryIQ "
                          "grounding -- the recommended starting point.")
+    ap.add_argument("--no-evals", action="store_true",
+                    help="skip rewriting evals/quality/golden_cases.jsonl. "
+                         "By default, the file is replaced with a one-case "
+                         "stub exercising the supervisor only; scaffold-agent.py "
+                         "extends each case's `exercises` array as workers are "
+                         "added, so `agent_has_golden_case` lint stays green "
+                         "during scaffold. Use this flag if you've already "
+                         "authored the file and want to preserve it.")
     args = ap.parse_args()
 
     sid = args.scenario_id.strip()
@@ -432,6 +465,8 @@ def main() -> int:
         return 2
 
     created: list[pathlib.Path] = []
+    golden_cases_path = ROOT / "evals" / "quality" / "golden_cases.jsonl"
+    golden_cases_backup: str | None = None
     try:
         for path, content in plan:
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -443,6 +478,22 @@ def main() -> int:
                     created.append(anc)
             path.write_text(content, encoding="utf-8")
             created.append(path)
+
+        # Replace golden_cases.jsonl with a fresh stub so the new scenario
+        # starts with a passing `agent_has_golden_case` lint floor. Snapshot
+        # the original first so any failure rolls back cleanly.
+        if not args.no_evals:
+            if golden_cases_path.exists():
+                golden_cases_backup = golden_cases_path.read_text(
+                    encoding="utf-8"
+                )
+            else:
+                golden_cases_path.parent.mkdir(parents=True, exist_ok=True)
+                created.append(golden_cases_path)
+            golden_cases_path.write_text(
+                _golden_cases_stub(sid), encoding="utf-8"
+            )
+
         leaf = _package_leaf(sid)
         agent_name = _supervisor_foundry_name(sid)
         snippet = (
@@ -455,6 +506,10 @@ def main() -> int:
         else:
             print("(default: FoundryIQ grounding -- AI Search underneath, "
                   "MCPTool wired by bootstrap)")
+        if not args.no_evals:
+            print("(seeded evals/quality/golden_cases.jsonl with a "
+                  "supervisor-only stub case; scaffold-agent.py extends "
+                  "`exercises` per worker)")
         print("")
         print("Next step — paste this into accelerator.yaml:")
         print("")
@@ -462,6 +517,15 @@ def main() -> int:
         return 0
     except Exception as exc:
         print(f"::error::scaffold failed: {exc}", file=sys.stderr)
+        # Restore golden_cases.jsonl first, then unwind created paths.
+        if golden_cases_backup is not None:
+            try:
+                golden_cases_path.write_text(
+                    golden_cases_backup, encoding="utf-8"
+                )
+            except Exception as restore_exc:
+                print(f"::warning::could not restore golden_cases.jsonl: "
+                      f"{restore_exc}", file=sys.stderr)
         _rollback(created)
         print("::error::rolled back partially-created paths.", file=sys.stderr)
         return 1
