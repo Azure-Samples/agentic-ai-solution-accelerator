@@ -34,7 +34,11 @@ from collections.abc import Iterable
 from typing import Any
 from urllib.parse import urlparse
 
-__all__ = ["require_citations", "assert_no_hallucinated_urls"]
+__all__ = [
+    "require_citations",
+    "assert_no_hallucinated_urls",
+    "extract_tool_trace_uris",
+]
 
 
 def require_citations(
@@ -129,3 +133,56 @@ def assert_no_hallucinated_urls(
                 "sources (possible hallucination)"
             )
     return True, ""
+
+
+def extract_tool_trace_uris(response: Any) -> set[str]:
+    """Walk a Foundry ``AgentResponse`` and return URIs from tool traces.
+
+    Foundry agents annotate text content with citation entries when a
+    hosted tool (FoundryIQ knowledge base, Bing grounding, etc.) supplies
+    retrieved sources. Each citation lives on
+    ``response.messages[i].contents[j].annotations[k]`` as a TypedDict
+    with at least ``type: "citation"`` and ``url``. This helper extracts
+    the set of URLs so a workflow can pass them to
+    :func:`assert_no_hallucinated_urls` even in ``foundry_tool``
+    retrieval mode (where Python never sees the search call directly).
+
+    The implementation is duck-typed (no agent_framework import) so
+    tests can pass plain dicts / SimpleNamespace stubs and the helper
+    survives SDK shape drift across preview revs. Anything that doesn't
+    look like a citation is skipped silently — a Foundry rev that adds a
+    new annotation type will degrade gracefully rather than raise.
+
+    Args:
+        response: A Foundry ``AgentResponse`` (or anything exposing
+            ``messages -> contents -> annotations``). ``None`` is
+            allowed and yields an empty set.
+
+    Returns:
+        Set of URL strings (deduplicated, order-insensitive). Empty when
+        no citation annotations are present.
+    """
+    uris: set[str] = set()
+    if response is None:
+        return uris
+    messages = getattr(response, "messages", None)
+    if messages is None and isinstance(response, dict):
+        messages = response.get("messages")
+    for msg in messages or []:
+        contents = getattr(msg, "contents", None)
+        if contents is None and isinstance(msg, dict):
+            contents = msg.get("contents")
+        for content in contents or []:
+            annots = getattr(content, "annotations", None)
+            if annots is None and isinstance(content, dict):
+                annots = content.get("annotations")
+            for ann in annots or []:
+                # ``Annotation`` is a TypedDict at runtime → plain dict.
+                if not isinstance(ann, dict):
+                    continue
+                if ann.get("type") != "citation":
+                    continue
+                url = ann.get("url")
+                if isinstance(url, str) and url:
+                    uris.add(url)
+    return uris
