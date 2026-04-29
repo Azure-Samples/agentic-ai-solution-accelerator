@@ -512,6 +512,75 @@ def side_effect_tools_call_hitl(ctx: Ctx) -> list[Finding]:
     return out
 
 
+_CATALOG_SIDE_EFFECT_PATTERNS = (
+    "create", "send", "delete", "update", "post",
+    "remove", "write", "upsert", "patch", "open_issue",
+)
+
+
+@check
+def catalog_tool_hitl(ctx: Ctx) -> list[Finding]:
+    """Warn when a Foundry portal catalog tool with a side-effect-shaped name is
+    declared on an agent without a matching ``src/tools/<tool>.py`` HITL wrapper.
+
+    Catalog tools call out from inside Foundry, so ``src/accelerator_baseline/
+    hitl.py`` does not gate them. Either re-implement as an in-process tool
+    (``/add-tool``) or configure portal-side approvals; either way the partner
+    must consciously opt in. See ``define-grounding`` chatmode Step 3.
+    """
+    manifest = _read_manifest_lines(ctx)
+    if not manifest:
+        return []
+    scenario = manifest.get("scenario") or {}
+    agents = scenario.get("agents") or []
+    if not isinstance(agents, list):
+        return []
+
+    tools_dir = ROOT / "src/tools"
+    in_process_tools: set[str] = set()
+    if tools_dir.exists():
+        in_process_tools = {p.stem for p in tools_dir.glob("*.py")
+                            if p.stem != "__init__"}
+
+    out: list[Finding] = []
+    for i, a in enumerate(agents):
+        if not isinstance(a, dict):
+            continue
+        catalog = a.get("catalog_tools") or []
+        if not isinstance(catalog, list):
+            continue
+        for tool_name in catalog:
+            if not isinstance(tool_name, str):
+                continue
+            lower = tool_name.lower()
+            if not any(p in lower for p in _CATALOG_SIDE_EFFECT_PATTERNS):
+                continue  # read-shaped name; no HITL needed
+            if tool_name in in_process_tools:
+                continue  # partner re-implemented as in-process tool with HITL
+            out.append(Finding(
+                "catalog-tool-hitl", "warn", "accelerator.yaml",
+                f"scenario.agents[{i}].catalog_tools[{tool_name!r}] looks "
+                "side-effect-shaped (write/send/delete/update/post). Catalog "
+                "tools call out from inside Foundry and bypass "
+                "src/accelerator_baseline/hitl.py. Either re-implement as an "
+                f"in-process tool at src/tools/{tool_name}.py "
+                "(run `/add-tool`) or configure portal-side approvals on the "
+                "Foundry agent's Tools tab. See `/define-grounding` Step 3."))
+    return out
+
+
+def _read_manifest_lines(ctx: Ctx) -> dict | None:
+    """Best-effort manifest read, mirroring scenario_manifest_valid()."""
+    m = ROOT / "accelerator.yaml"
+    if not m.exists():
+        return None
+    try:
+        import yaml  # type: ignore
+        return yaml.safe_load(m.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return None
+
+
 # ---------------------------------------------------------------------------
 # Telemetry
 # ---------------------------------------------------------------------------

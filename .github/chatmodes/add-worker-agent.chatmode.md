@@ -71,6 +71,6 @@ python scripts/enforce-acceptance.py
 `enforce-acceptance.py` reports pass/fail against every threshold in `accelerator.yaml.acceptance`. If quality regresses on a worker the new agent shouldn't have touched, the supervisor is mis-routing — tighten the new agent's one-sentence capability or its `_build_input_<agent_id>` payload. The same chain runs in CI and will block merge.
 
 ## Guardrails
-- Never write the Foundry system prompt in code — it lives in the portal.
+- Never hardcode the Foundry system instructions in Python code. The authoring source of truth is `docs/agent-specs/<foundry-agent-name>.md`. Never edit instructions in the Foundry portal either — `src/bootstrap.py` overwrites portal drift on the next `azd deploy`.
 - Never bypass the scaffolder to "just quickly add" a worker. The declarative `WORKERS` registry is the contract every future tool (scheduler, telemetry, lints, docs) reads.
 - The supervisor is always-invoked; do not list it in `depends_on` or golden-case `exercises`.
