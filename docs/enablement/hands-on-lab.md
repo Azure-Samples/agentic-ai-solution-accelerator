@@ -570,59 +570,59 @@ didn't regress the scenario.
 
 2. In Copilot Chat, run `/scaffold-from-brief`. When prompted, give
    it a scenario id (e.g. `ticket-summary`) and a display name
-   (e.g. `Ticket Summary`). The chatmode:
-
-   - Calls `scripts/scaffold-scenario.py` to materialise
-     `src/scenarios/ticket_summary/` (schema, workflow, retrieval,
-     supervisor agent package) plus the supervisor spec stub at
-     `docs/agent-specs/accel-ticket-summary-supervisor.md`.
-   - Pastes the printed `scenario:` YAML block into
-     `accelerator.yaml`, replacing the existing `scenario:` block.
-   - Walks the brief-to-files customisation checklist below so you
-     know exactly which files the brief wants you to touch.
+   (e.g. `Ticket Summary`). The chatmode calls
+   `scripts/scaffold-scenario.py` to materialise
+   `src/scenarios/ticket_summary/` (schema, workflow, retrieval,
+   supervisor agent package) plus the supervisor spec stub at
+   `docs/agent-specs/accel-ticket-summary-supervisor.md`, then
+   pastes the printed `scenario:` YAML block into
+   `accelerator.yaml`, then walks the brief-to-files customisation
+   checklist below.
 
    Treat its output as a **guided checklist, not a finished
    implementation.** The scaffold gives you structure; the brief
    tells you what to fill in.
 
-   !!! info "Behind the scenes / fallback path"
-       `/scaffold-from-brief` is a thin wrapper over a Python script.
-       If the chatmode fails midway, or if you're working without
-       Copilot Chat (Codex CLI, Claude Code, Cursor, etc.), run the
-       script directly:
+!!! info "Behind the scenes / fallback path"
+    `/scaffold-from-brief` is a thin wrapper over a Python script.
+    If the chatmode fails midway, or if you're working without
+    Copilot Chat (Codex CLI, Claude Code, Cursor, etc.), run the
+    script directly:
 
-       ```bash
-       python scripts/scaffold-scenario.py ticket-summary --display "Ticket Summary"
-       ```
+    ```bash
+    python scripts/scaffold-scenario.py ticket-summary --display "Ticket Summary"
+    ```
 
-       Then paste the printed `scenario:` YAML block into
-       `accelerator.yaml` by hand and walk the brief-to-files
-       checklist below manually. The script only handles the
-       structural scaffold — it does not do the brief-driven
-       per-file customisation.
+    Then paste the printed `scenario:` YAML block into
+    `accelerator.yaml` by hand and walk the brief-to-files
+    checklist below manually. The script only handles the
+    structural scaffold — it does not do the brief-driven
+    per-file customisation.
 
-3. Walk the **brief → files** checklist. The authoritative copy
-   lives in `.github/chatmodes/scaffold-from-brief.chatmode.md` —
-   the condensed version below mirrors it for lab use. If the two
+3. Walk the **brief → files** checklist below. The authoritative
+   copy lives in `.github/chatmodes/scaffold-from-brief.chatmode.md`
+   — the condensed version here mirrors it for lab use. If the two
    ever diverge, update both in the same PR.
-
-   | Brief area | Files to verify / customise |
-   |---|---|
-   | Problem + persona (Section 1) | `src/scenarios/<package>/agents/supervisor/prompt.py` — rewrite the intro |
-   | Solution shape (Section 5, if not supervisor-routing) | Re-shape `src/scenarios/<package>/workflow.py` for `single-agent` or `chat-with-actioning` |
-   | Grounding sources (Section 5) | `src/scenarios/<package>/retrieval.py` + declare indexes under `scenario.retrieval.indexes` |
-   | Side-effect tools + HITL (Section 5) | `src/tools/<tool_name>.py` (each wrapped in `hitl.checkpoint(...)`); `src/accelerator_baseline/hitl.py` per-tool rules |
-   | Constraints / controls (Section 6) | `infra/main.parameters.json` + `accelerator.yaml.controls.*` |
-   | Acceptance / evals (Sections 3 + 7) | `evals/quality/golden_cases.jsonl` (replace flagship cases); `evals/redteam/cases.jsonl` (one case per RAI risk) |
-   | KPIs (Section 4) | Register each event in `src/accelerator_baseline/telemetry.py`; append a `KqlItem/1.0` per KPI to `infra/dashboards/roi-kpis.json` |
-   | Worker agents (if supervisor-routing) | `python scripts/scaffold-agent.py <worker-id> --scenario <scenario-id> --capability "..."` for each worker named in the brief |
 
 4. Run `python scripts/accelerator-lint.py`. In a fresh scaffold,
    most lint rules will pass because the generated files are
    syntactically valid and the supervisor spec ships with a generic
    baseline. The `prompt.py`, `transform.py`, `validate.py`, and
-   `retrieval.py` are minimal placeholders — the checklist above is
+   `retrieval.py` are minimal placeholders — the checklist below is
    what turns them into a real scenario.
+
+### Brief → files checklist
+
+| Brief area | Files to verify / customise |
+|---|---|
+| Problem + persona (Section 1) | `src/scenarios/<package>/agents/supervisor/prompt.py` — rewrite the intro |
+| Solution shape (Section 5, if not supervisor-routing) | Re-shape `src/scenarios/<package>/workflow.py` for `single-agent` or `chat-with-actioning` |
+| Grounding sources (Section 5) | `src/scenarios/<package>/retrieval.py` + declare indexes under `scenario.retrieval.indexes` |
+| Side-effect tools + HITL (Section 5) | `src/tools/<tool_name>.py` (each wrapped in `hitl.checkpoint(...)`); `src/accelerator_baseline/hitl.py` per-tool rules |
+| Constraints / controls (Section 6) | `infra/main.parameters.json` + `accelerator.yaml.controls.*` |
+| Acceptance / evals (Sections 3 + 7) | `evals/quality/golden_cases.jsonl` (replace flagship cases); `evals/redteam/cases.jsonl` (one case per RAI risk) |
+| KPIs (Section 4) | Register each event in `src/accelerator_baseline/telemetry.py`; append a `KqlItem/1.0` per KPI to `infra/dashboards/roi-kpis.json` |
+| Worker agents (if supervisor-routing) | `python scripts/scaffold-agent.py <worker-id> --scenario <scenario-id> --capability "..."` for each worker named in the brief |
 
 **Check your work:**
 
