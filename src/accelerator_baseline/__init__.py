@@ -6,6 +6,7 @@ drift. Consistency is maintained by CI lint (``scripts/accelerator-lint.py``)
 verifying shape, not by a separate package release.
 """
 
+from .citations import assert_no_hallucinated_urls, require_citations
 from .cost import UsageSample, estimate_call_cost, record_call_cost
 from .evals import Acceptance, EvalResult, evaluate_acceptance
 from .hitl import HITLDenied, HITLMisconfigured, checkpoint
@@ -22,9 +23,11 @@ __all__ = [
     "KillSwitchEngaged",
     "UsageSample",
     "assert_enabled",
+    "assert_no_hallucinated_urls",
     "checkpoint",
     "emit_event",
     "estimate_call_cost",
     "evaluate_acceptance",
     "record_call_cost",
+    "require_citations",
 ]

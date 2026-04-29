@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from src.accelerator_baseline.citations import require_citations
+
 REQUIRED_FIELDS = (
     "company_overview", "industry", "recent_news",
     "strategic_initiatives", "technology_landscape",
@@ -22,6 +24,7 @@ def validate_response(response: dict[str, Any]) -> tuple[bool, str]:
     for f in FORBIDDEN_FIELDS:
         if f in response:
             return False, f"cross-agent contamination: {f} belongs to another agent"
-    if not response["citations"] and response["recent_news"]:
-        return False, "recent_news present without citations (groundedness violation)"
+    ok, msg = require_citations(response, when_fields_present=("recent_news",))
+    if not ok:
+        return False, msg
     return True, ""

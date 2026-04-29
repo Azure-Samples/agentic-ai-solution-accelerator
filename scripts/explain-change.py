@@ -267,7 +267,7 @@ CATEGORIES: list[Category] = [
         title="Foundry agent specs (docs/agent-specs/*.md)",
         impact=[
             "lint: agent_specs_no_hardcoded_model — specs must not pin a model; model_deployment_name comes from Bicep outputs",
-            "note: these docs are the bootstrap source for src/bootstrap.py (FastAPI startup); keep the system-instructions section in sync with what is configured in the Foundry portal",
+            "note: these `.md` files ARE the source of truth for system instructions; src/bootstrap.py rewrites the Foundry agent definition (model + instructions + tools) on every `azd deploy`. Edits in the Foundry portal are transient and overwritten on next sync.",
         ],
         patterns=[
             "docs/agent-specs/*.md",
