@@ -7,7 +7,7 @@ Layout after staging:
   docs-build/                     <- docs/**
   docs-build/QUICKSTART.md        <- QUICKSTART.md
   docs-build/about/<name>.md      <- AGENTS | SECURITY | SUPPORT | CONTRIBUTING | CLA
-  docs-build/chatmodes/*.md       <- .github/agents/*.agent.md (suffix stripped)
+  docs-build/agents/*.md          <- .github/agents/*.agent.md (suffix stripped)
 
 Rewrites links inside each staged file based on the file's origin and
 staged depth so cross-doc links resolve within the published tree.
@@ -33,7 +33,7 @@ CLA_SRC = REPO_ROOT / ".github" / "CLA.md"
 def rewrites_for_root_top() -> list[tuple[re.Pattern[str], str]]:
     return [
         (re.compile(r"\]\(docs/"), "]("),
-        (re.compile(r"\]\(\.github/agents/([^)#]+)\.agent\.md"), r"](chatmodes/\1.md"),
+        (re.compile(r"\]\(\.github/agents/([^)#]+)\.agent\.md"), r"](agents/\1.md"),
         (re.compile(r"\]\(\.github/CLA\.md"), "](about/CLA.md"),
     ]
 
@@ -41,7 +41,7 @@ def rewrites_for_root_top() -> list[tuple[re.Pattern[str], str]]:
 def rewrites_for_root_about() -> list[tuple[re.Pattern[str], str]]:
     return [
         (re.compile(r"\]\(docs/"), "](../"),
-        (re.compile(r"\]\(\.github/agents/([^)#]+)\.agent\.md"), r"](../chatmodes/\1.md"),
+        (re.compile(r"\]\(\.github/agents/([^)#]+)\.agent\.md"), r"](../agents/\1.md"),
         (re.compile(r"\]\(\.github/CLA\.md"), "](CLA.md"),
         (re.compile(r"\]\(README\.md\)"), "](../index.md)"),
     ]
@@ -81,18 +81,17 @@ def rewrites_for_docs_tree(depth: int) -> list[tuple[re.Pattern[str], str]]:
         # are staged into docs-build/patterns/<id>/README.md by prepare-pages.
         _md(r"patterns/", "patterns/"),
         # Custom agents are authored at .github/agents/<slug>.agent.md and
-        # staged at docs-build/chatmodes/<slug>.md (the .agent.md suffix is
-        # stripped during staging). The public URL path stays "chatmodes/"
-        # for partner-facing search continuity.
+        # staged at docs-build/agents/<slug>.md (the .agent.md suffix is
+        # stripped during staging). Public URL path is /agents/<slug>/.
         (re.compile(r"\]\(" + up_in + r"\.github/agents/([^)#]+)\.agent\.md"),
-         "](" + up_out + r"chatmodes/\1.md"),
+         "](" + up_out + r"agents/\1.md"),
         _md(r"\.github/CLA\.md", "about/CLA.md"),
     ]
     click_rules: list[tuple[re.Pattern[str], str]] = [
         _click(r"QUICKSTART\.md", "QUICKSTART.md"),
         _click(r"README\.md", "index.md"),
         (re.compile(r'(click\s+\w+\s+")' + up_in + r"\.github/agents/([^)#]+)\.agent\.md"),
-         r"\1" + up_out + r"chatmodes/\2.md"),
+         r"\1" + up_out + r"agents/\2.md"),
         _click(r"docs/", ""),
     ]
     return md_rules + click_rules
@@ -364,12 +363,12 @@ def stage() -> None:
         rewritten += 1
 
     if AGENTS_SRC.exists():
-        agents_dst = STAGE / "chatmodes"
+        agents_dst = STAGE / "agents"
         agents_dst.mkdir(exist_ok=True)
         for agent in AGENTS_SRC.glob("*.agent.md"):
             wrapped = wrap_agent_for_pages(agent.read_text(encoding="utf-8"), agent.name)
             # Strip the .agent.md suffix in the staged filename so the
-            # public URL becomes /chatmodes/<slug>/ (no .agent in the path).
+            # public URL becomes /agents/<slug>/ (no .agent in the path).
             staged_name = agent.name[: -len(".agent.md")] + ".md"
             (agents_dst / staged_name).write_text(wrapped, encoding="utf-8")
 

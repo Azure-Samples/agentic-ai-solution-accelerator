@@ -14,7 +14,7 @@
 !!! tip "Chatmodes used here"
     [`/configure-landing-zone`](../../../.github/agents/configure-landing-zone.agent.md) · [`/deploy-to-env`](../../../.github/agents/deploy-to-env.agent.md)
 
-    Full reference: [Chatmodes overview](../../chatmodes-index.md).
+    Full reference: [Chatmodes overview](../../agents-index.md).
 
 ??? success "What success looks like"
     `azd up` ends with a summary like:

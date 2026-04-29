@@ -2402,8 +2402,8 @@ def doc_links_resolve(ctx: Ctx) -> list[Finding]:
     # chatmodes/..., about/...) that resolve only after the
     # prepare-pages.py staging step (custom agents are sourced from
     # .github/agents/<slug>.agent.md and staged into
-    # docs-build/chatmodes/<slug>.md — the .agent.md suffix is dropped
-    # so partner-facing URLs stay /chatmodes/<slug>/).
+    # docs-build/agents/<slug>.md — the .agent.md suffix is dropped
+    # so partner-facing URLs are /agents/<slug>/).
     # scripts/prepare-pages.py staging hook runs. Their link
     # integrity is validated by `mkdocs build --strict`, so skip
     # them here to avoid false positives.
@@ -2501,7 +2501,7 @@ def mkdocs_nav_integrity(ctx: Ctx) -> list[Finding]:
     # Mapping rules mirror scripts/prepare-pages.py:
     #   docs-build/QUICKSTART.md   <- QUICKSTART.md
     #   docs-build/about/X.md      <- AGENTS/SECURITY/SUPPORT/CONTRIBUTING/.github/CLA
-    #   docs-build/chatmodes/X.md  <- .github/agents/X.agent.md (.agent.md suffix dropped during staging)
+    #   docs-build/agents/X.md     <- .github/agents/X.agent.md (.agent.md suffix dropped during staging)
     #   docs-build/X.md            <- docs/X.md
     def staged_to_source(staged: str) -> pathlib.Path:
         s = staged.strip()
@@ -2512,10 +2512,10 @@ def mkdocs_nav_integrity(ctx: Ctx) -> list[Finding]:
             if tail == "CLA.md":
                 return ROOT / ".github" / "CLA.md"
             return ROOT / tail  # AGENTS.md / SECURITY.md / SUPPORT.md / CONTRIBUTING.md
-        if s.startswith("chatmodes/"):
+        if s.startswith("agents/"):
             # Staged filename drops the .agent.md suffix; re-add it
             # to resolve the canonical source under .github/agents/.
-            tail = s[len("chatmodes/"):]
+            tail = s[len("agents/"):]
             if tail.endswith(".md") and not tail.endswith(".agent.md"):
                 tail = tail[: -len(".md")] + ".agent.md"
             return ROOT / ".github" / "agents" / tail

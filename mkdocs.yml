@@ -118,20 +118,20 @@ nav:
           - Customer service actioning: references/customer-service-actioning/README.md
           - RFP response: references/rfp-response/README.md
       - Custom agents:
-          - Overview: chatmodes-index.md
-          - Delivery guide: chatmodes/delivery-guide.md
-          - Discover scenario: chatmodes/discover-scenario.md
-          - Ingest PRD: chatmodes/ingest-prd.md
-          - Scaffold from brief: chatmodes/scaffold-from-brief.md
-          - Define grounding: chatmodes/define-grounding.md
-          - Implement workers: chatmodes/implement-workers.md
-          - Implement one worker: chatmodes/implement-worker.md
-          - Configure landing zone: chatmodes/configure-landing-zone.md
-          - Deploy to environment: chatmodes/deploy-to-env.md
-          - Add tool: chatmodes/add-tool.md
-          - Add worker agent: chatmodes/add-worker-agent.md
-          - Switch to variant: chatmodes/switch-to-variant.md
-          - Explain change: chatmodes/explain-change.md
+          - Overview: agents-index.md
+          - Delivery guide: agents/delivery-guide.md
+          - Discover scenario: agents/discover-scenario.md
+          - Ingest PRD: agents/ingest-prd.md
+          - Scaffold from brief: agents/scaffold-from-brief.md
+          - Define grounding: agents/define-grounding.md
+          - Implement workers: agents/implement-workers.md
+          - Implement one worker: agents/implement-worker.md
+          - Configure landing zone: agents/configure-landing-zone.md
+          - Deploy to environment: agents/deploy-to-env.md
+          - Add tool: agents/add-tool.md
+          - Add worker agent: agents/add-worker-agent.md
+          - Switch to variant: agents/switch-to-variant.md
+          - Explain change: agents/explain-change.md
       - Delivery deep dives:
           - Partner playbook: partner-playbook.md
           - Workflow map: partner-workflow.md

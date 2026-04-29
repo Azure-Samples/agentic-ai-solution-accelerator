@@ -72,7 +72,7 @@ Deep dives that sit **outside** the walkthrough — open them when a step sends 
 
 | If you want to… | Go to |
 |---|---|
-| See which chatmode runs at which step | [Chatmodes overview](chatmodes-index.md) |
+| See which chatmode runs at which step | [Chatmodes overview](agents-index.md) |
 | Add a side-effect tool with HITL baked in | [`/add-tool`](../.github/agents/add-tool.agent.md) (used in step 8) |
 | Add a specialist worker agent | [`/add-worker-agent`](../.github/agents/add-worker-agent.agent.md) (used in step 8) |
 | Scaffold the customer's repo from a filled brief | [`/scaffold-from-brief`](../.github/agents/scaffold-from-brief.agent.md) (used in step 6) |

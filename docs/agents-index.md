@@ -44,7 +44,7 @@ The full prompt for each agent is published in the navigation under [Reference �
 
 ---
 
-## When you can skip a chatmode
+## When you can skip a custom agent
 
 | Situation | Why you can skip |
 |---|---|
@@ -52,7 +52,7 @@ The full prompt for each agent is published in the navigation under [Reference �
 | Returning engineer, no scenario change | Skip `/scaffold-from-brief` — the existing scaffold is fine if `accelerator.yaml` matches the brief |
 | Pilot in your own dev sub | Skip `/configure-landing-zone` — Tier 1 (`standalone`) is the default and works for a sandbox |
 | Tool is read-only (a retriever) | Skip `/add-tool` — add a module under `src/retrieval/` instead; HITL is for side-effects |
-| Adding a single agent in the existing scenario | Skip the chatmode and run `python scripts/scaffold-agent.py` directly — same code path |
+| Adding a single agent in the existing scenario | Skip the custom agent and run `python scripts/scaffold-agent.py` directly — same code path |
 
 ---
 
@@ -60,4 +60,4 @@ The full prompt for each agent is published in the navigation under [Reference �
 
 Every custom agent is a Markdown file under [`.github/agents/`](https://github.com/Azure-Samples/agentic-ai-solution-accelerator/tree/main/.github/agents) in the repo. The header `description:` field is what Copilot Chat shows in the picker; the body is the prompt Copilot follows. You can read or fork them — they're plain Markdown, version-controlled, and reviewable.
 
-If you want to add a custom chatmode for your partner practice, follow the existing files as templates and PR it back; the accelerator team welcomes new patterns.
+If you want to add a custom agent for your partner practice, follow the existing files as templates and PR it back; the accelerator team welcomes new patterns.

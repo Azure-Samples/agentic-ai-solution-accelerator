@@ -16,7 +16,7 @@
 
     Run them in that order. `/scaffold-from-brief` lays down the structural shape (folders, stub three-layer files, manifest skeleton). `/define-grounding` wires FoundryIQ + AI Search indexes + catalog tools into each worker declaratively. `/implement-workers` walks the supervisor DAG and fills every stub `prompt.py` / `transform.py` / `validate.py` + Foundry agent spec in dependency order.
 
-    Full reference: [Chatmodes overview](../../chatmodes-index.md).
+    Full reference: [Chatmodes overview](../../agents-index.md).
 
 ??? success "What success looks like"
     `git status` after the scaffold run shows changes spread across (typical):

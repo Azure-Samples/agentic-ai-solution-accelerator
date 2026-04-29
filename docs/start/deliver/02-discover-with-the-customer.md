@@ -14,7 +14,7 @@
 !!! tip "Chatmodes used here"
     [`/ingest-prd`](../../../.github/agents/ingest-prd.agent.md) *(optional, if customer provided a PRD)* · [`/discover-scenario`](../../../.github/agents/discover-scenario.agent.md)
 
-    Full reference: [Chatmodes overview](../../chatmodes-index.md).
+    Full reference: [Chatmodes overview](../../agents-index.md).
 
 ---
 
