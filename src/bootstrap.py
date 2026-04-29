@@ -395,7 +395,12 @@ def _tool_fingerprint(tool: Any | None) -> tuple:
 
 
 def _existing_tools_fingerprint(definition: Any) -> tuple:
-    """Fingerprint the ``tools`` field on a returned PromptAgentDefinition."""
+    """Fingerprint the ``tools`` field on a returned PromptAgentDefinition.
+
+    Kept for backward compatibility with the single-tool readback path. New
+    code should prefer :func:`_kb_tool_present` to support agents that carry
+    partner-attached catalog tools alongside the bootstrap-managed KB tool.
+    """
     if definition is None:
         return ()
     tools = getattr(definition, "tools", None) or []
@@ -404,6 +409,70 @@ def _existing_tools_fingerprint(definition: Any) -> tuple:
     if len(tools) != 1:
         return ("__unknown_count__", len(tools))
     return _tool_fingerprint(tools[0])
+
+
+def _agent_definition_unchanged(
+    cur_model: Any,
+    cur_instr: Any,
+    desired_model: str,
+    desired_instr: str,
+) -> bool:
+    """Decide whether ``create_version`` can be skipped.
+
+    Bootstrap owns model + instructions; tools are preserved/merged
+    separately (see :func:`_merge_preserved_tools`). Comparing tool
+    fingerprints here would force a fresh version every time a partner
+    attaches a catalog tool in the Foundry portal, even though the
+    accelerator has nothing new to write — that would silently nuke
+    portal-attached tools on every ``azd deploy``.
+    """
+    return cur_model == desired_model and cur_instr == desired_instr
+
+
+def _merge_preserved_tools(
+    existing_tools: list[Any] | None,
+    desired_managed: Any | None,
+) -> list[Any] | None:
+    """Build the final ``tools`` list, preserving partner-attached tools.
+
+    Bootstrap "owns" exactly one tool — the FoundryIQ Knowledge Base MCP
+    tool whose fingerprint matches ``_tool_fingerprint(desired_managed)``.
+    Any other tool on the existing definition was attached out-of-band
+    (Foundry portal catalog, partner script) and must survive
+    ``azd deploy``.
+
+    Behaviour:
+    - ``desired_managed is None``: bootstrap doesn't manage a tool for this
+      agent (``retrieval.mode: none``). Existing tools pass through
+      unchanged.
+    - Otherwise: drop any existing tool whose fingerprint matches the
+      managed one (so we refresh it rather than duplicate), then append the
+      managed tool last.
+
+    Returns ``None`` when the resulting list would be empty so the caller
+    can omit the ``tools`` kwarg entirely.
+    """
+    existing = list(existing_tools or [])
+    if desired_managed is None:
+        return existing or None
+    desired_fp = _tool_fingerprint(desired_managed)
+    preserved = [t for t in existing if _tool_fingerprint(t) != desired_fp]
+    merged = preserved + [desired_managed]
+    return merged or None
+
+
+def _kb_tool_present(definition: Any, desired_fp: tuple) -> bool:
+    """Return True if a tool matching ``desired_fp`` is on the definition.
+
+    Used by the readback canary after ``create_version`` to confirm the
+    bootstrap-managed KB tool round-tripped, without forcing equality on
+    the full tools list (which may include partner-attached catalog
+    tools).
+    """
+    if definition is None or not desired_fp:
+        return False
+    tools = getattr(definition, "tools", None) or []
+    return any(_tool_fingerprint(t) == desired_fp for t in tools)
 
 
 async def _grant_agent_search_access(
@@ -587,7 +656,6 @@ async def _bootstrap_foundry(bundle: ScenarioBundle) -> None:
 
             for agent, deployment, instructions, tool in work:
                 name = agent.foundry_name
-                desired_tools = [tool] if tool is not None else None
                 desired_tool_fp = _tool_fingerprint(tool)
                 # Force tool use for retrieval-mode agents so gpt-5-mini
                 # cannot skip the AI Search call. Server may reject the
@@ -598,22 +666,24 @@ async def _bootstrap_foundry(bundle: ScenarioBundle) -> None:
                 )
 
                 # Decide whether a fresh version is needed: skip the write
-                # when the latest version already matches our desired
-                # (model, instructions, tools) tuple so partners don't
-                # churn version history on every cold start.
+                # when the latest version's (model, instructions) tuple
+                # already matches what we want. Tools are preserved /
+                # merged separately so partner-attached portal catalog
+                # tools survive across deploys.
                 needs_new_version = True
                 latest: Any = None
+                cur_existing_tools: list[Any] = []
                 if name in existing_names:
                     try:
                         latest = await proj.agents.get_version(name, "latest")
                         defn = getattr(latest, "definition", None)
                         cur_model = getattr(defn, "model", None)
                         cur_instr = getattr(defn, "instructions", None)
-                        cur_tool_fp = _existing_tools_fingerprint(defn)
-                        if (
-                            cur_model == deployment
-                            and cur_instr == instructions
-                            and cur_tool_fp == desired_tool_fp
+                        cur_existing_tools = list(
+                            getattr(defn, "tools", None) or []
+                        )
+                        if _agent_definition_unchanged(
+                            cur_model, cur_instr, deployment, instructions,
                         ):
                             needs_new_version = False
                     except ResourceNotFoundError:
@@ -660,6 +730,14 @@ async def _bootstrap_foundry(bundle: ScenarioBundle) -> None:
                                 "skipped: %s", name, exc,
                             )
                     continue
+
+                # Merge: preserve any partner-attached tools (Foundry
+                # portal catalog, partner scripts) and refresh the
+                # bootstrap-managed KB tool. ``cur_existing_tools`` is
+                # empty for new agents.
+                desired_tools = _merge_preserved_tools(
+                    cur_existing_tools, tool,
+                )
 
                 async def _create_version(
                     _name=name,
@@ -717,20 +795,21 @@ async def _bootstrap_foundry(bundle: ScenarioBundle) -> None:
                 )
 
                 # Readback canary — for retrieval-mode agents, fetch the
-                # version we just wrote and confirm the tool fingerprint
-                # round-trips. Catches silent server-side strip of fields
-                # we don't have visibility into yet. Cheap (~1 GET).
+                # version we just wrote and confirm the KB tool round-
+                # tripped. We check membership (not equality) so partner-
+                # attached catalog tools merged in above don't trip the
+                # canary. Catches silent server-side strip of fields we
+                # don't have visibility into yet. Cheap (~1 GET).
                 if tool is not None and created_version_id:
                     try:
                         verified = await proj.agents.get_version(
                             name, created_version_id,
                         )
                         v_defn = getattr(verified, "definition", None)
-                        v_fp = _existing_tools_fingerprint(v_defn)
-                        if v_fp != desired_tool_fp:
+                        if not _kb_tool_present(v_defn, desired_tool_fp):
                             raise RuntimeError(
                                 f"foundry.foundry: {name} readback "
-                                f"fingerprint {v_fp!r} != desired "
+                                f"missing KB tool fingerprint "
                                 f"{desired_tool_fp!r} — tool not attached"
                             )
                         # Grant Search RBAC to the agent's instance MI now
