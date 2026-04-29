@@ -1,4 +1,5 @@
 ---
+name: implement-workers
 description: Walk the entire WORKERS DAG and implement every scaffolded-but-unfinished worker by invoking /implement-worker for each, in dependency order. Use this after /scaffold-from-brief when you want to fill in all stubs in one pass.
 tools: ['codebase', 'editFiles', 'search', 'runCommands']
 ---

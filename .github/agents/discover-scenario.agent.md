@@ -1,6 +1,12 @@
 ---
+name: discover-scenario
 description: Guided interview that fills docs/discovery/solution-brief.md with structured business context, success criteria, ROI hypothesis, and acceptance evals — works after a workshop, from notes, or live in the room.
 tools: ['codebase', 'editFiles', 'search']
+handoffs:
+  - label: Scaffold from brief
+    agent: scaffold-from-brief
+    prompt: The solution brief is filled. Run /scaffold-from-brief to materialize the scenario package from it.
+    send: false
 ---
 
 # /discover-scenario — structured discovery for a customer engagement

@@ -1,4 +1,5 @@
 ---
+name: switch-to-variant
 description: Switch the repo from the flagship supervisor-routing pattern to a simpler variant (single-agent or chat-with-actioning), or vice versa.
 tools: ['codebase', 'editFiles', 'search', 'terminal']
 ---

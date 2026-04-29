@@ -1,4 +1,5 @@
 ---
+name: configure-landing-zone
 description: Pick (or change) the Azure AI Landing Zone tier for this engagement and update accelerator.yaml + infra/ accordingly.
 ---
 

@@ -1,4 +1,5 @@
 ---
+name: add-tool
 description: Add a side-effect tool (CRM write, ticket create, email send, etc.) with HITL scaffolding, telemetry, and a redteam case.
 tools: ['codebase', 'editFiles', 'search']
 ---

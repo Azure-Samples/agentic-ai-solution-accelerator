@@ -1,4 +1,5 @@
 ---
+name: implement-worker
 description: Implement one scaffolded worker — fill prompt.py, transform.py, validate.py, and the Foundry agent spec from the discovery brief and scenario manifest. Run after the worker has been added via /add-worker-agent or /scaffold-from-brief.
 tools: ['codebase', 'editFiles', 'search', 'runCommands']
 ---

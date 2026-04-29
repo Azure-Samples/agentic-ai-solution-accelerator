@@ -1,4 +1,5 @@
 ---
+name: deploy-to-env
 description: Wires up a new Azure environment (partner dev, staging, or customer-scoped subscription) so `deploy.yml` can target it without a repo fork. Covers the manifest entry, GitHub Environment, OIDC federated credential, and first dispatch run.
 tools: ['codebase', 'editFiles', 'search', 'runCommands']
 ---

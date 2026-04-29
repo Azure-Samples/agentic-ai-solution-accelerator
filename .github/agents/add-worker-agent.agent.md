@@ -1,6 +1,12 @@
 ---
+name: add-worker-agent
 description: Add a new specialist worker agent to an existing scenario by invoking scripts/scaffold-agent.py, then finishing the three manual follow-ups the scaffolder cannot do.
 tools: ['codebase', 'editFiles', 'search', 'runCommands']
+handoffs:
+  - label: Implement this worker
+    agent: implement-worker
+    prompt: A new worker has been scaffolded. Run /implement-worker on it to fill in prompt.py, transform.py, validate.py, and the Foundry agent spec.
+    send: false
 ---
 
 # /add-worker-agent — scaffold a new worker via scripts/scaffold-agent.py

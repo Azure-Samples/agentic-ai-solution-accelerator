@@ -1,4 +1,5 @@
 ---
+name: delivery-guide
 description: Delivery companion for a complete engagement, from pre-sales discovery through production handover. Use this for the full journey, not a single task.
 tools: ['codebase', 'editFiles', 'search', 'terminal']
 ---

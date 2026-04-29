@@ -1,6 +1,12 @@
 ---
+name: define-grounding
 description: Define grounding for the scenario — pick FoundryIQ Knowledge Base versus no grounding per agent, declare AI Search indexes underneath FoundryIQ, and list any Foundry portal catalog tools each agent should call.
 tools: ['codebase', 'editFiles', 'search', 'runCommands']
+handoffs:
+  - label: Implement all workers
+    agent: implement-workers
+    prompt: Grounding is defined for every worker in the manifest. Run /implement-workers to fill in every scaffolded worker (prompt.py, transform.py, validate.py, agent spec) in dependency order.
+    send: false
 ---
 
 # /define-grounding — wire knowledge + tools to each worker

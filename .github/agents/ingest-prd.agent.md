@@ -1,6 +1,12 @@
 ---
+name: ingest-prd
 description: Draft docs/discovery/solution-brief.md from a customer-provided PRD, BRD, or functional spec. Produces an AI-extracted draft with per-field evidence citations and TBDs for risky fields; /discover-scenario then fills the TBDs in gap-fill mode.
 tools: ['codebase', 'editFiles', 'search', 'terminal']
+handoffs:
+  - label: Fill remaining TBDs
+    agent: discover-scenario
+    prompt: The brief draft is staged with TBDs marking risky fields. Run /discover-scenario in gap-fill mode to close them.
+    send: false
 ---
 
 # /ingest-prd — draft a solution brief from a customer document

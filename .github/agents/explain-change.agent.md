@@ -1,4 +1,5 @@
 ---
+name: explain-change
 description: Run scripts/explain-change.py against the current branch to preflight which lint rules will fire, which evals will run, and what the deploy pipeline will do on the next azd up. Use before opening a PR or squash-merging.
 tools: ['codebase', 'runCommands']
 ---

@@ -1,6 +1,12 @@
 ---
+name: scaffold-from-brief
 description: Thin wrapper over scripts/scaffold-scenario.py — materializes a new scenario package, then walks through pasting the manifest snippet and customising per the solution brief.
 tools: ['codebase', 'editFiles', 'search', 'terminal']
+handoffs:
+  - label: Define grounding per worker
+    agent: define-grounding
+    prompt: The scenario package is scaffolded. Run /define-grounding to wire FoundryIQ knowledge bases and catalog tools to each worker.
+    send: false
 ---
 
 # /scaffold-from-brief — generate a scenario from the discovery brief
